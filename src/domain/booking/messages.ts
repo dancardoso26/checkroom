@@ -64,6 +64,9 @@ export function describeViolation(
         violation.conflict.purpose
       }", em ${periodOf(violation.conflict)}.`;
 
+    case "SUBJECT_REQUIRED":
+      return "Informe a disciplina da aula.";
+
     case "NO_TEACHING_ASSIGNMENT":
       return `Este professor não leciona a disciplina selecionada para esta turma no período ${violation.term}.`;
 

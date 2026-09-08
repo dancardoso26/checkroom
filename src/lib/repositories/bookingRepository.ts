@@ -1,6 +1,6 @@
 import "server-only";
 import { supabaseServer } from "@/lib/supabase/server";
-import type { ExistingBooking } from "@/domain/booking/types";
+import type { ActivityType, ExistingBooking } from "@/domain/booking/types";
 
 /**
  * Repositório de reservas. Concentra os nomes das constraints, os códigos de
@@ -121,6 +121,7 @@ export async function createBooking(input: {
   roomId: string;
   professorId: string;
   classId: string;
+  activityType: ActivityType;
   subjectId: string | null;
   purpose: string;
   startsAt: Date;
@@ -131,6 +132,7 @@ export async function createBooking(input: {
     p_room_id: input.roomId,
     p_professor_id: input.professorId,
     p_class_id: input.classId,
+    p_activity_type: input.activityType,
     // undefined omite o parâmetro na chamada, e o banco aplica o default null.
     // Enviar null explícito seria equivalente no PostgreSQL, mas o tipo gerado
     // descreve o parâmetro como opcional, e respeitá-lo evita um cast.

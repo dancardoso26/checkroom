@@ -159,19 +159,23 @@ export function validateBooking(
 
   // 4. Vínculo acadêmico.
   //
-  // Sem disciplina informada não há o que verificar: defesa de TCC e seminário
-  // ocupam espaço sem pertencer a uma disciplina. Com disciplina e sem vínculo,
-  // a combinação é academicamente impossível, ainda que todos os horários
-  // estejam livres.
-  //
-  // É esta verificação que torna o modelo exclusivo de educação: uma agenda de
+  // É a verificação que torna o modelo exclusivo de educação: uma agenda de
   // consultórios ou de coworking não tem onde encaixar a relação entre docente,
   // disciplina e turma.
-  if (request.subjectId !== null && context.teachingAssignment === null) {
-    violations.push({
-      code: "NO_TEACHING_ASSIGNMENT",
-      term: PERIODO_LETIVO_VIGENTE,
-    });
+  //
+  // O tipo da atividade decide se ela se aplica. Aula exige disciplina, e a
+  // disciplina exige vínculo; palestra, prova, defesa e evento não pertencem a
+  // disciplina nenhuma. Antes do tipo existir, a exigência dependia de o campo
+  // vir preenchido, e bastava deixá-lo vazio para contorná-la.
+  if (request.activityType === "class") {
+    if (request.subjectId === null) {
+      violations.push({ code: "SUBJECT_REQUIRED" });
+    } else if (context.teachingAssignment === null) {
+      violations.push({
+        code: "NO_TEACHING_ASSIGNMENT",
+        term: PERIODO_LETIVO_VIGENTE,
+      });
+    }
   }
 
   // 5. Compatibilidade com o espaço. Ao contrário dos conflitos, seria verdadeira

@@ -46,6 +46,7 @@ export type Database = {
       }
       bookings: {
         Row: {
+          activity_type: Database["public"]["Enums"]["activity_type"]
           class_id: string
           created_at: string
           created_by: string | null
@@ -58,6 +59,7 @@ export type Database = {
           subject_id: string | null
         }
         Insert: {
+          activity_type?: Database["public"]["Enums"]["activity_type"]
           class_id: string
           created_at?: string
           created_by?: string | null
@@ -70,6 +72,7 @@ export type Database = {
           subject_id?: string | null
         }
         Update: {
+          activity_type?: Database["public"]["Enums"]["activity_type"]
           class_id?: string
           created_at?: string
           created_by?: string | null
@@ -346,6 +349,7 @@ export type Database = {
     Functions: {
       create_booking: {
         Args: {
+          p_activity_type?: Database["public"]["Enums"]["activity_type"]
           p_class_id: string
           p_ends_at: string
           p_professor_id: string
@@ -359,6 +363,7 @@ export type Database = {
       }
     }
     Enums: {
+      activity_type: "class" | "lecture" | "exam" | "defense" | "event"
       room_type: "classroom" | "laboratory" | "auditorium"
     }
     CompositeTypes: {
@@ -487,6 +492,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      activity_type: ["class", "lecture", "exam", "defense", "event"],
       room_type: ["classroom", "laboratory", "auditorium"],
     },
   },

@@ -31,19 +31,33 @@ export async function escolherHorario(
   await expect(page.locator(`#${campo}`)).toHaveText(horario);
 }
 
+export type TipoDeAtividade =
+  | "Aula"
+  | "Palestra"
+  | "Prova"
+  | "Defesa"
+  | "Evento";
+
+/**
+ * A ordem dos campos importa e reflete a da tela: o professor define quais
+ * turmas aparecem, e a turma define quais disciplinas. Preencher fora de ordem
+ * encontraria listas ainda vazias.
+ */
 export async function preencherAtividade(
   page: Page,
   dados: {
     finalidade: string;
     professor: string;
     turma: string;
-    /**
-     * Opcional, como no formulário: atividades que não são aula seguem sem
-     * disciplina e sem vínculo docente a verificar.
-     */
+    /** Aula é o padrão do formulário; os demais tipos dispensam disciplina. */
+    tipo?: TipoDeAtividade;
     disciplina?: string;
   }
 ) {
+  if (dados.tipo && dados.tipo !== "Aula") {
+    await page.getByText(dados.tipo, { exact: true }).click();
+  }
+
   await page.fill("#purposeField", dados.finalidade);
 
   await page.click("#professorField");

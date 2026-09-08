@@ -8,7 +8,11 @@ import { listRooms } from "@/lib/repositories/roomRepository";
 import { listClasses } from "@/lib/repositories/classRepository";
 import { listProfessors } from "@/lib/repositories/professorRepository";
 import { listResources } from "@/lib/repositories/resourceRepository";
-import { listSubjects } from "@/lib/repositories/subjectRepository";
+import {
+  listSubjects,
+  listTeachingAssignments,
+} from "@/lib/repositories/subjectRepository";
+import { PERIODO_LETIVO_VIGENTE } from "@/domain/booking/businessHours";
 import { toDateInputValue } from "@/lib/datetime";
 
 /**
@@ -28,12 +32,14 @@ import { toDateInputValue } from "@/lib/datetime";
 export const dynamic = "force-dynamic";
 
 export default async function NovaReservaPage() {
-  const [rooms, professors, classes, resources, subjects] = await Promise.all([
+  const [rooms, professors, classes, resources, subjects, assignments] =
+    await Promise.all([
     listRooms(),
     listProfessors(),
     listClasses(),
     listResources(),
     listSubjects(),
+    listTeachingAssignments(PERIODO_LETIVO_VIGENTE),
   ]);
 
   return (
@@ -65,6 +71,7 @@ export default async function NovaReservaPage() {
           classes={classes}
           resources={resources}
           subjects={subjects}
+          assignments={assignments}
           // A data de hoje é calculada aqui, no servidor, e não dentro do
           // componente de cliente. Assim o valor inicial do campo é o mesmo na
           // renderização do servidor e na hidratação do navegador.

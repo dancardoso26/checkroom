@@ -22,7 +22,10 @@ import type { RoomOption } from "@/lib/repositories/roomRepository";
 import type { ClassOption } from "@/lib/repositories/classRepository";
 import type { ProfessorOption } from "@/lib/repositories/professorRepository";
 import type { ResourceOption } from "@/lib/repositories/resourceRepository";
-import type { SubjectOption } from "@/lib/repositories/subjectRepository";
+import type {
+  SubjectOption,
+  TeachingAssignmentOption,
+} from "@/lib/repositories/subjectRepository";
 
 import { CAMPOS_VAZIOS, ehPeriodoValido, type CamposDaReserva } from "./campos";
 import { ETAPAS, Stepper } from "./stepper";
@@ -57,6 +60,7 @@ type BookingWizardProps = {
   classes: ClassOption[];
   resources: ResourceOption[];
   subjects: SubjectOption[];
+  assignments: TeachingAssignmentOption[];
   hoje: string;
 };
 
@@ -68,6 +72,7 @@ export function BookingWizard({
   classes,
   resources,
   subjects,
+  assignments,
   hoje,
 }: BookingWizardProps) {
   const [etapa, setEtapa] = useState(0);
@@ -127,6 +132,7 @@ export function BookingWizard({
         date: campos.date,
         startTime: campos.startTime,
         endTime: campos.endTime,
+        activityType: campos.activityType,
         subjectId: campos.subjectId,
         resourceIds: recursos,
       });
@@ -142,6 +148,7 @@ export function BookingWizard({
     campos.professorId,
     campos.classId,
     campos.subjectId,
+    campos.activityType,
     campos.date,
     campos.startTime,
     campos.endTime,
@@ -195,7 +202,13 @@ export function BookingWizard({
    * nada disso é validação: quem recusa é a regra no servidor.
    */
   const podeAvancar = [
-    campos.professorId !== "" && campos.classId !== "" && campos.purpose.trim() !== "",
+    // A disciplina entra na condição porque, sendo aula, o vínculo docente é
+    // exigido e a informação para verificá-lo já está toda aqui. Sem isto, o
+    // erro só apareceria duas etapas adiante, quando a análise roda.
+    campos.professorId !== "" &&
+      campos.classId !== "" &&
+      campos.purpose.trim() !== "" &&
+      (campos.activityType !== "class" || campos.subjectId !== ""),
     periodoPreenchido && ehPeriodoValido(campos) && agendaLivre,
     true,
     roomIdValido !== "" && !analisando,
@@ -254,6 +267,7 @@ export function BookingWizard({
                   professors={professors}
                   classes={classes}
                   subjects={subjects}
+                  assignments={assignments}
                 />
               )}
 
@@ -307,6 +321,11 @@ export function BookingWizard({
           <input type="hidden" name="professorId" value={campos.professorId} />
           <input type="hidden" name="classId" value={campos.classId} />
           <input type="hidden" name="subjectId" value={campos.subjectId} />
+          <input
+            type="hidden"
+            name="activityType"
+            value={campos.activityType}
+          />
           <input type="hidden" name="purpose" value={campos.purpose} />
           <input type="hidden" name="date" value={campos.date} />
           <input type="hidden" name="startTime" value={campos.startTime} />

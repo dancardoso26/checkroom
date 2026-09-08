@@ -7,6 +7,7 @@ import type { ClassOption } from "@/lib/repositories/classRepository";
 import type { ProfessorOption } from "@/lib/repositories/professorRepository";
 import type { ResourceOption } from "@/lib/repositories/resourceRepository";
 import type { SubjectOption } from "@/lib/repositories/subjectRepository";
+import { CAMPO_FINALIDADE, ROTULO_DA_ATIVIDADE } from "./campos";
 import { Cabecalho } from "./ui";
 
 export function EtapaConfirmacao({
@@ -18,7 +19,13 @@ export function EtapaConfirmacao({
   resources,
   disciplina,
 }: {
-  campos: { purpose: string; date: string; startTime: string; endTime: string };
+  campos: {
+    activityType: keyof typeof ROTULO_DA_ATIVIDADE;
+    purpose: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+  };
   professor?: ProfessorOption;
   turma?: ClassOption;
   espaco?: RoomOption;
@@ -37,13 +44,21 @@ export function EtapaConfirmacao({
       />
 
       <dl className="grid gap-4 sm:grid-cols-2">
-        <Item termo="Finalidade" valor={campos.purpose} />
+        <Item termo="Tipo" valor={ROTULO_DA_ATIVIDADE[campos.activityType]} />
+        <Item
+          termo={CAMPO_FINALIDADE[campos.activityType].rotulo}
+          valor={campos.purpose}
+        />
         <Item termo="Professor" valor={professor?.name} />
         <Item termo="Turma" valor={turma && `${turma.name} · ${turma.studentCount} alunos`} />
         <Item termo="Curso" valor={turma?.courseName} />
         <Item
           termo="Disciplina"
-          valor={disciplina?.name ?? "Atividade sem disciplina"}
+          valor={
+            campos.activityType === "class"
+              ? disciplina?.name
+              : "Não se aplica"
+          }
         />
         <Item termo="Data" valor={formatFullDate(inicio)} />
         <Item termo="Horário" valor={formatTimeRange(inicio, fim)} />

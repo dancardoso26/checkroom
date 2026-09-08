@@ -19,7 +19,7 @@ intervalo de tempo. Ele é recusado quando:
 | Conflito de turma | a turma já tem aula no horário, **mesmo em outra sala** |
 | Capacidade | a turma tem mais alunos do que o espaço comporta |
 | Recursos | a atividade exige um equipamento que o espaço não oferece |
-| **Vínculo acadêmico** | **o professor não leciona a disciplina informada para aquela turma no período letivo** |
+| **Vínculo acadêmico** | **a atividade é aula e o professor não leciona aquela disciplina para aquela turma no período letivo** |
 | Expediente | o período cai fora do horário de funcionamento (7h às 22h) |
 
 Os conflitos de professor e de turma são o que diferencia o CheckRoom de uma
@@ -33,9 +33,19 @@ turma. Uma reserva com todos os horários livres e o espaço perfeito continua
 sendo recusada se aquele professor não leciona aquela disciplina para aquela
 turma.
 
-A disciplina é opcional, porque nem toda atividade acadêmica é aula: defesa de
-TCC, seminário e reunião de colegiado ocupam espaço sem pertencer a uma. Quando
-ela é informada, o vínculo passa a ser exigido.
+Toda reserva declara um **tipo de atividade**: aula, palestra, prova, defesa ou
+evento. Só a aula exige disciplina e vínculo docente, porque só ela pertence a
+uma disciplina.
+
+Essa declaração não é enfeite. Antes dela a disciplina era simplesmente
+opcional, para acomodar defesa de TCC e seminário, e bastava deixar o campo
+vazio para escapar da verificação do vínculo. Com o tipo declarado, a exigência
+deixa de depender de o usuário não preencher um campo.
+
+O formulário também oferece apenas o que é possível: escolhido o professor, a
+lista de turmas mostra só aquelas para as quais ele leciona, e a de disciplinas
+só as que ele leciona para aquela turma. A combinação impossível deixa de
+existir em vez de ser recusada depois.
 
 O intervalo é fechado no início e aberto no fim. Uma aula que termina às 20h40 e
 outra que começa às 20h40 **não** conflitam, que é o caso normal de uma grade

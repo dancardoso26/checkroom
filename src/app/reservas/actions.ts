@@ -53,6 +53,7 @@ const schema = z.object({
   roomId: z.uuid("Selecione um espaço."),
   professorId: z.uuid("Selecione um professor."),
   classId: z.uuid("Selecione uma turma."),
+  activityType: z.enum(["class", "lecture", "exam", "defense", "event"]),
   // Opcional: nem toda atividade é aula. O campo vem vazio em defesa de TCC ou
   // seminário, e o Zod converte a string vazia em null.
   subjectId: z.union([z.uuid(), z.literal("")]).transform((v) => v || null),
@@ -102,6 +103,7 @@ export type SubmittedValues = {
   roomId: string;
   professorId: string;
   classId: string;
+  activityType: string;
   subjectId: string;
   purpose: string;
   date: string;
@@ -132,6 +134,7 @@ export async function criarReserva(
     roomId: texto(formData.get("roomId")),
     professorId: texto(formData.get("professorId")),
     classId: texto(formData.get("classId")),
+    activityType: texto(formData.get("activityType")),
     subjectId: texto(formData.get("subjectId")),
     purpose: texto(formData.get("purpose")),
     date: texto(formData.get("date")),
@@ -153,6 +156,7 @@ export async function criarReserva(
     roomId: input.roomId,
     professorId: input.professorId,
     classId: input.classId,
+    activityType: input.activityType,
     subjectId: input.subjectId,
     purpose: input.purpose,
     startsAt: combineDateTime(input.date, input.startTime),
@@ -200,6 +204,7 @@ export async function criarReserva(
     roomId: request.roomId,
     professorId: request.professorId,
     classId: request.classId,
+    activityType: request.activityType,
     subjectId: request.subjectId,
     purpose: request.purpose,
     startsAt: request.startsAt,

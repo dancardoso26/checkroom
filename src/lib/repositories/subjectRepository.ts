@@ -29,29 +29,40 @@ export async function listSubjects(): Promise<SubjectOption[]> {
   return data.map((s) => ({ id: s.id, name: s.name, courseId: s.course_id }));
 }
 
-/**
- * As disciplinas que um professor leciona para uma turma no período.
- *
- * Alimenta o formulário: em vez de oferecer o catálogo inteiro e recusar depois,
- * a tela mostra apenas as disciplinas que aquela combinação permite.
- */
-export async function listSubjectsTaughtBy(params: {
+/** Um vínculo, no formato que o formulário usa para filtrar as disciplinas. */
+export type TeachingAssignmentOption = {
   professorId: string;
+  subjectId: string;
   classId: string;
-  term: string;
-}): Promise<string[]> {
+};
+
+/**
+ * Todos os vínculos do período letivo.
+ *
+ * A lista inteira vai para o formulário em vez de uma consulta a cada troca de
+ * professor ou turma. São poucos registros, e o filtro no cliente responde no
+ * mesmo instante em que a pessoa escolhe, sem ida ao servidor.
+ *
+ * É o que permite mostrar apenas as disciplinas possíveis: em vez de oferecer o
+ * catálogo inteiro e recusar depois, a combinação errada deixa de existir.
+ */
+export async function listTeachingAssignments(
+  term: string
+): Promise<TeachingAssignmentOption[]> {
   const { data, error } = await supabaseServer
     .from("teaching_assignments")
-    .select("subject_id")
-    .eq("professor_id", params.professorId)
-    .eq("class_id", params.classId)
-    .eq("term", params.term);
+    .select("professor_id, subject_id, class_id")
+    .eq("term", term);
 
   if (error) {
     throw new Error(`Falha ao consultar as atribuições: ${error.message}`);
   }
 
-  return data.map((linha) => linha.subject_id);
+  return data.map((linha) => ({
+    professorId: linha.professor_id,
+    subjectId: linha.subject_id,
+    classId: linha.class_id,
+  }));
 }
 
 /**

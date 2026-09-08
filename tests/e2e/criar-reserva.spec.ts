@@ -121,6 +121,7 @@ test("impede avançar quando o professor e a turma já têm compromisso", async 
     finalidade: `${PREFIXO_TESTE} conflito`,
     professor: "Ana",
     turma: "SI 8",
+    disciplina: "Engenharia de Software",
   });
   await avancar(page);
 
@@ -148,6 +149,7 @@ test("mostra por que cada espaço incompatível foi descartado", async ({
     finalidade: `${PREFIXO_TESTE} incompatíveis`,
     professor: "Carlos",
     turma: "SI 4",
+    disciplina: "Banco de Dados II",
   });
   await avancar(page);
 
@@ -182,6 +184,7 @@ test("preserva o preenchimento quando a reserva é recusada", async ({ page }) =
     finalidade: `${PREFIXO_TESTE} preservar`,
     professor: "Marina",
     turma: "ENF 6",
+    disciplina: "Saúde Coletiva",
   });
 
   await expect(page.locator("#professorField")).toContainText("Marina");
@@ -200,32 +203,40 @@ test("preserva o preenchimento quando a reserva é recusada", async ({ page }) =
   await expect(page.locator("#professorField")).toContainText("Marina");
 });
 
-test("recusa quando o professor não leciona a disciplina para a turma", async ({
+test("só oferece as turmas com vínculo quando a atividade é aula", async ({
   page,
 }) => {
-  // Marina leciona Saúde Coletiva para ENF 6º, não Banco de Dados II para SI 8º.
-  // Todos os horários estão livres: o que impede a reserva é só o vínculo.
+  // Marina leciona apenas Saúde Coletiva para ENF 6º. Em uma aula, nenhuma outra
+  // turma deve aparecer: a escolha impossível deixa de existir em vez de ser
+  // recusada duas etapas adiante.
   await page.goto("/reservas/nova");
 
-  await preencherAtividade(page, {
-    finalidade: `${PREFIXO_TESTE} sem vínculo`,
-    professor: "Marina",
-    turma: "SI 8",
-    disciplina: "Banco de Dados II",
-  });
-  await avancar(page);
+  await page.click("#professorField");
+  await page.getByRole("option", { name: "Marina" }).first().click();
 
-  await page.fill("#dateField", SEGUNDA);
-  await escolherHorario(page, "startField", "14:00");
-  await escolherHorario(page, "endField", "15:40");
+  await page.click("#classField");
+  const turmas = await page.getByRole("option").allInnerTexts();
+  await page.keyboard.press("Escape");
 
-  await expect(page.getByText(/não leciona a disciplina/)).toBeVisible({
-    timeout: 20_000,
-  });
+  expect(turmas.some((t) => t.includes("ENF 6"))).toBe(true);
+  expect(turmas.some((t) => t.includes("SI 8"))).toBe(false);
+});
 
-  // O vínculo não se resolve escolhendo outro espaço, então o avanço fica
-  // bloqueado pelo mesmo motivo do conflito de agenda.
-  await expect(page.getByRole("button", { name: "Continuar" })).toBeDisabled();
+test("oferece todas as turmas quando a atividade não é aula", async ({
+  page,
+}) => {
+  // Palestra e evento não dependem de vínculo docente, então o filtro sai.
+  await page.goto("/reservas/nova");
+
+  await page.getByText("Palestra", { exact: true }).click();
+
+  await page.click("#professorField");
+  await page.getByRole("option", { name: "Marina" }).first().click();
+
+  await page.click("#classField");
+  const turmas = await page.getByRole("option").allInnerTexts();
+
+  expect(turmas.some((t) => t.includes("SI 8"))).toBe(true);
 });
 
 test("aceita atividade sem disciplina, como seminário ou defesa", async ({
@@ -237,7 +248,8 @@ test("aceita atividade sem disciplina, como seminário ou defesa", async ({
     finalidade: `${PREFIXO_TESTE} defesa de TCC`,
     professor: "Marina",
     turma: "SI 8",
-    // Sem disciplina de propósito.
+    // Defesa não pertence a disciplina, e por isso aceita uma turma sem vínculo.
+    tipo: "Defesa",
   });
   await avancar(page);
 
@@ -258,6 +270,7 @@ test("oferece apenas horários dentro do expediente", async ({ page }) => {
     finalidade: `${PREFIXO_TESTE} horários`,
     professor: "Marina",
     turma: "ENF 6",
+    tipo: "Palestra",
   });
   await avancar(page);
 

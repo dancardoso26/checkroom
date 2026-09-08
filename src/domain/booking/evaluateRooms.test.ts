@@ -49,6 +49,9 @@ function pedido(
     professorId: PROF_ANA,
     classId: CLASS_SI8,
     subjectId: null,
+    // Palestra: a avaliação de espaços não depende de vínculo docente, e usar o
+    // tipo que não o exige mantém cada teste medindo uma coisa só.
+    activityType: "lecture" as const,
     purpose: "Aula de Banco de Dados II",
     startsAt: segunda("19:00"),
     endsAt: segunda("20:40"),

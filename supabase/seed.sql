@@ -130,7 +130,10 @@ join public.resources res on res.name = v.resource_name;
 
 -- As três reservas contra as quais os conflitos são testados, no período
 -- noturno, quando a disputa por espaço realmente acontece.
-insert into public.bookings (room_id, professor_id, class_id, subject_id, purpose, starts_at, ends_at)
+insert into public.bookings (
+  room_id, professor_id, class_id, subject_id, activity_type,
+  purpose, starts_at, ends_at
+)
 values
   -- Base dos três testes de conflito: espaço, professora e turma.
   (
@@ -138,6 +141,7 @@ values
     (select id from public.professors where email = 'ana.moura@umc.br'),
     (select id from public.classes where name = 'SI 8º semestre A'),
     (select id from public.subjects where name = 'Engenharia de Software'),
+    'class',
     'Aula de Engenharia de Software',
     public.seed_slot(0, '19:00'),
     public.seed_slot(0, '20:40')
@@ -149,6 +153,7 @@ values
     (select id from public.professors where email = 'carlos.lima@umc.br'),
     (select id from public.classes where name = 'ENG 2º semestre A'),
     (select id from public.subjects where name = 'Resistência dos Materiais'),
+    'class',
     'Laboratório de Materiais',
     public.seed_slot(0, '19:00'),
     public.seed_slot(0, '20:40')
@@ -158,9 +163,10 @@ values
     (select id from public.rooms where building = 'Bloco C' and name = 'Auditório'),
     (select id from public.professors where email = 'marina.prado@umc.br'),
     (select id from public.classes where name = 'ENF 6º semestre A'),
-    -- Sem disciplina de propósito: seminário não é aula, e é o caso que prova
-    -- que a reserva sem vínculo continua possível.
+    -- Palestra não pertence a disciplina nenhuma, e é o caso que prova que a
+    -- reserva sem vínculo continua possível.
     null,
+    'lecture',
     'Seminário de Saúde Coletiva',
     public.seed_slot(1, '20:00'),
     public.seed_slot(1, '21:40')
@@ -215,10 +221,14 @@ drop function public.seed_slot(integer, time);
 --     ingênuas de comparação de horário.
 --
 --  7. Vínculo acadêmico ausente
---     Marina Alves Prado com a turma SI 8º semestre A na disciplina Banco de
---     Dados II. Ela não leciona essa disciplina para essa turma.
+--     Aula com Marina Alves Prado e a turma SI 8º semestre A. Ela não leciona
+--     nenhuma disciplina para essa turma, e o formulário nem oferece opção.
 --
---  8. Reserva válida
+--  8. Aula sem disciplina
+--     Tipo "aula" com o campo de disciplina vazio. Recusada: o tipo é o que
+--     torna a disciplina obrigatória.
+--
+--  9. Reserva válida
 --     SI 4º semestre B no Bloco C Auditório, quarta 19:00-20:40, exigindo
 --     Projetor. Cabe, tem o recurso, e nada está ocupado.
 --

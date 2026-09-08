@@ -91,6 +91,7 @@ function makeRequest(overrides: Partial<BookingRequest> = {}): BookingRequest {
     professorId: PROF_ANA,
     classId: CLASS_SI8,
     subjectId: SUBJECT_ES,
+    activityType: "class" as const,
     purpose: "Aula de Engenharia de Software",
     startsAt: segunda("19:00"),
     endsAt: segunda("20:40"),
@@ -612,15 +613,41 @@ describe("validateBooking", () => {
       });
     });
 
-    it("aceita atividade sem disciplina, como defesa de TCC ou seminário", () => {
-      // Nem toda atividade acadêmica é aula. Sem disciplina informada não há
-      // vínculo a verificar, e a reserva segue sujeita a todas as outras regras.
+    it("aceita defesa de TCC sem disciplina nem vínculo", () => {
+      // Nem toda atividade acadêmica é aula, e as demais não pertencem a
+      // disciplina nenhuma. A reserva segue sujeita a todas as outras regras.
       const result = validateBooking(
-        makeRequest({ subjectId: null, purpose: "Defesa de TCC" }),
+        makeRequest({
+          activityType: "defense",
+          subjectId: null,
+          purpose: "Defesa de TCC",
+        }),
         makeContext({ teachingAssignment: null })
       );
 
       expect(result).toEqual({ valid: true });
+    });
+
+    it("exige disciplina quando a atividade é aula", () => {
+      // O furo que o tipo de atividade fechou: antes bastava deixar a
+      // disciplina em branco para escapar da verificação do vínculo.
+      const result = validateBooking(
+        makeRequest({ subjectId: null }),
+        makeContext({ teachingAssignment: null })
+      );
+
+      expect(codesOf(result)).toEqual(["SUBJECT_REQUIRED"]);
+    });
+
+    it("não exige vínculo em palestra, prova nem evento", () => {
+      for (const tipo of ["lecture", "exam", "event"] as const) {
+        const result = validateBooking(
+          makeRequest({ activityType: tipo, subjectId: null }),
+          makeContext({ teachingAssignment: null })
+        );
+
+        expect(result, `tipo ${tipo}`).toEqual({ valid: true });
+      }
     });
 
     it("aceita quando o vínculo existe", () => {

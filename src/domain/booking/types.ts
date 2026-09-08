@@ -9,6 +9,15 @@
  */
 
 /**
+ * O que acontece no espaço.
+ *
+ * Só a aula exige disciplina e vínculo docente. Antes disso existir, a
+ * disciplina era opcional para acomodar defesa de TCC e seminário, e bastava
+ * deixá-la vazia para contornar a verificação do vínculo.
+ */
+export type ActivityType = "class" | "lecture" | "exam" | "defense" | "event";
+
+/**
  * Datas como Date, e não string ISO, porque a regra compara instantes. Com
  * string, bastaria esquecer uma conversão para comparar alfabeticamente.
  */
@@ -17,11 +26,11 @@ export type BookingRequest = {
   professorId: string;
   classId: string;
 
+  activityType: ActivityType;
+
   /**
-   * A disciplina da atividade, quando houver.
-   *
-   * Nulo em atividades que não são aula: defesa de TCC, seminário, reunião de
-   * colegiado. Quando informada, a regra passa a exigir o vínculo docente.
+   * A disciplina, obrigatória quando a atividade é aula e ignorada nos demais
+   * tipos, que não pertencem a nenhuma.
    */
   subjectId: string | null;
 
@@ -158,6 +167,9 @@ export type BookingViolation =
    * não tem onde encaixar um vínculo entre docente, disciplina e turma.
    */
   | { code: "NO_TEACHING_ASSIGNMENT"; term: string }
+
+  /** A atividade é aula e nenhuma disciplina foi informada. */
+  | { code: "SUBJECT_REQUIRED" }
 
   /** O espaço não comporta a turma. */
   | { code: "INSUFFICIENT_CAPACITY"; capacity: number; studentCount: number }
