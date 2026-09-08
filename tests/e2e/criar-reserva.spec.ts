@@ -77,6 +77,7 @@ test("cria uma reserva válida do início ao fim", async ({ page }) => {
     finalidade: `${PREFIXO_TESTE} aula de laboratório`,
     professor: "Marina",
     turma: "ENF 6",
+    disciplina: "Saúde Coletiva",
   });
   await avancar(page);
 
@@ -197,6 +198,57 @@ test("preserva o preenchimento quando a reserva é recusada", async ({ page }) =
     `${PREFIXO_TESTE} preservar`
   );
   await expect(page.locator("#professorField")).toContainText("Marina");
+});
+
+test("recusa quando o professor não leciona a disciplina para a turma", async ({
+  page,
+}) => {
+  // Marina leciona Saúde Coletiva para ENF 6º, não Banco de Dados II para SI 8º.
+  // Todos os horários estão livres: o que impede a reserva é só o vínculo.
+  await page.goto("/reservas/nova");
+
+  await preencherAtividade(page, {
+    finalidade: `${PREFIXO_TESTE} sem vínculo`,
+    professor: "Marina",
+    turma: "SI 8",
+    disciplina: "Banco de Dados II",
+  });
+  await avancar(page);
+
+  await page.fill("#dateField", SEGUNDA);
+  await escolherHorario(page, "startField", "14:00");
+  await escolherHorario(page, "endField", "15:40");
+
+  await expect(page.getByText(/não leciona a disciplina/)).toBeVisible({
+    timeout: 20_000,
+  });
+
+  // O vínculo não se resolve escolhendo outro espaço, então o avanço fica
+  // bloqueado pelo mesmo motivo do conflito de agenda.
+  await expect(page.getByRole("button", { name: "Continuar" })).toBeDisabled();
+});
+
+test("aceita atividade sem disciplina, como seminário ou defesa", async ({
+  page,
+}) => {
+  await page.goto("/reservas/nova");
+
+  await preencherAtividade(page, {
+    finalidade: `${PREFIXO_TESTE} defesa de TCC`,
+    professor: "Marina",
+    turma: "SI 8",
+    // Sem disciplina de propósito.
+  });
+  await avancar(page);
+
+  await page.fill("#dateField", SEGUNDA);
+  await escolherHorario(page, "startField", "16:00");
+  await escolherHorario(page, "endField", "17:40");
+
+  await expect(page.getByText("Horário disponível")).toBeVisible({
+    timeout: 20_000,
+  });
+  await esperarAnalise(page);
 });
 
 test("oferece apenas horários dentro do expediente", async ({ page }) => {

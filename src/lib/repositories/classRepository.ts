@@ -40,6 +40,7 @@ export type ClassOption = {
   id: string;
   name: string;
   studentCount: number;
+  courseId: string;
   courseName: string;
 };
 
@@ -52,7 +53,7 @@ export type ClassOption = {
 export async function listClasses(): Promise<ClassOption[]> {
   const { data, error } = await supabaseServer
     .from("classes")
-    .select("id, name, student_count, courses(name)")
+    .select("id, name, student_count, course_id, courses(name)")
     .order("name");
 
   if (error) {
@@ -63,6 +64,7 @@ export async function listClasses(): Promise<ClassOption[]> {
     id: turma.id,
     name: turma.name,
     studentCount: turma.student_count,
+    courseId: turma.course_id,
     // courses vem como objeto porque course_id é uma chave estrangeira
     // obrigatória: cada turma tem exatamente um curso. Fosse a relação inversa,
     // o PostgREST devolveria um array.

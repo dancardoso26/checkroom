@@ -12,6 +12,8 @@ import {
   toResourceNameMap,
 } from "@/lib/repositories/resourceRepository";
 import { findBookingsInPeriod } from "@/lib/repositories/bookingRepository";
+import { findTeachingAssignment } from "@/lib/repositories/subjectRepository";
+import { PERIODO_LETIVO_VIGENTE } from "@/domain/booking/businessHours";
 import { combineDateTime } from "@/lib/datetime";
 
 /**
@@ -29,6 +31,7 @@ import { combineDateTime } from "@/lib/datetime";
 const schema = z.object({
   professorId: z.uuid(),
   classId: z.uuid(),
+  subjectId: z.union([z.uuid(), z.literal("")]).transform((v) => v || null),
   date: z.iso.date(),
   startTime: z.iso.time(),
   endTime: z.iso.time(),
@@ -73,10 +76,17 @@ export async function analisarReserva(
   const startsAt = combineDateTime(dados.date, dados.startTime);
   const endsAt = combineDateTime(dados.date, dados.endTime);
 
-  const [classGroup, rooms, resources, bookings] = await Promise.all([
+  const [classGroup, rooms, resources, teachingAssignment, bookings] =
+    await Promise.all([
     findClassSnapshot(dados.classId),
     listRooms(),
     listResources(),
+    findTeachingAssignment({
+      professorId: dados.professorId,
+      subjectId: dados.subjectId,
+      classId: dados.classId,
+      term: PERIODO_LETIVO_VIGENTE,
+    }),
     // Período invertido produz intervalo vazio e consulta sem resultado. A regra
     // recusa por INVALID_PERIOD antes de comparar sobreposição.
     findBookingsInPeriod({ startsAt, endsAt }),
@@ -89,6 +99,7 @@ export async function analisarReserva(
   const pedido = {
     professorId: dados.professorId,
     classId: dados.classId,
+    subjectId: dados.subjectId,
     purpose: "análise",
     startsAt,
     endsAt,
@@ -97,6 +108,7 @@ export async function analisarReserva(
 
   const contexto = {
     classGroup,
+    teachingAssignment,
     conflictingBookings: bookings,
     now: new Date(),
   };

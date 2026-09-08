@@ -33,7 +33,16 @@ export async function escolherHorario(
 
 export async function preencherAtividade(
   page: Page,
-  dados: { finalidade: string; professor: string; turma: string }
+  dados: {
+    finalidade: string;
+    professor: string;
+    turma: string;
+    /**
+     * Opcional, como no formulário: atividades que não são aula seguem sem
+     * disciplina e sem vínculo docente a verificar.
+     */
+    disciplina?: string;
+  }
 ) {
   await page.fill("#purposeField", dados.finalidade);
 
@@ -42,6 +51,11 @@ export async function preencherAtividade(
 
   await page.click("#classField");
   await page.getByRole("option", { name: dados.turma }).first().click();
+
+  if (dados.disciplina) {
+    await page.click("#subjectField");
+    await page.getByRole("option", { name: dados.disciplina }).first().click();
+  }
 }
 
 export async function avancar(page: Page) {

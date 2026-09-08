@@ -10,6 +10,7 @@ import { combineDateTime } from "@/lib/datetime";
 export type CamposDaReserva = {
   professorId: string;
   classId: string;
+  subjectId: string;
   purpose: string;
   date: string;
   startTime: string;
@@ -20,6 +21,7 @@ export type CamposDaReserva = {
 export const CAMPOS_VAZIOS = (hoje: string): CamposDaReserva => ({
   professorId: "",
   classId: "",
+  subjectId: "",
   purpose: "",
   date: hoje,
   startTime: "",

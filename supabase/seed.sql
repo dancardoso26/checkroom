@@ -14,6 +14,8 @@
 truncate table
   public.booking_resources,
   public.bookings,
+  public.teaching_assignments,
+  public.subjects,
   public.room_resources,
   public.classes,
   public.rooms,
@@ -75,6 +77,28 @@ insert into public.classes (name, course_id, student_count) values
   ('ENF 6º semestre A', (select id from public.courses where name = 'Enfermagem'),            30);
 
 
+-- As disciplinas, e quem leciona cada uma para cada turma. É o vínculo que
+-- impede uma professora de Enfermagem reservar em nome da turma de Engenharia.
+insert into public.subjects (name, course_id) values
+  ('Banco de Dados II',      (select id from public.courses where name = 'Sistemas de Informação')),
+  ('Engenharia de Software', (select id from public.courses where name = 'Sistemas de Informação')),
+  ('Resistência dos Materiais', (select id from public.courses where name = 'Engenharia Civil')),
+  ('Saúde Coletiva',         (select id from public.courses where name = 'Enfermagem'));
+
+insert into public.teaching_assignments (professor_id, subject_id, class_id, term)
+select p.id, s.id, c.id, v.term
+from (values
+  ('ana.moura@umc.br',    'Engenharia de Software',     'SI 8º semestre A',  '2026.2'),
+  ('ana.moura@umc.br',    'Banco de Dados II',          'SI 8º semestre A',  '2026.2'),
+  ('carlos.lima@umc.br',  'Banco de Dados II',          'SI 4º semestre B',  '2026.2'),
+  ('carlos.lima@umc.br',  'Resistência dos Materiais',  'ENG 2º semestre A', '2026.2'),
+  ('marina.prado@umc.br', 'Saúde Coletiva',             'ENF 6º semestre A', '2026.2')
+) as v (email, subject_name, class_name, term)
+join public.professors p on p.email = v.email
+join public.subjects s   on s.name = v.subject_name
+join public.classes c    on c.name = v.class_name;
+
+
 -- A sala 102 é pequena e mal equipada de propósito: é ela que faz as
 -- verificações de capacidade e de recurso falharem quando precisam falhar.
 insert into public.rooms (name, building, capacity, room_type) values
@@ -106,13 +130,14 @@ join public.resources res on res.name = v.resource_name;
 
 -- As três reservas contra as quais os conflitos são testados, no período
 -- noturno, quando a disputa por espaço realmente acontece.
-insert into public.bookings (room_id, professor_id, class_id, purpose, starts_at, ends_at)
+insert into public.bookings (room_id, professor_id, class_id, subject_id, purpose, starts_at, ends_at)
 values
   -- Base dos três testes de conflito: espaço, professora e turma.
   (
     (select id from public.rooms where building = 'Bloco A' and name = '101'),
     (select id from public.professors where email = 'ana.moura@umc.br'),
     (select id from public.classes where name = 'SI 8º semestre A'),
+    (select id from public.subjects where name = 'Engenharia de Software'),
     'Aula de Engenharia de Software',
     public.seed_slot(0, '19:00'),
     public.seed_slot(0, '20:40')
@@ -123,6 +148,7 @@ values
     (select id from public.rooms where building = 'Bloco B' and name = 'Lab 01'),
     (select id from public.professors where email = 'carlos.lima@umc.br'),
     (select id from public.classes where name = 'ENG 2º semestre A'),
+    (select id from public.subjects where name = 'Resistência dos Materiais'),
     'Laboratório de Materiais',
     public.seed_slot(0, '19:00'),
     public.seed_slot(0, '20:40')
@@ -132,6 +158,9 @@ values
     (select id from public.rooms where building = 'Bloco C' and name = 'Auditório'),
     (select id from public.professors where email = 'marina.prado@umc.br'),
     (select id from public.classes where name = 'ENF 6º semestre A'),
+    -- Sem disciplina de propósito: seminário não é aula, e é o caso que prova
+    -- que a reserva sem vínculo continua possível.
+    null,
     'Seminário de Saúde Coletiva',
     public.seed_slot(1, '20:00'),
     public.seed_slot(1, '21:40')
@@ -185,7 +214,11 @@ drop function public.seed_slot(integer, time);
 --     conta como sobreposição. É o caso que mais falha em implementações
 --     ingênuas de comparação de horário.
 --
---  7. Reserva válida
+--  7. Vínculo acadêmico ausente
+--     Marina Alves Prado com a turma SI 8º semestre A na disciplina Banco de
+--     Dados II. Ela não leciona essa disciplina para essa turma.
+--
+--  8. Reserva válida
 --     SI 4º semestre B no Bloco C Auditório, quarta 19:00-20:40, exigindo
 --     Projetor. Cabe, tem o recurso, e nada está ocupado.
 --

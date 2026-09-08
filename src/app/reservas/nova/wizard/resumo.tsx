@@ -8,6 +8,7 @@ import type { RoomOption } from "@/lib/repositories/roomRepository";
 import type { ClassOption } from "@/lib/repositories/classRepository";
 import type { ProfessorOption } from "@/lib/repositories/professorRepository";
 import type { ResourceOption } from "@/lib/repositories/resourceRepository";
+import type { SubjectOption } from "@/lib/repositories/subjectRepository";
 import { ehPeriodoValido } from "./campos";
 
 export function Resumo({
@@ -17,6 +18,7 @@ export function Resumo({
   campos,
   recursos,
   resources,
+  disciplina,
 }: {
   professor?: ProfessorOption;
   turma?: ClassOption;
@@ -24,6 +26,7 @@ export function Resumo({
   campos: { date: string; startTime: string; endTime: string };
   recursos: string[];
   resources: ResourceOption[];
+  disciplina?: SubjectOption;
 }) {
   const temPeriodo = ehPeriodoValido(campos);
 
@@ -38,6 +41,10 @@ export function Resumo({
       <dl className="space-y-3 text-sm">
         <LinhaResumo termo="Professor" valor={professor?.name} />
         <LinhaResumo termo="Turma" valor={turma?.name} />
+        <LinhaResumo
+          termo="Disciplina"
+          valor={disciplina?.name ?? (turma ? "Atividade sem disciplina" : undefined)}
+        />
         <LinhaResumo
           termo="Data e horário"
           valor={

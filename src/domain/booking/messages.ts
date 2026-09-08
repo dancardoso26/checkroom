@@ -64,6 +64,9 @@ export function describeViolation(
         violation.conflict.purpose
       }", em ${periodOf(violation.conflict)}.`;
 
+    case "NO_TEACHING_ASSIGNMENT":
+      return `Este professor não leciona a disciplina selecionada para esta turma no período ${violation.term}.`;
+
     case "INSUFFICIENT_CAPACITY":
       return `O espaço comporta ${violation.capacity} pessoas e a turma tem ${violation.studentCount} alunos.`;
 

@@ -22,7 +22,9 @@ dependem da extensão.
 | 5 | `migrations/20260907000000_create_booking_function.sql` | Cria `create_booking`, a gravação atômica |
 | 6 | `migrations/20260907000100_grants.sql` | Concede acesso às tabelas ao papel do servidor |
 | 7 | `migrations/20260907000200_booking_created_by.sql` | Acrescenta quem registrou a reserva |
-| 8 | `seed.sql` | Popula com dados de exemplo (opcional, só em desenvolvimento) |
+| 8 | `migrations/20260908000000_academic_context.sql` | Cria `subjects` e `teaching_assignments`, e a disciplina na reserva |
+| 9 | `migrations/20260908000100_create_booking_with_subject.sql` | Atualiza `create_booking` para gravar a disciplina |
+| 10 | `seed.sql` | Popula com dados de exemplo (opcional, só em desenvolvimento) |
 
 O `seed.sql` **apaga** o conteúdo das tabelas antes de inserir. É intencional,
 para que ele possa ser reexecutado durante o desenvolvimento, mas não deve ser

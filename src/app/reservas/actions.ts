@@ -19,6 +19,8 @@ import {
   createBooking,
   findConflictCandidates,
 } from "@/lib/repositories/bookingRepository";
+import { findTeachingAssignment } from "@/lib/repositories/subjectRepository";
+import { PERIODO_LETIVO_VIGENTE } from "@/domain/booking/businessHours";
 
 /**
  * Server Action de criação de reserva.
@@ -51,6 +53,9 @@ const schema = z.object({
   roomId: z.uuid("Selecione um espaço."),
   professorId: z.uuid("Selecione um professor."),
   classId: z.uuid("Selecione uma turma."),
+  // Opcional: nem toda atividade é aula. O campo vem vazio em defesa de TCC ou
+  // seminário, e o Zod converte a string vazia em null.
+  subjectId: z.union([z.uuid(), z.literal("")]).transform((v) => v || null),
   purpose: z
     .string()
     .trim()
@@ -97,6 +102,7 @@ export type SubmittedValues = {
   roomId: string;
   professorId: string;
   classId: string;
+  subjectId: string;
   purpose: string;
   date: string;
   startTime: string;
@@ -126,6 +132,7 @@ export async function criarReserva(
     roomId: texto(formData.get("roomId")),
     professorId: texto(formData.get("professorId")),
     classId: texto(formData.get("classId")),
+    subjectId: texto(formData.get("subjectId")),
     purpose: texto(formData.get("purpose")),
     date: texto(formData.get("date")),
     startTime: texto(formData.get("startTime")),
@@ -146,6 +153,7 @@ export async function criarReserva(
     roomId: input.roomId,
     professorId: input.professorId,
     classId: input.classId,
+    subjectId: input.subjectId,
     purpose: input.purpose,
     startsAt: combineDateTime(input.date, input.startTime),
     endsAt: combineDateTime(input.date, input.endTime),
@@ -154,12 +162,19 @@ export async function criarReserva(
 
   // 2. Regra. As quatro consultas são independentes, então rodam em paralelo.
 
-  const [room, classGroup, conflictingBookings, resources] = await Promise.all([
-    findRoomSnapshot(request.roomId),
-    findClassSnapshot(request.classId),
-    findConflictCandidates(request),
-    listResources(),
-  ]);
+  const [room, classGroup, conflictingBookings, resources, teachingAssignment] =
+    await Promise.all([
+      findRoomSnapshot(request.roomId),
+      findClassSnapshot(request.classId),
+      findConflictCandidates(request),
+      listResources(),
+      findTeachingAssignment({
+        professorId: request.professorId,
+        subjectId: request.subjectId,
+        classId: request.classId,
+        term: PERIODO_LETIVO_VIGENTE,
+      }),
+    ]);
 
   const resourceNames = toResourceNameMap(resources);
 
@@ -170,6 +185,7 @@ export async function criarReserva(
   const veredito = validateBooking(request, {
     room,
     classGroup,
+    teachingAssignment,
     conflictingBookings,
     now,
   });
@@ -184,6 +200,7 @@ export async function criarReserva(
     roomId: request.roomId,
     professorId: request.professorId,
     classId: request.classId,
+    subjectId: request.subjectId,
     purpose: request.purpose,
     startsAt: request.startsAt,
     endsAt: request.endsAt,
@@ -200,6 +217,7 @@ export async function criarReserva(
     const revalidacao = validateBooking(request, {
       room,
       classGroup,
+      teachingAssignment,
       conflictingBookings: conflitosAtuais,
       now,
     });

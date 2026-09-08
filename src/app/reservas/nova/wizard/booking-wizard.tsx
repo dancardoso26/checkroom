@@ -22,6 +22,7 @@ import type { RoomOption } from "@/lib/repositories/roomRepository";
 import type { ClassOption } from "@/lib/repositories/classRepository";
 import type { ProfessorOption } from "@/lib/repositories/professorRepository";
 import type { ResourceOption } from "@/lib/repositories/resourceRepository";
+import type { SubjectOption } from "@/lib/repositories/subjectRepository";
 
 import { CAMPOS_VAZIOS, ehPeriodoValido, type CamposDaReserva } from "./campos";
 import { ETAPAS, Stepper } from "./stepper";
@@ -55,6 +56,7 @@ type BookingWizardProps = {
   professors: ProfessorOption[];
   classes: ClassOption[];
   resources: ResourceOption[];
+  subjects: SubjectOption[];
   hoje: string;
 };
 
@@ -65,6 +67,7 @@ export function BookingWizard({
   professors,
   classes,
   resources,
+  subjects,
   hoje,
 }: BookingWizardProps) {
   const [etapa, setEtapa] = useState(0);
@@ -124,6 +127,7 @@ export function BookingWizard({
         date: campos.date,
         startTime: campos.startTime,
         endTime: campos.endTime,
+        subjectId: campos.subjectId,
         resourceIds: recursos,
       });
 
@@ -137,6 +141,7 @@ export function BookingWizard({
     dadosParaAnalise,
     campos.professorId,
     campos.classId,
+    campos.subjectId,
     campos.date,
     campos.startTime,
     campos.endTime,
@@ -248,6 +253,7 @@ export function BookingWizard({
                   alterar={alterar}
                   professors={professors}
                   classes={classes}
+                  subjects={subjects}
                 />
               )}
 
@@ -289,6 +295,7 @@ export function BookingWizard({
                   espaco={espaco}
                   recursos={recursos}
                   resources={resources}
+                  disciplina={subjects.find((s) => s.id === campos.subjectId)}
                 />
               )}
             </CardContent>
@@ -299,6 +306,7 @@ export function BookingWizard({
           <input type="hidden" name="roomId" value={roomIdValido} />
           <input type="hidden" name="professorId" value={campos.professorId} />
           <input type="hidden" name="classId" value={campos.classId} />
+          <input type="hidden" name="subjectId" value={campos.subjectId} />
           <input type="hidden" name="purpose" value={campos.purpose} />
           <input type="hidden" name="date" value={campos.date} />
           <input type="hidden" name="startTime" value={campos.startTime} />
@@ -370,6 +378,7 @@ export function BookingWizard({
           campos={campos}
           recursos={recursos}
           resources={resources}
+          disciplina={subjects.find((s) => s.id === campos.subjectId)}
         />
       </div>
     </div>

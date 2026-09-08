@@ -48,6 +48,7 @@ function pedido(
   return {
     professorId: PROF_ANA,
     classId: CLASS_SI8,
+    subjectId: null,
     purpose: "Aula de Banco de Dados II",
     startsAt: segunda("19:00"),
     endsAt: segunda("20:40"),
@@ -61,6 +62,7 @@ function contexto(
 ): Omit<BookingContext, "room"> {
   return {
     classGroup: makeClass(),
+    teachingAssignment: null,
     conflictingBookings: [],
     now: NOW,
     ...overrides,

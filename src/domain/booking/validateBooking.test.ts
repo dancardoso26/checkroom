@@ -41,6 +41,7 @@ const PROF_CARLOS = "prof-carlos";
 const CLASS_SI8 = "class-si8";
 const CLASS_ENG2 = "class-eng2";
 const RES_PROJETOR = "res-projetor";
+const SUBJECT_ES = "subject-engenharia-software";
 const RES_COMPUTADORES = "res-computadores";
 
 /**
@@ -89,6 +90,7 @@ function makeRequest(overrides: Partial<BookingRequest> = {}): BookingRequest {
     roomId: ROOM_101,
     professorId: PROF_ANA,
     classId: CLASS_SI8,
+    subjectId: SUBJECT_ES,
     purpose: "Aula de Engenharia de Software",
     startsAt: segunda("19:00"),
     endsAt: segunda("20:40"),
@@ -101,6 +103,15 @@ function makeContext(overrides: Partial<BookingContext> = {}): BookingContext {
   return {
     room: makeRoom(),
     classGroup: makeClass(),
+    // Por padrão o vínculo existe: os casos que o testam o removem
+    // explicitamente, e assim nenhum outro teste falha por um motivo alheio ao
+    // que está verificando.
+    teachingAssignment: {
+      professorId: PROF_ANA,
+      subjectId: SUBJECT_ES,
+      classId: CLASS_SI8,
+      term: "2026.2",
+    },
     conflictingBookings: [],
     now: NOW,
     ...overrides,
@@ -571,6 +582,51 @@ describe("validateBooking", () => {
       );
 
       expect(codesOf(result)).toContain("STARTS_IN_THE_PAST");
+    });
+  });
+
+  describe("vínculo acadêmico", () => {
+    it("recusa quando o professor não leciona a disciplina para a turma", () => {
+      // Todos os horários livres, o espaço comporta e tem os recursos. O que
+      // torna a reserva impossível é apenas o vínculo inexistente.
+      const result = validateBooking(
+        makeRequest(),
+        makeContext({ teachingAssignment: null })
+      );
+
+      expect(codesOf(result)).toEqual(["NO_TEACHING_ASSIGNMENT"]);
+    });
+
+    it("informa o período letivo na violação", () => {
+      const result = validateBooking(
+        makeRequest(),
+        makeContext({ teachingAssignment: null })
+      );
+
+      expect(result.valid).toBe(false);
+      if (result.valid) return;
+
+      expect(result.violations[0]).toMatchObject({
+        code: "NO_TEACHING_ASSIGNMENT",
+        term: expect.stringMatching(/^\d{4}\.\d$/),
+      });
+    });
+
+    it("aceita atividade sem disciplina, como defesa de TCC ou seminário", () => {
+      // Nem toda atividade acadêmica é aula. Sem disciplina informada não há
+      // vínculo a verificar, e a reserva segue sujeita a todas as outras regras.
+      const result = validateBooking(
+        makeRequest({ subjectId: null, purpose: "Defesa de TCC" }),
+        makeContext({ teachingAssignment: null })
+      );
+
+      expect(result).toEqual({ valid: true });
+    });
+
+    it("aceita quando o vínculo existe", () => {
+      const result = validateBooking(makeRequest(), makeContext());
+
+      expect(result).toEqual({ valid: true });
     });
   });
 

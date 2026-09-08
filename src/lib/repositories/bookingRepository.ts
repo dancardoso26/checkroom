@@ -121,6 +121,7 @@ export async function createBooking(input: {
   roomId: string;
   professorId: string;
   classId: string;
+  subjectId: string | null;
   purpose: string;
   startsAt: Date;
   endsAt: Date;
@@ -130,6 +131,10 @@ export async function createBooking(input: {
     p_room_id: input.roomId,
     p_professor_id: input.professorId,
     p_class_id: input.classId,
+    // undefined omite o parâmetro na chamada, e o banco aplica o default null.
+    // Enviar null explícito seria equivalente no PostgreSQL, mas o tipo gerado
+    // descreve o parâmetro como opcional, e respeitá-lo evita um cast.
+    p_subject_id: input.subjectId ?? undefined,
     p_purpose: input.purpose.trim(),
     p_starts_at: input.startsAt.toISOString(),
     p_ends_at: input.endsAt.toISOString(),

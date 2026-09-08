@@ -16,6 +16,15 @@ export type BookingRequest = {
   roomId: string;
   professorId: string;
   classId: string;
+
+  /**
+   * A disciplina da atividade, quando houver.
+   *
+   * Nulo em atividades que não são aula: defesa de TCC, seminário, reunião de
+   * colegiado. Quando informada, a regra passa a exigir o vínculo docente.
+   */
+  subjectId: string | null;
+
   purpose: string;
   startsAt: Date;
   endsAt: Date;
@@ -32,6 +41,18 @@ export type RoomSnapshot = {
   capacity: number;
   /** Recursos que este espaço oferece, vindos de room_resources. */
   resourceIds: string[];
+};
+
+/**
+ * A confirmação de que o professor leciona a disciplina para a turma naquele
+ * período. A regra só precisa saber que existe, então carrega apenas o que a
+ * mensagem de erro usa.
+ */
+export type TeachingAssignmentSnapshot = {
+  professorId: string;
+  subjectId: string;
+  classId: string;
+  term: string;
 };
 
 /** A turma. O nome evita "class", palavra reservada em JavaScript. */
@@ -68,6 +89,16 @@ export type BookingContext = {
 
   /** Nulo pelo mesmo motivo que room. */
   classGroup: ClassSnapshot | null;
+
+  /**
+   * O vínculo entre professor, disciplina e turma no período letivo.
+   *
+   * Nulo quando o pedido não informa disciplina, e também quando informa mas o
+   * vínculo não existe. A regra distingue os dois casos pelo subjectId do
+   * pedido: sem disciplina não há o que verificar; com disciplina e sem vínculo,
+   * a combinação é academicamente impossível.
+   */
+  teachingAssignment: TeachingAssignmentSnapshot | null;
 
   /**
    * Reservas que podem colidir. O repositório já filtra por período para o
@@ -120,6 +151,13 @@ export type BookingViolation =
 
   /** A turma já tem aula no período, em qualquer espaço. */
   | { code: "CLASS_CONFLICT"; conflict: ExistingBooking }
+
+  /**
+   * O professor não leciona aquela disciplina para aquela turma no período. É a
+   * verificação que torna o modelo exclusivo de educação: uma agenda genérica
+   * não tem onde encaixar um vínculo entre docente, disciplina e turma.
+   */
+  | { code: "NO_TEACHING_ASSIGNMENT"; term: string }
 
   /** O espaço não comporta a turma. */
   | { code: "INSUFFICIENT_CAPACITY"; capacity: number; studentCount: number }

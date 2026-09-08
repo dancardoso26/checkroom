@@ -48,3 +48,16 @@ export const FECHAMENTO = minutosParaHora(FECHAMENTO_EM_MINUTOS);
 export const ULTIMO_INICIO = minutosParaHora(
   FECHAMENTO_EM_MINUTOS - PASSO_EM_MINUTOS
 );
+
+/**
+ * O período letivo vigente.
+ *
+ * É uma constante porque o calendário acadêmico ainda não existe como tabela.
+ * Quando entrar, com datas de início, fim, recesso e feriados, o período passa a
+ * ser deduzido da data da reserva em vez de fixado aqui, e a regra deixa de
+ * receber este valor pronto.
+ *
+ * Enquanto isso, ele permite validar o vínculo docente sem construir o
+ * calendário inteiro, que é uma entrega bem maior.
+ */
+export const PERIODO_LETIVO_VIGENTE = "2026.2";

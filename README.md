@@ -19,11 +19,23 @@ intervalo de tempo. Ele é recusado quando:
 | Conflito de turma | a turma já tem aula no horário, **mesmo em outra sala** |
 | Capacidade | a turma tem mais alunos do que o espaço comporta |
 | Recursos | a atividade exige um equipamento que o espaço não oferece |
+| **Vínculo acadêmico** | **o professor não leciona a disciplina informada para aquela turma no período letivo** |
 | Expediente | o período cai fora do horário de funcionamento (7h às 22h) |
 
 Os conflitos de professor e de turma são o que diferencia o CheckRoom de uma
 agenda genérica de salas: não adianta a sala estar livre se a professora está
 dando aula em outro bloco.
+
+O vínculo acadêmico vai além disso. Ele é o que torna o modelo **exclusivo de
+educação**, e não transportável para qualquer área: uma agenda de consultórios
+ou de coworking não tem onde encaixar a relação entre docente, disciplina e
+turma. Uma reserva com todos os horários livres e o espaço perfeito continua
+sendo recusada se aquele professor não leciona aquela disciplina para aquela
+turma.
+
+A disciplina é opcional, porque nem toda atividade acadêmica é aula: defesa de
+TCC, seminário e reunião de colegiado ocupam espaço sem pertencer a uma. Quando
+ela é informada, o vínculo passa a ser exigido.
 
 O intervalo é fechado no início e aberto no fim. Uma aula que termina às 20h40 e
 outra que começa às 20h40 **não** conflitam, que é o caso normal de uma grade
@@ -108,7 +120,8 @@ políticas de Row Level Security. As políticas estão preparadas no banco, mas 
 `auth.uid()` não há como escrevê-las. **O sistema não deve ser publicado neste
 estado.**
 
-**Contexto acadêmico completo.** A reserva ainda não representa disciplina,
-período letivo, calendário acadêmico nem o vínculo entre professor, turma e
-disciplina. Na prática, o sistema hoje aceita qualquer professor reservando para
-qualquer turma. É a evolução prevista para a etapa seguinte.
+**Calendário acadêmico.** O período letivo existe como rótulo no vínculo
+docente (`2026.2`), mas não como calendário com datas de início, fim, recesso e
+feriados. Por isso o sistema ainda não recusa uma reserva marcada em pleno
+recesso. Quando o calendário entrar, o período passa a ser deduzido da data da
+reserva em vez de fixado em constante, e a estrutura já prevê essa troca.

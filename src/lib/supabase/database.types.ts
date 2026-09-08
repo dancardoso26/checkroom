@@ -55,6 +55,7 @@ export type Database = {
           purpose: string
           room_id: string
           starts_at: string
+          subject_id: string | null
         }
         Insert: {
           class_id: string
@@ -66,6 +67,7 @@ export type Database = {
           purpose: string
           room_id: string
           starts_at: string
+          subject_id?: string | null
         }
         Update: {
           class_id?: string
@@ -77,6 +79,7 @@ export type Database = {
           purpose?: string
           room_id?: string
           starts_at?: string
+          subject_id?: string | null
         }
         Relationships: [
           {
@@ -98,6 +101,13 @@ export type Database = {
             columns: ["room_id"]
             isOneToOne: false
             referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
             referencedColumns: ["id"]
           },
         ]
@@ -251,6 +261,84 @@ export type Database = {
         }
         Relationships: []
       }
+      subjects: {
+        Row: {
+          course_id: string
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subjects_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teaching_assignments: {
+        Row: {
+          class_id: string
+          created_at: string
+          id: string
+          professor_id: string
+          subject_id: string
+          term: string
+        }
+        Insert: {
+          class_id: string
+          created_at?: string
+          id?: string
+          professor_id: string
+          subject_id: string
+          term: string
+        }
+        Update: {
+          class_id?: string
+          created_at?: string
+          id?: string
+          professor_id?: string
+          subject_id?: string
+          term?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teaching_assignments_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teaching_assignments_professor_id_fkey"
+            columns: ["professor_id"]
+            isOneToOne: false
+            referencedRelation: "professors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teaching_assignments_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -265,6 +353,7 @@ export type Database = {
           p_resource_ids: string[]
           p_room_id: string
           p_starts_at: string
+          p_subject_id?: string
         }
         Returns: string
       }

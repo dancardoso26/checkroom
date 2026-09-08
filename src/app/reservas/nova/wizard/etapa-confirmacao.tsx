@@ -6,6 +6,7 @@ import type { RoomOption } from "@/lib/repositories/roomRepository";
 import type { ClassOption } from "@/lib/repositories/classRepository";
 import type { ProfessorOption } from "@/lib/repositories/professorRepository";
 import type { ResourceOption } from "@/lib/repositories/resourceRepository";
+import type { SubjectOption } from "@/lib/repositories/subjectRepository";
 import { Cabecalho } from "./ui";
 
 export function EtapaConfirmacao({
@@ -15,6 +16,7 @@ export function EtapaConfirmacao({
   espaco,
   recursos,
   resources,
+  disciplina,
 }: {
   campos: { purpose: string; date: string; startTime: string; endTime: string };
   professor?: ProfessorOption;
@@ -22,6 +24,7 @@ export function EtapaConfirmacao({
   espaco?: RoomOption;
   recursos: string[];
   resources: ResourceOption[];
+  disciplina?: SubjectOption;
 }) {
   const inicio = combineDateTime(campos.date, campos.startTime);
   const fim = combineDateTime(campos.date, campos.endTime);
@@ -38,6 +41,10 @@ export function EtapaConfirmacao({
         <Item termo="Professor" valor={professor?.name} />
         <Item termo="Turma" valor={turma && `${turma.name} · ${turma.studentCount} alunos`} />
         <Item termo="Curso" valor={turma?.courseName} />
+        <Item
+          termo="Disciplina"
+          valor={disciplina?.name ?? "Atividade sem disciplina"}
+        />
         <Item termo="Data" valor={formatFullDate(inicio)} />
         <Item termo="Horário" valor={formatTimeRange(inicio, fim)} />
         <Item termo="Espaço" valor={espaco && `${espaco.building} · ${espaco.name}`} />
