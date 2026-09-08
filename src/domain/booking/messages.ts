@@ -2,51 +2,25 @@ import { formatPeriod } from "@/lib/datetime";
 import type { BookingViolation, ExistingBooking } from "./types";
 
 /**
- * TRADUÇÃO DAS VIOLAÇÕES PARA TEXTO
+ * Traduz as violações em frases para o usuário.
  *
- * validateBooking devolve fatos: um código e os dados que o sustentam. Este
- * arquivo transforma esses fatos em frases para o usuário.
- *
- * POR QUE SÃO ARQUIVOS SEPARADOS
- *
- * Seria mais curto colocar um campo "message" em cada violação e acabar. A
- * separação existe porque as duas coisas mudam por motivos diferentes.
- *
- * O texto muda por motivo de produto: alguém acha a frase seca, o orientador
- * pede mais clareza, o sistema um dia é traduzido. A regra muda por motivo de
- * negócio: a instituição passa a exigir intervalo mínimo entre aulas.
- *
- * Com os dois no mesmo arquivo, ajustar uma vírgula em uma mensagem obrigaria a
- * mexer no arquivo da regra e a rodar os testes da regra de novo. Separados, o
- * teste de validateBooking compara códigos, não frases, e continua passando
- * mesmo que todo o texto do sistema seja reescrito.
+ * Fica separado da regra porque os dois mudam por motivos diferentes: texto por
+ * razão de produto, regra por razão de negócio. Assim os testes de
+ * validateBooking comparam códigos e continuam passando mesmo que todo o texto
+ * seja reescrito.
  */
 
 /**
- * O horário da reserva conflitante, como "14/09, 19:00 às 20:40".
- *
- * A formatação vem de lib/datetime, compartilhada com as telas. Manter uma
- * cópia aqui faria a mesma reserva aparecer com formatos diferentes na mensagem
- * de erro e na listagem, e o fuso precisaria ser corrigido em dois lugares.
- *
- * Importar de lib não compromete a pureza deste módulo: datetime.ts também não
- * tem efeito colateral nem depende do ambiente de execução.
+ * A formatação é compartilhada com as telas, para a mesma reserva não aparecer
+ * em formatos diferentes na mensagem de erro e na listagem.
  */
 function periodOf(booking: ExistingBooking): string {
   return formatPeriod(booking.startsAt, booking.endsAt);
 }
 
 /**
- * Nomes legíveis para ids, quando quem chama consegue fornecê-los.
- *
- * A regra trabalha com ids porque a comparação precisa ser exata. A mensagem
- * precisa de nomes, porque "o espaço não oferece o recurso
- * 8f3c1a2e-..." não ajuda ninguém. Quem tem os dois é a camada que consultou o
- * banco, então é ela que passa o dicionário.
- *
- * O parâmetro é opcional de propósito: sem ele a função ainda produz uma frase
- * correta, apenas menos específica. Uma mensagem de erro nunca deve falhar por
- * falta de um dado acessório.
+ * A regra trabalha com ids, a mensagem precisa de nomes. Opcional de propósito:
+ * uma mensagem de erro nunca deve falhar por falta de um dado acessório.
  */
 export type ViolationLabels = {
   resourceNames?: Record<string, string>;
@@ -94,8 +68,7 @@ export function describeViolation(
       return `O espaço comporta ${violation.capacity} pessoas e a turma tem ${violation.studentCount} alunos.`;
 
     case "MISSING_RESOURCES": {
-      // Cai para o próprio id quando o dicionário não traz o nome. É preferível
-      // a uma frase quebrada, e o id ainda permite investigar o que houve.
+      // Cai para o id quando falta o nome: feio, mas investigável.
       const nomes = violation.missingResourceIds.map(
         (id) => labels.resourceNames?.[id] ?? id
       );
@@ -108,13 +81,9 @@ export function describeViolation(
 }
 
 /**
- * Traduz a lista inteira.
- *
- * O switch acima não tem "default" de propósito. Como BookingViolation é uma
- * união fechada e a função declara retornar string, acrescentar um código novo
- * em types.ts sem tratá-lo aqui faz o typecheck falhar. É o compilador
- * lembrando de escrever a mensagem, em vez de o usuário descobrir um espaço em
- * branco na tela.
+ * O switch acima não tem "default" de propósito: acrescentar um código novo em
+ * types.ts sem tratá-lo aqui faz o typecheck falhar, em vez de o usuário
+ * descobrir um espaço em branco na tela.
  */
 export function describeViolations(
   violations: BookingViolation[],

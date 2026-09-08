@@ -3,37 +3,18 @@ import { supabaseServer } from "@/lib/supabase/server";
 import type { RoomSnapshot } from "@/domain/booking/types";
 
 /**
- * REPOSITÓRIO DE ESPAÇOS
+ * A fronteira entre o banco e o domínio: o único lugar que conhece nomes de
+ * tabela, snake_case e a biblioteca do Supabase.
  *
- * A camada de repositórios é a fronteira entre o banco e o domínio. Ela é o
- * único lugar do sistema que conhece nomes de tabela, formato de coluna e a
- * biblioteca do Supabase.
- *
- * POR QUE ESSA FRONTEIRA EXISTE
- *
- * A regra de negócio trabalha com RoomSnapshot, um objeto pequeno com o que a
- * decisão precisa. O banco devolve linhas com snake_case, created_at e uma
- * lista aninhada de recursos. A tradução entre as duas formas acontece aqui, e
- * só aqui.
- *
- * A consequência aparece em 28/09. Quando a autenticação entrar, o cliente do
- * Supabase deixa de usar a chave secreta e passa a usar a sessão do usuário.
- * Essa troca acontece em src/lib/supabase/server.ts e nestes arquivos, e não se
- * espalha por telas e regras que nunca souberam como o dado era buscado.
+ * Existe para conter a troca prevista para 28/09, quando o acesso deixar de usar
+ * a chave secreta e passar a usar a sessão do usuário. Sem ela, essa mudança se
+ * espalharia por telas e regras que nunca souberam como o dado era buscado.
  */
 
 /**
- * Carrega o espaço no formato que a regra de negócio consome.
- *
- * O select traz room_resources aninhado em vez de fazer duas consultas. O
- * PostgREST, que é a camada REST do Supabase, resolve o relacionamento em um
- * único join no banco, e o resultado chega como:
- *
- *   { id: "...", capacity: 45, room_resources: [{ resource_id: "..." }] }
- *
- * O achatamento para o array simples de ids acontece logo abaixo, porque essa
- * forma aninhada é um detalhe de como o dado foi buscado, e o domínio não deve
- * conhecê-la.
+ * O select traz room_resources aninhado, que o PostgREST resolve em um join só.
+ * O achatamento para ids acontece abaixo: a forma aninhada é detalhe de como o
+ * dado foi buscado, e o domínio não deve conhecê-la.
  */
 export async function findRoomSnapshot(
   roomId: string
@@ -42,9 +23,8 @@ export async function findRoomSnapshot(
     .from("rooms")
     .select("id, name, building, capacity, room_resources(resource_id)")
     .eq("id", roomId)
-    // maybeSingle, e não single: single trata "nenhuma linha" como erro, e aqui
-    // a ausência do espaço é um resultado legítimo. Quem decide o que fazer com
-    // isso é a regra, que devolve a violação ROOM_NOT_FOUND.
+    // maybeSingle: single trataria "nenhuma linha" como erro, mas a ausência do
+    // espaço é resultado legítimo, e a regra devolve ROOM_NOT_FOUND.
     .maybeSingle();
 
   if (error) {
@@ -72,12 +52,8 @@ export type RoomOption = {
 };
 
 /**
- * Lista os espaços para o formulário.
- *
- * Traz os recursos junto, e não só id e nome, para que a tela possa avisar
- * sobre capacidade e equipamento enquanto o professor ainda está escolhendo,
- * em vez de só na hora de enviar. A regra continua sendo a autoridade: o aviso
- * na tela é conveniência, a recusa é decisão.
+ * Traz os recursos junto para a tela avisar sobre capacidade e equipamento
+ * durante a escolha. O aviso é conveniência; a recusa continua sendo da regra.
  */
 export async function listRooms(): Promise<RoomOption[]> {
   const { data, error } = await supabaseServer

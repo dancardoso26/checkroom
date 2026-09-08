@@ -1,29 +1,18 @@
 -- ---------------------------------------------------------------------------
 -- GRAVAÇÃO ATÔMICA DE UMA RESERVA
 --
--- Criar uma reserva escreve em duas tabelas: a linha em bookings e uma linha
--- por recurso exigido em booking_resources. As duas precisam acontecer juntas
--- ou nenhuma acontecer.
+-- Criar uma reserva escreve em bookings e em booking_resources, e as duas
+-- precisam acontecer juntas ou nenhuma acontecer.
 --
--- POR QUE ISSO NÃO PODE SER RESOLVIDO NO TYPESCRIPT
---
--- A biblioteca do Supabase conversa com o banco pela API REST, e cada chamada é
--- uma transação separada. Dois inserts seguidos a partir do código seriam duas
--- transações independentes: se a segunda falhasse, a primeira já estaria
--- gravada, e o sistema ficaria com uma reserva que não registra os recursos que
--- exige, exatamente a condição que a regra de negócio acabou de validar.
---
--- O contorno usual é apagar a primeira quando a segunda falha, o que é pior:
--- essa exclusão de compensação também pode falhar, e aí não há mais nada a
--- fazer. A solução correta é não deixar a operação sair pela metade, e isso só
--- existe dentro do banco.
+-- Isso não se resolve no TypeScript: a biblioteca do Supabase conversa pela API
+-- REST, e cada chamada é uma transação separada. Dois inserts seguidos deixariam
+-- uma reserva gravada sem os recursos que exige caso o segundo falhasse. Apagar
+-- a primeira como compensação é pior, porque essa exclusão também pode falhar.
 --
 -- Uma função em plpgsql roda inteira dentro de uma única transação. Se qualquer
--- comando falhar, incluindo uma das constraints de exclusão da migration
--- 20260904000200, o PostgreSQL desfaz tudo e a chamada devolve o erro.
---
--- É a mesma razão que justifica as constraints: a garantia de integridade fica
--- no banco, não na confiança de que o código sempre fará a sequência certa.
+-- comando falhar, incluindo uma das constraints de exclusão, o PostgreSQL desfaz
+-- tudo. É a mesma razão que justifica as constraints: a integridade fica no
+-- banco, e não na confiança de que o código fará a sequência certa.
 -- ---------------------------------------------------------------------------
 
 create or replace function public.create_booking(
@@ -37,9 +26,8 @@ create or replace function public.create_booking(
 )
 returns uuid
 language plpgsql
--- search_path fixo. Sem isto, quem chama a função poderia alterar o search_path
--- da sessão e fazer "bookings" apontar para uma tabela própria em outro schema.
--- É a recomendação do próprio Supabase para qualquer função do banco.
+-- search_path fixo: sem isto, quem chama poderia alterá-lo e fazer "bookings"
+-- apontar para uma tabela própria em outro schema.
 set search_path = pg_catalog, public
 as $$
 declare
@@ -53,30 +41,20 @@ begin
   )
   returning id into v_booking_id;
 
-  -- Reserva sem exigência de recurso é comum: uma aula expositiva em sala
-  -- comum não precisa de nada além da sala. O coalesce trata o array nulo como
-  -- vazio, e o insert simplesmente não produz linha nenhuma nesse caso.
+  -- Reserva sem recurso é comum: uma aula expositiva não precisa de nada além
+  -- da sala. O coalesce trata o array nulo como vazio.
   insert into public.booking_resources (booking_id, resource_id)
   select v_booking_id, resource_id
   from unnest(coalesce(p_resource_ids, array[]::uuid[])) as resource_id
-  -- O mesmo recurso enviado duas vezes violaria a chave primária composta. A
-  -- regra de negócio já remove duplicatas antes de chegar aqui; esta linha é a
-  -- segunda barreira, para o caso de a função ser chamada por outro caminho.
+  -- Segunda barreira contra duplicatas, para o caso de a função ser chamada por
+  -- outro caminho que não a aplicação.
   on conflict (booking_id, resource_id) do nothing;
 
   return v_booking_id;
 end;
 $$;
 
--- ---------------------------------------------------------------------------
--- SOBRE SEGURANÇA
---
--- A função NÃO é security definer. Ela executa com as permissões de quem chama,
--- o que hoje significa a chave secreta usada pelo servidor.
---
--- A tentação de marcá-la como security definer aparecerá em 28/09, quando o RLS
--- ganhar políticas: seria um jeito rápido de deixar a gravação passar por cima
--- delas. Seria também uma porta aberta, porque qualquer usuário autenticado
--- poderia chamá-la e criar reserva em nome de terceiros. A gravação deve
--- continuar respeitando as políticas.
--- ---------------------------------------------------------------------------
+-- A função NÃO é security definer, e não deve virar. Em 28/09, quando o RLS
+-- ganhar políticas, marcá-la assim seria um jeito rápido de passar por cima
+-- delas, e também uma porta aberta: qualquer usuário autenticado poderia criar
+-- reserva em nome de terceiros.

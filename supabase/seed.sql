@@ -1,19 +1,14 @@
 -- ---------------------------------------------------------------------------
 -- DADOS DE EXEMPLO
 --
--- Este arquivo NÃO é uma migration. Migrations descrevem a estrutura do banco e
--- valem para produção; este arquivo popula um banco de desenvolvimento com o
--- mínimo necessário para exercitar a regra de negócio e demonstrá-la ao
--- orientador.
+-- Não é uma migration: popula um banco de desenvolvimento com o mínimo para
+-- exercitar a regra e demonstrá-la.
 --
--- ATENÇÃO: a primeira instrução APAGA todo o conteúdo das oito tabelas. É o que
--- torna o arquivo repetível, permitindo rodá-lo quantas vezes for preciso
--- durante o desenvolvimento sem acumular duplicatas. Não execute em um banco
--- com dados que importem.
+-- ATENÇÃO: a primeira instrução APAGA o conteúdo das oito tabelas, o que torna o
+-- arquivo repetível. Não execute em um banco com dados que importem.
 --
--- Os dados não são aleatórios: cada registro existe para tornar possível um
--- caso de teste específico, indicado nos comentários. O roteiro de verificação
--- está no final do arquivo.
+-- Os dados não são aleatórios: cada registro existe para um caso de teste
+-- específico. O roteiro está no fim do arquivo.
 -- ---------------------------------------------------------------------------
 
 truncate table
@@ -28,30 +23,21 @@ truncate table
   cascade;
 
 
--- ---------------------------------------------------------------------------
--- Auxiliar de horário
+-- Horários calculados a partir da próxima segunda, e não como datas fixas: uma
+-- data fixa envelhece, e em outubro o seed criaria reservas no passado.
 --
--- Os horários das reservas de exemplo são calculados a partir da próxima
--- segunda-feira, e não escritos como datas fixas. Uma data fixa envelhece: em
--- outubro o seed criaria reservas no passado, e a tela de próximas reservas
--- apareceria vazia na demonstração.
+-- O "at time zone" existe porque as colunas são timestamptz. Sem ele, "19:00"
+-- seria interpretado em UTC e as aulas noturnas apareceriam de madrugada.
 --
--- A conversão explícita com "at time zone 'America/Sao_Paulo'" existe porque as
--- colunas são timestamptz. Sem ela, "19:00" seria interpretado no fuso do
--- servidor, que no Supabase é UTC, e as aulas noturnas apareceriam de
--- madrugada.
---
--- A função é removida no fim do arquivo: serve ao seed, não ao sistema.
--- ---------------------------------------------------------------------------
+-- A função é removida no fim: serve ao seed, não ao sistema.
 create or replace function public.seed_slot(dias integer, hora time)
 returns timestamptz
 language sql
 stable
 as $$
   select (
-    -- date_trunc devolve a segunda-feira desta semana; o cast para date é
-    -- necessário porque "date + time" existe no PostgreSQL e devolve timestamp,
-    -- enquanto "timestamp + time" não é um operador válido.
+    -- O cast para date é necessário: "date + time" existe no PostgreSQL,
+    -- "timestamp + time" não.
     (date_trunc('week', current_date)::date + (7 + dias))
     + hora
   ) at time zone 'America/Sao_Paulo';
@@ -80,12 +66,8 @@ insert into public.resources (name) values
   ('Sistema de som');
 
 
--- ---------------------------------------------------------------------------
--- Turmas
---
--- Os tamanhos são escolhidos para produzir o teste de capacidade: a turma de
--- 55 alunos não cabe em nenhum espaço além do auditório.
--- ---------------------------------------------------------------------------
+-- A turma de 55 alunos não cabe em nenhum espaço além do auditório, e é o que
+-- produz o teste de capacidade.
 insert into public.classes (name, course_id, student_count) values
   ('SI 8º semestre A', (select id from public.courses where name = 'Sistemas de Informação'), 42),
   ('SI 4º semestre B', (select id from public.courses where name = 'Sistemas de Informação'), 55),
@@ -93,12 +75,8 @@ insert into public.classes (name, course_id, student_count) values
   ('ENF 6º semestre A', (select id from public.courses where name = 'Enfermagem'),            30);
 
 
--- ---------------------------------------------------------------------------
--- Espaços
---
--- A sala 102 é pequena e mal equipada de propósito: é o espaço que faz as
+-- A sala 102 é pequena e mal equipada de propósito: é ela que faz as
 -- verificações de capacidade e de recurso falharem quando precisam falhar.
--- ---------------------------------------------------------------------------
 insert into public.rooms (name, building, capacity, room_type) values
   ('101',       'Bloco A', 45,  'classroom'),
   ('102',       'Bloco A', 30,  'classroom'),
@@ -106,12 +84,8 @@ insert into public.rooms (name, building, capacity, room_type) values
   ('Auditório', 'Bloco C', 120, 'auditorium');
 
 
--- ---------------------------------------------------------------------------
--- O que cada espaço oferece
---
--- Repare que a sala 102 não tem projetor. Esse é o único dado necessário para
--- demonstrar a recusa por recurso ausente.
--- ---------------------------------------------------------------------------
+-- A sala 102 não tem projetor, único dado necessário para demonstrar a recusa
+-- por recurso ausente.
 insert into public.room_resources (room_id, resource_id)
 select r.id, res.id
 from public.rooms r
@@ -130,17 +104,11 @@ join (values
 join public.resources res on res.name = v.resource_name;
 
 
--- ---------------------------------------------------------------------------
--- Reservas já existentes
---
--- São as três reservas contra as quais os conflitos serão testados. Todas na
--- próxima semana, no período noturno, que é quando a disputa por espaço
--- realmente acontece na instituição.
--- ---------------------------------------------------------------------------
+-- As três reservas contra as quais os conflitos são testados, no período
+-- noturno, quando a disputa por espaço realmente acontece.
 insert into public.bookings (room_id, professor_id, class_id, purpose, starts_at, ends_at)
 values
-  -- Segunda, 19:00 às 20:40, Bloco A 101.
-  -- Base dos três testes de conflito: mesmo espaço, mesma professora, mesma turma.
+  -- Base dos três testes de conflito: espaço, professora e turma.
   (
     (select id from public.rooms where building = 'Bloco A' and name = '101'),
     (select id from public.professors where email = 'ana.moura@umc.br'),
@@ -149,9 +117,8 @@ values
     public.seed_slot(0, '19:00'),
     public.seed_slot(0, '20:40')
   ),
-  -- Segunda, mesmo horário, mas outro espaço, outro professor e outra turma.
-  -- Existe para provar o contrário: reservas simultâneas são permitidas quando
-  -- não compartilham nenhum dos três vínculos.
+  -- Prova o contrário: reservas simultâneas são permitidas quando não
+  -- compartilham nenhum dos três vínculos.
   (
     (select id from public.rooms where building = 'Bloco B' and name = 'Lab 01'),
     (select id from public.professors where email = 'carlos.lima@umc.br'),
@@ -171,9 +138,7 @@ values
   );
 
 
--- ---------------------------------------------------------------------------
--- O que cada reserva exige
--- ---------------------------------------------------------------------------
+-- O que cada reserva exige.
 insert into public.booking_resources (booking_id, resource_id)
 select b.id, res.id
 from public.bookings b
@@ -224,8 +189,7 @@ drop function public.seed_slot(integer, time);
 --     SI 4º semestre B no Bloco C Auditório, quarta 19:00-20:40, exigindo
 --     Projetor. Cabe, tem o recurso, e nada está ocupado.
 --
--- Os casos 1, 2, 3 e 6 devem ser verificados DUAS vezes: pelo formulário, onde
--- a resposta vem de validateBooking, e por INSERT direto no editor SQL do
--- Supabase, onde a resposta vem das constraints de exclusão. As duas camadas
--- precisam concordar.
+-- Os casos 1, 2, 3 e 6 valem ser verificados nas duas camadas: pelo formulário,
+-- onde a resposta vem de validateBooking, e por INSERT direto no editor SQL,
+-- onde vem das constraints. A suíte em tests/e2e faz isso automaticamente.
 -- ---------------------------------------------------------------------------

@@ -1,35 +1,20 @@
 -- ---------------------------------------------------------------------------
 -- ROW LEVEL SECURITY
 --
--- Estado desta etapa, e por que ele é assim.
+-- RLS habilitado em todas as tabelas e NENHUMA política definida. No PostgreSQL
+-- isso significa negar tudo, que é o comportamento desejado nesta etapa:
 --
--- O RLS do PostgreSQL decide, linha a linha, o que cada usuário pode ler ou
--- escrever. As políticas que expressam essa decisão dependem de auth.uid(),
--- que devolve o identificador do usuário autenticado na requisição.
+--   a chave publishable, que roda no navegador, não lê nem escreve nada;
+--   a chave secreta, usada só no servidor, ignora o RLS e continua funcionando.
 --
--- Não existe autenticação ainda: ela é a entrega de 28/09. Sem login não há
--- auth.uid(), e uma política escrita agora ou seria falsa (liberando tudo) ou
--- bloquearia o sistema inteiro.
+-- As políticas dependem de auth.uid(), e sem login esse valor não existe. Uma
+-- política escrita agora ou liberaria tudo ou bloquearia o sistema inteiro.
 --
--- A decisão aqui é habilitar o RLS em todas as tabelas e NÃO criar política
--- nenhuma. No PostgreSQL, tabela com RLS habilitado e sem políticas nega tudo
--- por padrão. Na prática:
+-- Habilitar sem políticas evita o cenário pior: uma tabela esquecida sem RLS
+-- ficaria aberta no dia em que a chave publishable começasse a ser usada.
 --
---   - a chave publishable, que roda no navegador, não lê nem escreve nada;
---   - a chave secreta, usada apenas dentro das Server Actions no servidor,
---     ignora o RLS e continua funcionando.
---
--- Ou seja, o acesso ao banco fica restrito ao servidor, que é exatamente a
--- arquitetura desta etapa. Habilitar o RLS agora, mesmo sem políticas, evita o
--- cenário pior: uma tabela esquecida sem RLS ficaria aberta ao mundo no dia em
--- que a chave publishable começasse a ser usada.
---
--- EM 28/09
---
--- Entram as políticas: professor lê e cria as próprias reservas, coordenação
--- enxerga as do seu curso, e as tabelas de catálogo (cursos, espaços, recursos)
--- ficam legíveis por qualquer usuário autenticado. Só então a monografia poderá
--- afirmar, com verdade, que a autorização é aplicada em duas camadas.
+-- Em 28/09 entram as políticas de verdade, e só então a monografia poderá
+-- afirmar com verdade que a autorização é aplicada em duas camadas.
 -- ---------------------------------------------------------------------------
 
 alter table public.courses            enable row level security;

@@ -1,79 +1,45 @@
 -- ---------------------------------------------------------------------------
 -- QUEM REGISTROU A RESERVA
 --
--- A tabela já responde "de quem é a aula", em professor_id. Esta coluna passa a
--- responder uma pergunta diferente: "quem registrou".
+-- professor_id responde "de quem é a aula". Esta coluna responde outra pergunta:
+-- "quem registrou".
 --
--- POR QUE SÃO DUAS PERGUNTAS
+-- Na instituição os dois caminhos existem. O professor reserva o laboratório da
+-- própria aula, e as duas colunas apontam para a mesma pessoa; mas a secretaria
+-- também registra em nome dos professores, e aí são pessoas diferentes.
 --
--- Na instituição, os dois caminhos existem. O professor entra no sistema e
--- reserva o laboratório da própria aula, e nesse caso as duas colunas apontam
--- para a mesma pessoa. Mas a secretaria também registra reservas em nome dos
--- professores, e aí a pessoa que criou não é a pessoa que vai dar a aula.
+-- Com uma coluna só seria preciso escolher qual informação perder: registrar a
+-- secretária como professora falsearia a agenda e apontaria o conflito de
+-- professor para a pessoa errada; registrar só a professora apagaria o rastro de
+-- quem criou.
 --
--- Com uma coluna só, o segundo caso obrigaria a escolher qual informação
--- perder. Registrar a secretária como professora falsearia a agenda e faria a
--- verificação de conflito de professor apontar para a pessoa errada. Registrar
--- só a professora apagaria o rastro de quem de fato criou o registro.
+-- Em 28/09 é esta coluna que responde "quem pode alterar esta reserva", e é ela
+-- que sustenta os registros de auditoria: um log que não sabe quem executou a
+-- ação não é um log.
 --
--- O QUE ISSO DESTRAVA
---
--- Em 28/09, com a autenticação, esta coluna é o que responde "quem pode alterar
--- esta reserva". E é ela que sustenta a entrega de registros de auditoria: um
--- log que não sabe quem executou a ação não é um log.
---
--- POR QUE AGORA, E NÃO EM 28/09
---
--- Acrescentar coluna em tabela vazia é trivial. Acrescentar depois, com
--- reservas gravadas, obriga a decidir o que colocar nas linhas antigas, e a
--- resposta honesta seria "não sabemos quem criou".
---
--- POR QUE ELA ACEITA NULO
---
--- Não existe usuário autenticado ainda, então não há o que gravar aqui. A
--- coluna nasce opcional e passa a ser obrigatória em 28/09, quando toda reserva
--- nova tiver um autor conhecido. Deixá-la obrigatória agora exigiria inventar
--- um autor, o que seria pior do que admitir que não se sabe.
---
--- POR QUE ELA NÃO TEM CHAVE ESTRANGEIRA AINDA
---
--- O destino natural seria referenciar professors, e seria um erro. A secretária
--- que registra a reserva não é professora, e uma referência a professors
--- tornaria impossível registrar exatamente o caso que motivou esta coluna.
---
--- O alvo correto é a tabela de usuários do sistema, que ainda não existe: ela
--- entra em 28/09 como profiles, ligada a auth.users, e abriga professores,
--- secretaria e coordenação. Nesse dia a chave estrangeira é acrescentada e a
--- coluna vira obrigatória.
+-- Ela aceita nulo porque não existe usuário autenticado ainda, e não tem chave
+-- estrangeira porque o alvo correto não existe: referenciar professors seria um
+-- erro, já que a secretária não é professora. O destino é profiles, ligada a
+-- auth.users, que entra em 28/09 junto com a obrigatoriedade e a FK.
 --
 -- Uma coluna uuid solta é frágil, e é uma fragilidade assumida e datada. A
--- alternativa seria criar agora uma tabela de usuários incompleta, que teria de
--- ser refeita quando o Supabase Auth entrar.
+-- alternativa seria criar agora uma tabela de usuários incompleta.
 -- ---------------------------------------------------------------------------
 
--- "if not exists" nas três instruções abaixo torna este arquivo repetível.
---
--- A primeira versão dele referenciava professors, o que estava errado pelo
--- motivo explicado acima, e chegou a ser aplicada. Sem a idempotência, corrigir
--- exigiria descobrir manualmente o que já existe no banco e o que falta.
---
--- Vale como prática geral: uma migration que pode ser reexecutada sem erro é a
--- diferença entre corrigir um engano em um comando e passar meia hora
--- reconstruindo o estado do banco à mão.
+-- "if not exists" torna o arquivo repetível. A primeira versão referenciava
+-- professors e chegou a ser aplicada; sem a idempotência, corrigir exigiria
+-- descobrir à mão o que já existe no banco.
 alter table public.bookings
   add column if not exists created_by uuid;
 
--- Remove a chave estrangeira criada pela versão anterior deste arquivo. Se ela
--- nunca chegou a existir, esta linha não faz nada, que é o comportamento
--- desejado. O nome é o que o PostgreSQL gera por padrão para uma referência na
--- coluna created_by da tabela bookings.
+-- Remove a chave estrangeira criada pela versão anterior. Se nunca existiu, esta
+-- linha não faz nada.
 alter table public.bookings
   drop constraint if exists bookings_created_by_fkey;
 
 comment on column public.bookings.created_by is
   'Quem registrou a reserva, que nem sempre é o professor da aula. Passa a referenciar profiles(id) e a ser obrigatória na entrega de 28/09. Nulo nas reservas criadas antes disso.';
 
--- A consulta "reservas que eu registrei" é a base da tela de acompanhamento da
--- secretaria. Sem índice, ela varreria a tabela inteira.
+-- "reservas que eu registrei" é a base da tela de acompanhamento da secretaria.
 create index if not exists bookings_created_by_idx
   on public.bookings (created_by);

@@ -3,44 +3,22 @@ import { supabaseServer } from "@/lib/supabase/server";
 import type { ExistingBooking } from "@/domain/booking/types";
 
 /**
- * REPOSITÓRIO DE RESERVAS
- *
- * O arquivo que mais conhece o banco em todo o sistema. É aqui que ficam os
- * nomes das constraints, os códigos de erro do PostgreSQL e a conversão entre
- * as datas em texto que o banco devolve e os objetos Date que o domínio usa.
+ * Repositório de reservas. Concentra os nomes das constraints, os códigos de
+ * erro do PostgreSQL e a conversão entre as datas do banco e os Date do domínio.
  */
 
-/**
- * Converte a data como o banco a devolve para o tipo que o domínio espera.
- *
- * O PostgREST entrega timestamptz como string ISO com fuso, por exemplo
- * "2026-09-14T22:00:00+00:00". O construtor de Date interpreta o fuso
- * corretamente, então a conversão é direta. A função existe para que a
- * conversão apareça uma vez só, com o motivo explicado, em vez de espalhada.
- */
+/** O PostgREST entrega timestamptz como string ISO com fuso. */
 function toDate(valor: string): Date {
   return new Date(valor);
 }
 
 /**
- * Busca as reservas que podem conflitar com o período pedido.
+ * O retrato do conflito triplo em SQL: qualquer reserva que compartilhe espaço,
+ * professor ou turma e toque a mesma faixa de tempo.
  *
- * A consulta é o retrato do conflito triplo: interessa qualquer reserva que
- * compartilhe o espaço OU o professor OU a turma, e que toque a mesma faixa de
- * tempo.
- *
- * O FILTRO DE PERÍODO
- *
- * starts_at < fim E ends_at > início é a mesma condição de sobreposição da
- * função overlaps em validateBooking.ts, escrita em SQL. Trazer só o que pode
- * conflitar mantém o custo da consulta constante conforme a agenda cresce;
- * trazer a base inteira funcionaria hoje e ficaria insustentável em um ano.
- *
- * Os dois lados são estritos, pelo mesmo motivo de lá: uma reserva que termina
- * exatamente quando esta começa não é candidata a conflito.
- *
- * Ainda assim, a regra reconfere cada linha devolvida. Se esta consulta um dia
- * for alterada e passar a trazer algo a mais, a decisão continua correta.
+ * O filtro de período é a mesma condição de overlaps, com os dois lados
+ * estritos, e é o que mantém o custo constante conforme a agenda cresce. A regra
+ * reconfere cada linha, então alterar esta consulta não corrompe a decisão.
  */
 export async function findConflictCandidates(params: {
   roomId: string;
@@ -54,9 +32,8 @@ export async function findConflictCandidates(params: {
   let query = supabaseServer
     .from("bookings")
     .select("id, room_id, professor_id, class_id, purpose, starts_at, ends_at")
-    // O "or" do PostgREST recebe as condições em uma string separada por
-    // vírgula. Ele agrupa este bloco entre parênteses, então a expressão final
-    // é (espaço OU professor OU turma) E período, que é o pretendido.
+    // O "or" do PostgREST agrupa entre parênteses, então a expressão final é
+    // (espaço OU professor OU turma) E período.
     .or(
       `room_id.eq.${params.roomId},professor_id.eq.${params.professorId},class_id.eq.${params.classId}`
     )
@@ -85,15 +62,8 @@ export async function findConflictCandidates(params: {
 }
 
 /**
- * Todas as reservas que tocam o período, sem filtrar por espaço.
- *
- * Serve à tela que avalia os espaços de uma vez. Ali a pergunta não é "esta
- * sala está livre", e sim "quais estão", então filtrar por um espaço específico
- * esconderia justamente a informação que a tela precisa mostrar.
- *
- * O filtro de período continua, e é ele que mantém o custo sob controle: em uma
- * instituição com anos de histórico, o que importa são as poucas reservas que
- * disputam aquelas duas horas.
+ * Todas as reservas do período, sem filtrar por espaço: a tela de escolha
+ * pergunta "quais salas estão livres", e não "esta sala está livre".
  */
 export async function findBookingsInPeriod(params: {
   startsAt: Date;
@@ -121,12 +91,9 @@ export async function findBookingsInPeriod(params: {
 }
 
 /**
- * O que pode acontecer ao tentar gravar.
- *
- * "conflict" não é o mesmo que erro: significa que a validação aprovou mas o
- * banco recusou, o que só acontece quando outra reserva foi gravada entre a
- * consulta e a gravação. É a corrida que as constraints de exclusão existem
- * para pegar, e quem chama precisa distinguir esse caso de uma falha real.
+ * "conflict" não é erro: é a validação ter aprovado e o banco recusado, o que só
+ * acontece quando outra reserva foi gravada no intervalo. Quem chama precisa
+ * distinguir isso de uma falha real.
  */
 export type CreateBookingOutcome =
   | { status: "created"; bookingId: string }
@@ -137,11 +104,8 @@ export type CreateBookingOutcome =
   | { status: "error"; message: string };
 
 /**
- * Nome da constraint no banco para o código de violação do domínio.
- *
- * Este objeto é o outro lado do acordo firmado no comentário final da migration
- * 20260904000200: os nomes das constraints são interface, e renomear uma delas
- * lá obriga a atualizar este mapa aqui.
+ * Os nomes das constraints são interface: renomear uma na migration
+ * 20260904000200 obriga a atualizar este mapa.
  */
 const CONSTRAINT_TO_VIOLATION = {
   bookings_no_room_overlap: "ROOM_CONFLICT",
@@ -150,11 +114,8 @@ const CONSTRAINT_TO_VIOLATION = {
 } as const;
 
 /**
- * Grava a reserva.
- *
- * Chama a função create_booking do banco em vez de dois inserts seguidos,
- * porque a gravação toca bookings e booking_resources e precisa ser atômica. O
- * raciocínio está na migration 20260907000000.
+ * Chama create_booking em vez de dois inserts seguidos, porque a gravação toca
+ * bookings e booking_resources e precisa ser atômica.
  */
 export async function createBooking(input: {
   roomId: string;
@@ -179,14 +140,10 @@ export async function createBooking(input: {
     return { status: "created", bookingId: data };
   }
 
-  // 23P01 é o código do PostgreSQL para exclusion_violation, devolvido quando
-  // uma das três constraints de sobreposição barra a gravação. É o único erro
-  // esperado no funcionamento normal do sistema.
+  // 23P01 é exclusion_violation, o único erro esperado no funcionamento normal.
   if (error.code === "23P01") {
-    // A mensagem do banco cita o nome da constraint violada. Procurar o nome
-    // dentro do texto é frágil por natureza, mas é a única informação que o
-    // PostgREST repassa, e os testes que comparam as duas camadas pegariam a
-    // quebra caso o formato mude.
+    // Procurar o nome no texto é frágil, mas é a única informação que o
+    // PostgREST repassa. Os testes de ponta a ponta pegam se o formato mudar.
     const texto = `${error.message} ${error.details ?? ""}`;
 
     for (const [constraint, code] of Object.entries(CONSTRAINT_TO_VIOLATION)) {
@@ -195,17 +152,15 @@ export async function createBooking(input: {
       }
     }
 
-    // Constraint de exclusão desconhecida: alguém acrescentou uma no banco sem
-    // atualizar o mapa acima. Melhor recusar de forma honesta do que gravar.
+    // Constraint desconhecida: recusar é melhor do que gravar às cegas.
     return {
       status: "error",
       message: "A reserva conflita com outra já existente.",
     };
   }
 
-  // 23514 é violação de check, hoje só o bookings_period_valid. A regra já
-  // barra esse caso antes, então chegar aqui significa que algo passou por um
-  // caminho que não validou.
+  // 23514 é violação de check. A regra já barra esse caso, então chegar aqui
+  // significa que algo passou por um caminho que não validou.
   if (error.code === "23514") {
     return {
       status: "error",
@@ -213,8 +168,7 @@ export async function createBooking(input: {
     };
   }
 
-  // 23503 é violação de chave estrangeira: o espaço, o professor ou a turma
-  // deixou de existir entre o carregamento do formulário e o envio.
+  // 23503: o espaço, o professor ou a turma sumiu entre o carregamento e o envio.
   if (error.code === "23503") {
     return {
       status: "error",
@@ -223,18 +177,12 @@ export async function createBooking(input: {
     };
   }
 
-  // Erro não previsto. A mensagem do PostgreSQL fica no log do servidor, e o
-  // usuário recebe um texto genérico.
+  // Erro não previsto: o detalhe fica no log e o usuário recebe texto genérico,
+  // porque mensagens do banco citam nomes de tabela e de constraint.
   //
-  // A diferença importa: mensagens do banco citam nomes de tabela, de coluna e
-  // de constraint. Devolvê-las à tela entrega o desenho interno do sistema a
-  // quem estiver olhando, e não ajuda em nada quem só queria reservar uma sala.
-  //
-  // Repare que os "throw" espalhados neste arquivo continuam carregando o
-  // detalhe, e isso é intencional: exceção não tratada em Server Action é
-  // substituída pelo Next por uma mensagem neutra com um identificador, e o
-  // texto completo só aparece no log. O caso perigoso é este aqui, um retorno
-  // normal da função, que chega à interface exatamente como foi escrito.
+  // Os "throw" deste arquivo continuam carregando o detalhe de propósito: exceção
+  // não tratada em Server Action é substituída pelo Next por uma mensagem neutra.
+  // O caso perigoso é este, um retorno normal, que chega à tela como foi escrito.
   console.error("Falha inesperada ao gravar reserva:", error);
 
   return {
@@ -258,10 +206,8 @@ export type BookingListItem = {
 };
 
 /**
- * Lista as reservas que ainda não terminaram.
- *
- * O corte é por ends_at, e não por starts_at: uma aula que começou há dez
- * minutos ainda está acontecendo e precisa aparecer na grade.
+ * O corte é por ends_at: uma aula que começou há dez minutos ainda está
+ * acontecendo e precisa aparecer na grade.
  */
 export async function listUpcomingBookings(
   now: Date = new Date()
@@ -291,9 +237,8 @@ export async function listUpcomingBookings(
     building: linha.rooms.building,
     professorName: linha.professors.name,
     className: linha.classes.name,
-    // Dois níveis de aninhamento: booking_resources é a tabela de ligação, e o
-    // nome está em resources, do outro lado dela. O PostgREST atravessa as duas
-    // em uma consulta só.
+    // Dois níveis: booking_resources é a ligação e o nome está em resources. O
+    // PostgREST atravessa as duas em uma consulta só.
     resourceNames: linha.booking_resources.map(
       (vinculo) => vinculo.resources.name
     ),

@@ -1,30 +1,16 @@
 /**
- * TIPOS DO DOMÍNIO DE RESERVA
+ * O vocabulário da regra de reserva: o que é um pedido, o que a decisão precisa
+ * saber e o que pode dar errado.
  *
- * Este arquivo descreve o vocabulário da regra de negócio: o que é um pedido de
- * reserva, o que precisa ser conhecido para julgá-lo e o que pode dar errado.
- *
- * POR QUE ESTES TIPOS NÃO SÃO OS TIPOS DO BANCO
- *
- * O Supabase gera automaticamente os tipos das tabelas em database.types.ts, e
- * seria tentador usá-los aqui. Não uso, de propósito.
- *
- * Os tipos do banco descrevem linhas: trazem created_at, trazem colunas que a
- * regra não consulta, e mudam sempre que uma migration acrescenta um campo. Os
- * tipos abaixo descrevem exatamente o que a decisão precisa, nem mais nem
- * menos. A consequência prática é que acrescentar uma coluna em bookings não
- * quebra nem sequer toca a regra de negócio.
- *
- * A tradução entre as duas formas acontece na camada de repositórios, que é o
- * único lugar do sistema que conhece as duas.
+ * Estes tipos são propositalmente diferentes dos gerados em database.types.ts.
+ * Os do banco descrevem linhas inteiras e mudam a cada migration; estes
+ * descrevem só o que a decisão examina. Acrescentar uma coluna em bookings não
+ * toca a regra de negócio.
  */
 
 /**
- * O que o usuário pediu.
- *
- * Datas como Date, e não como string ISO, porque a regra compara instantes. Uma
- * string obrigaria cada comparação a converter antes, e bastaria esquecer uma
- * conversão para que "2026-09-14T19:00" fosse comparado alfabeticamente.
+ * Datas como Date, e não string ISO, porque a regra compara instantes. Com
+ * string, bastaria esquecer uma conversão para comparar alfabeticamente.
  */
 export type BookingRequest = {
   roomId: string;
@@ -34,13 +20,7 @@ export type BookingRequest = {
   startsAt: Date;
   endsAt: Date;
 
-  /**
-   * Os recursos que a atividade exige, por id.
-   *
-   * Ids, e não nomes, porque a comparação com o que o espaço oferece precisa
-   * ser exata. "Projetor" e "projetor" são o mesmo equipamento para uma pessoa
-   * e coisas diferentes para uma comparação de strings.
-   */
+  /** Ids, e não nomes: "Projetor" e "projetor" seriam recursos diferentes. */
   requiredResourceIds: string[];
 };
 
@@ -50,16 +30,11 @@ export type RoomSnapshot = {
   name: string;
   building: string;
   capacity: number;
-
-  /** Ids dos recursos que este espaço oferece, vindos de room_resources. */
+  /** Recursos que este espaço oferece, vindos de room_resources. */
   resourceIds: string[];
 };
 
-/**
- * A turma, reduzida ao que a decisão examina.
- *
- * O nome evita "class", que é palavra reservada em JavaScript.
- */
+/** A turma. O nome evita "class", palavra reservada em JavaScript. */
 export type ClassSnapshot = {
   id: string;
   name: string;
@@ -67,11 +42,10 @@ export type ClassSnapshot = {
 };
 
 /**
- * Uma reserva que já existe e pode conflitar com o pedido.
+ * Uma reserva já gravada que pode conflitar com o pedido.
  *
- * Carrega os três vínculos porque a verificação de conflito é tripla: a mesma
- * reserva pode colidir por espaço, por professor ou por turma, e o motivo
- * precisa ser distinguido para que a mensagem faça sentido ao usuário.
+ * Carrega os três vínculos porque o conflito é triplo, e o motivo precisa ser
+ * distinguido para que a mensagem faça sentido.
  */
 export type ExistingBooking = {
   id: string;
@@ -84,88 +58,57 @@ export type ExistingBooking = {
 };
 
 /**
- * Tudo o que a regra precisa saber do mundo para decidir.
- *
- * Esta é a peça central do desenho. validateBooking não consulta o banco: ela
- * RECEBE o resultado das consultas. Quem busca é a Server Action, através dos
- * repositórios.
- *
- * A vantagem aparece no arquivo de testes ao lado: cada caso monta um contexto
- * como um objeto literal, sem banco, sem mock de biblioteca e sem esperar
- * conexão. É o que a seção 2.6 da monografia afirma sobre manter as regras
- * separadas do contexto de execução para permitir teste direto.
+ * Tudo o que a regra precisa saber do mundo. Ela recebe o resultado das
+ * consultas em vez de fazê-las, e é isso que permite a cada teste montar um
+ * contexto como objeto literal, sem banco e sem mock.
  */
 export type BookingContext = {
-  /**
-   * Nulo quando o id enviado não corresponde a nenhum espaço. Pode acontecer se
-   * o espaço for removido entre o carregamento do formulário e o envio.
-   */
+  /** Nulo quando o espaço foi removido entre o carregamento e o envio. */
   room: RoomSnapshot | null;
 
   /** Nulo pelo mesmo motivo que room. */
   classGroup: ClassSnapshot | null;
 
   /**
-   * As reservas já gravadas que podem colidir com o pedido.
-   *
-   * O repositório traz apenas as que envolvem o mesmo espaço, o mesmo professor
-   * ou a mesma turma e tocam a mesma faixa de tempo. Trazer a agenda inteira
-   * funcionaria igual, mas cresceria sem limite com o uso do sistema.
-   *
-   * A regra não confia nesse filtro: ela reconfere a sobreposição de cada uma.
-   * Se confiasse, um erro na consulta viraria silenciosamente uma reserva
-   * duplicada aceita.
+   * Reservas que podem colidir. O repositório já filtra por período para o
+   * custo não crescer com a agenda, mas a regra reconfere cada uma.
    */
   conflictingBookings: ExistingBooking[];
 
   /**
-   * O instante presente, injetado em vez de lido com new Date().
-   *
-   * Esta linha é o que mantém a função pura. Lendo o relógio por dentro, a
-   * mesma entrada produziria resultados diferentes conforme a hora da execução,
-   * e o teste de "reserva no passado" só passaria enquanto a data escolhida
-   * continuasse no passado. Recebendo o instante, o teste fixa o presente e o
-   * resultado é sempre o mesmo.
+   * O instante presente, injetado em vez de lido com new Date(). É o que mantém
+   * a função pura: o teste fixa o presente e o resultado nunca muda com o
+   * passar do tempo.
    */
   now: Date;
 };
 
 /**
- * Os motivos pelos quais um pedido pode ser recusado.
+ * Os motivos de recusa, como união discriminada por "code". O TypeScript usa
+ * esse campo para saber quais outros campos existem em cada caso.
  *
- * União discriminada pelo campo "code": o TypeScript usa esse campo para saber
- * quais outros campos existem em cada caso. Ao tratar uma violação de
- * INSUFFICIENT_CAPACITY, o compilador garante que capacity e studentCount estão
- * lá; ao tratar ROOM_CONFLICT, garante que não estão.
- *
- * Repare que nenhuma variante carrega texto para o usuário. O domínio devolve o
- * fato, não a frase. A tradução para português está em messages.ts, e essa
- * separação é o que permite mudar o texto de uma mensagem, ou traduzi-la, sem
- * tocar na regra de negócio.
+ * Nenhuma variante carrega texto: o domínio devolve o fato, e messages.ts faz a
+ * frase. Assim reescrever uma mensagem não toca a regra.
  */
 export type BookingViolation =
-  /** Fim antes do início, ou igual a ele. Uma reserva de duração zero ou negativa. */
+  /** Fim antes do início, ou igual a ele. */
   | { code: "INVALID_PERIOD" }
 
-  /** O pedido aponta para um espaço que não existe mais. */
+  /** O espaço não existe mais. */
   | { code: "ROOM_NOT_FOUND" }
 
-  /** O pedido aponta para uma turma que não existe mais. */
+  /** A turma não existe mais. */
   | { code: "CLASS_NOT_FOUND" }
 
-  /** A finalidade veio vazia ou só com espaços. */
+  /** A finalidade veio vazia. */
   | { code: "EMPTY_PURPOSE" }
 
   /** O período começa antes de agora. */
   | { code: "STARTS_IN_THE_PAST" }
 
   /**
-   * O período cai fora do horário de funcionamento da instituição, ou atravessa
-   * a virada do dia.
-   *
-   * Carrega os limites em vez de deixar a mensagem repeti-los: assim o texto
-   * exibido acompanha automaticamente qualquer mudança no horário de
-   * funcionamento.
+   * Fora do horário de funcionamento, ou atravessando a virada do dia. Carrega
+   * os limites para a mensagem acompanhar qualquer mudança no expediente.
    */
   | { code: "OUTSIDE_BUSINESS_HOURS"; opening: string; closing: string }
 
@@ -185,12 +128,9 @@ export type BookingViolation =
   | { code: "MISSING_RESOURCES"; missingResourceIds: string[] };
 
 /**
- * O veredito.
- *
- * Também é união discriminada, e por um motivo específico: o campo "violations"
- * só existe quando valid é false. Isso impede, no compilador, o erro clássico
- * de ler a lista de problemas de uma reserva que foi aprovada, ou de gravar uma
- * reserva sem antes verificar o resultado.
+ * O veredito. União discriminada para que "violations" só exista quando valid é
+ * false: o compilador impede ler a lista de problemas de uma reserva aprovada,
+ * ou gravar sem antes verificar.
  */
 export type BookingValidationResult =
   | { valid: true }

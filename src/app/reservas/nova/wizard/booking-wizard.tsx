@@ -34,43 +34,20 @@ import { Resumo } from "./resumo";
 import { Confirmada } from "./reserva-confirmada";
 
 /**
- * FORMULÁRIO DE NOVA RESERVA, EM ETAPAS
+ * Formulário de nova reserva, em cinco etapas: atividade, data e horário,
+ * necessidades, espaço e confirmação. Cada uma mora em seu arquivo nesta pasta;
+ * aqui ficam só o estado dos campos, o disparo da análise e o avanço.
  *
- * Este arquivo cuida de três coisas, e só delas: o estado dos campos, quando
- * pedir uma análise ao servidor, e quando liberar o avanço. Cada etapa mora em
- * seu próprio arquivo nesta pasta.
+ * As etapas 2 e 4 consultam o servidor pela Server Action de análise, que roda a
+ * mesma regra usada na gravação. Nada é reimplementado no cliente.
  *
- * A separação veio depois de uma revisão apontar que o arquivo único já passava
- * de mil linhas. O problema não era o tamanho em si: era que a lógica de
- * navegação ficava soterrada entre marcação de cinco telas, e quem procurasse
- * "por que este botão não habilita" precisava percorrer tudo.
+ * Ainda não há disciplina, vínculo professor-turma nem calendário letivo, então
+ * a etapa 1 não confirma que a professora leciona para aquela turma e a etapa 2
+ * não verifica o período letivo. Dependem de tabelas das entregas seguintes.
  *
- * O QUE CADA ETAPA RESOLVE
- *
- *   1. Atividade    quem, para qual turma, com que finalidade
- *   2. Data e hora  o professor e a turma estão livres nesse horário?
- *   3. Necessidades o que a atividade exige do espaço
- *   4. Espaço       quais espaços atendem, e por que os outros não
- *   5. Confirmação  revisão antes de gravar
- *
- * As etapas 2 e 4 consultam o servidor pela Server Action de análise, que roda
- * exatamente a mesma regra usada na gravação. Nenhuma verificação é
- * reimplementada no cliente: os arquivos desta pasta cuidam de apresentação.
- *
- * O QUE ESTA VERSÃO AINDA NÃO FAZ
- *
- * O modelo de dados desta entrega não tem disciplina, vínculo do professor com
- * a turma nem calendário letivo. Por isso a etapa 1 não confirma "esta
- * professora leciona esta disciplina para esta turma", e a etapa 2 não verifica
- * se a data cai dentro do período letivo. As duas dependem de tabelas previstas
- * para as entregas seguintes.
- *
- * POR QUE O ENVIO É FEITO NO onSubmit, E NÃO NO ATRIBUTO action
- *
- * O React 19 limpa um formulário com action assim que ela termina. Nos
- * componentes do Radix, que estão sob o shadcn, esse reset dispara
- * onValueChange("") e onCheckedChange(false), zerando o que o usuário
- * preencheu. Chamando a action a partir do onSubmit, o reset não acontece.
+ * O envio é feito no onSubmit, e não no atributo action, porque o React 19 limpa
+ * o formulário quando a action termina, e nos componentes do Radix esse reset
+ * dispara onValueChange("") e onCheckedChange(false), zerando o preenchimento.
  */
 
 type BookingWizardProps = {
@@ -99,11 +76,8 @@ export function BookingWizard({
   const [recursos, setRecursos] = useState<string[]>([]);
 
   /**
-   * O resultado da última análise pedida ao servidor.
-   *
-   * Nulo enquanto não houver dados suficientes. A etapa 2 lê os conflitos de
-   * agenda; a etapa 4 lê a lista de espaços. As duas vêm da mesma chamada,
-   * porque são recortes da mesma decisão.
+   * A etapa 2 lê os conflitos de agenda e a etapa 4 lê a lista de espaços: são
+   * recortes da mesma chamada.
    */
   const [analise, setAnalise] = useState<AnaliseResult | null>(null);
   const [analisando, iniciarAnalise] = useTransition();
@@ -129,24 +103,18 @@ export function BookingWizard({
   /**
    * Pede uma análise nova sempre que muda algo que altera a resposta.
    *
-   * useEffect é o lugar certo aqui: sincronizar com um sistema externo, no caso
-   * o servidor, é exatamente o que o hook existe para fazer. Não haveria como
-   * calcular isto durante a renderização, porque a resposta depende da agenda.
-   *
-   * A dependência inclui os recursos porque eles mudam quais espaços atendem,
-   * mas não inclui roomId: escolher um espaço não altera o julgamento dos
-   * outros, e refazer a análise a cada clique da lista apagaria a seleção.
+   * roomId fica fora das dependências de propósito: escolher um espaço não muda
+   * o julgamento dos outros, e refazer a análise a cada clique apagaria a
+   * seleção.
    */
   useEffect(() => {
-    // Sem dados suficientes não há o que perguntar. O efeito apenas não faz
-    // nada; limpar o estado daqui seria escrever no React de dentro de um
-    // efeito, o que provoca uma renderização em cascata. Quem descarta o
-    // resultado antigo é a derivação logo abaixo do efeito.
+    // Limpar o estado daqui seria escrever de dentro de um efeito, o que provoca
+    // renderização em cascata. Quem descarta o resultado antigo é a derivação
+    // logo abaixo.
     if (!dadosParaAnalise) return;
 
-    // A flag existe para descartar a resposta de uma análise que ficou obsoleta
-    // enquanto viajava. Sem ela, uma consulta lenta poderia chegar depois de
-    // outra mais recente e sobrescrever o resultado certo pelo antigo.
+    // Descarta a resposta de uma análise que ficou obsoleta enquanto viajava:
+    // uma consulta lenta poderia chegar depois de outra mais recente.
     let atual = true;
 
     iniciarAnalise(async () => {
@@ -176,32 +144,15 @@ export function BookingWizard({
   ]);
 
   /**
-   * A análise que vale para os dados que estão na tela AGORA.
-   *
-   * Quando falta preencher algo, o resultado guardado no estado passa a
-   * descrever um pedido que não existe mais, e ignorá-lo aqui é mais barato e
-   * mais seguro do que apagá-lo dentro do efeito.
-   *
-   * Esta linha substituiu um setAnalise(null) que ficava no efeito acima.
-   * Escrever no estado de dentro de um efeito provoca uma renderização em
-   * cascata: o React pinta a tela, o efeito roda, o estado muda, a tela é
-   * pintada de novo. O ESLint aponta esse padrão, e a orientação da
-   * documentação do React é a mesma: o que pode ser calculado durante a
-   * renderização não deve virar estado.
+   * A análise que vale para os dados que estão na tela agora. Quando falta
+   * preencher algo, o resultado guardado descreve um pedido que não existe mais.
    */
   const analiseAtual = dadosParaAnalise ? analise : null;
 
   /**
-   * O espaço escolhido, mas só enquanto ele continuar servindo.
-   *
-   * O professor escolhe o laboratório na etapa 4, volta para trocar o horário e
-   * o laboratório fica ocupado. Sem esta derivação, ele seguiria para a
-   * confirmação com um espaço que já não serve, e descobriria na gravação.
-   *
-   * Aqui também havia um efeito que zerava campos.roomId, e ele deu lugar a uma
-   * expressão pelo mesmo motivo do anterior. A vantagem prática é que a resposta
-   * nunca fica desatualizada: não existe o intervalo entre a análise chegar e o
-   * efeito reagir, porque não há efeito.
+   * O espaço escolhido, só enquanto continuar servindo. Sem isto, trocar o
+   * horário depois de escolher levaria à confirmação com um espaço ocupado, e o
+   * erro só apareceria na gravação.
    */
   const roomIdValido =
     campos.roomId !== "" &&
@@ -219,11 +170,8 @@ export function BookingWizard({
   }
 
   /**
-   * A agenda está livre no horário escolhido?
-   *
-   * Verdadeiro só quando a análise já voltou do servidor e não encontrou nada.
-   * Enquanto ela está em andamento, ou quando ainda faltam dados, a resposta é
-   * falsa: avançar sem saber é pior do que esperar meio segundo.
+   * Falso também enquanto a análise está em andamento: avançar sem saber é pior
+   * do que esperar meio segundo.
    */
   const agendaLivre =
     !analisando &&
@@ -233,26 +181,13 @@ export function BookingWizard({
   /**
    * O que cada etapa exige para liberar o avanço.
    *
-   * A segunda etapa é a única que bloqueia por um resultado do servidor, e a
-   * razão vale ser registrada, porque contraria o padrão adotado no resto do
-   * formulário.
+   * A etapa 2 é a única que bloqueia por resultado do servidor, contrariando o
+   * padrão de avisar em vez de impedir. A razão: conflito de agenda não se
+   * resolve nas etapas seguintes, ao contrário do aviso de capacidade. Deixar
+   * avançar levaria a pessoa por três telas para recusar no fim.
    *
-   * Em toda outra situação a escolha é avisar, não impedir. O aviso de
-   * capacidade da primeira etapa é assim: a turma não cabe naquele espaço, mas
-   * cabe em outro, e a etapa seguinte é exatamente onde isso se resolve.
-   *
-   * Conflito de agenda é de outra natureza. Se o professor ou a turma já têm
-   * compromisso naquele horário, nenhuma escolha de espaço ou de recurso
-   * desfaz: a única saída é voltar e trocar o horário. Deixar avançar seria
-   * conduzir a pessoa por três telas para recusar o pedido no fim, com a
-   * informação que já estava disponível na segunda.
-   *
-   * O botão desabilitado nunca aparece sozinho: o aviso vermelho acima dele diz
-   * qual é o conflito e com qual reserva. Bloquear sem explicar seria pior do
-   * que não bloquear.
-   *
-   * Nada disso é validação. Quem recusa a reserva continua sendo a regra no
-   * servidor, e ela é refeita no envio porque a agenda pode mudar no intervalo.
+   * O botão desabilitado nunca aparece sozinho, o aviso acima diz o motivo. E
+   * nada disso é validação: quem recusa é a regra no servidor.
    */
   const podeAvancar = [
     campos.professorId !== "" && campos.classId !== "" && campos.purpose.trim() !== "",
@@ -262,29 +197,14 @@ export function BookingWizard({
     true,
   ][etapa];
 
-  /**
-   * Referência ao formulário, usada para disparar o envio a partir do botão da
-   * última etapa. O motivo está explicado logo abaixo, na declaração do botão.
-   */
+  /** Usada pelo botão da última etapa; o motivo está na declaração dele. */
   const formulario = useRef<HTMLFormElement>(null);
 
   /**
-   * Tudo o que impediu a reserva, em uma lista só.
-   *
-   * A Server Action devolve duas coisas: "messages", que são as violações da
-   * regra de negócio, e "fieldErrors", que são problemas de formato apontados
-   * pelo Zod, indexados por campo.
-   *
-   * O formulário exibia apenas as primeiras, e os fieldErrors eram descartados
-   * em silêncio. Na prática isso quase nunca aparecia, porque os campos são
-   * controlados e o wizard só libera o avanço com tudo preenchido. Mas "quase
-   * nunca" é diferente de nunca: bastava um envio com um campo em branco, ou
-   * uma requisição vinda de fora do formulário, para a tela recusar a reserva
-   * sem dizer por quê.
-   *
-   * Os dois grupos são juntados aqui em vez de exibidos separadamente porque,
-   * do ponto de vista de quem preencheu, ambos respondem a mesma pergunta: por
-   * que não deu certo.
+   * As violações da regra e os erros de formato do Zod em uma lista só: do ponto
+   * de vista de quem preencheu, ambos respondem a mesma pergunta. Os fieldErrors
+   * eram descartados em silêncio, e uma requisição vinda de fora do formulário
+   * recusava a reserva sem dizer por quê.
    */
   const motivosDaRecusa =
     state.status === "error"
@@ -374,10 +294,8 @@ export function BookingWizard({
             </CardContent>
           </Card>
 
-          {/* Os campos ocultos carregam tudo ao envio. Ficam fora das etapas
-              porque o formulário só existe uma vez: se estivessem dentro de
-              cada etapa, os valores das etapas não visíveis não seriam
-              enviados. */}
+          {/* Ficam fora das etapas: dentro delas, os valores das etapas não
+              visíveis não seriam enviados. */}
           <input type="hidden" name="roomId" value={roomIdValido} />
           <input type="hidden" name="professorId" value={campos.professorId} />
           <input type="hidden" name="classId" value={campos.classId} />
@@ -406,25 +324,16 @@ export function BookingWizard({
             )}
 
             {/*
-              OS DOIS BOTÕES SÃO type="button", E TÊM key DIFERENTE
+              Os dois botões são type="button" e têm key diferente, o que evita um
+              defeito real: quando eles alternavam entre button e submit, clicar
+              em "Continuar" na etapa do espaço CRIAVA a reserva, pulando a
+              revisão.
 
-              Parece exagero para um botão que muda de rótulo, e não é. A versão
-              anterior alternava entre type="button" na etapa de escolha do
-              espaço e type="submit" na confirmação, e produzia um defeito que
-              custou uma sessão de depuração para ser entendido: clicar em
-              "Continuar" na etapa do espaço CRIAVA a reserva, pulando a revisão.
-
-              O motivo é a ordem dos acontecimentos em um clique. O onClick roda,
-              avança a etapa e o React re-renderiza de forma síncrona. Como os
-              dois botões ocupavam a mesma posição na árvore, o React reaproveitou
-              o mesmo nó do DOM e apenas trocou o atributo type. Só então o
-              navegador aplicou o comportamento padrão do clique, e o botão que
-              ele encontrou já era um submit.
-
-              A correção tem duas partes. As chaves diferentes fazem o React
-              descartar um nó e criar outro, em vez de reaproveitar. E manter os
-              dois como type="button" garante que nenhum clique submeta por
-              conta própria: o envio acontece só onde está escrito que acontece.
+              O onClick avança a etapa, o React re-renderiza de forma síncrona
+              reaproveitando o mesmo nó do DOM e trocando o type, e só então o
+              navegador aplica o comportamento padrão do clique, encontrando um
+              submit. As chaves impedem o reaproveitamento; o type fixo garante
+              que o envio aconteça só onde está escrito.
             */}
             {etapa < ETAPAS.length - 1 ? (
               <Button
@@ -444,9 +353,8 @@ export function BookingWizard({
                 key="confirmar"
                 type="button"
                 disabled={enviando}
-                // requestSubmit dispara o onSubmit do formulário, passando pelas
-                // mesmas validações do navegador que um submit comum. Chamar
-                // submit() puro as ignoraria.
+                // requestSubmit passa pelas validações do navegador; submit() puro
+                // as ignoraria.
                 onClick={() => formulario.current?.requestSubmit()}
               >
                 {enviando ? "Confirmando..." : "Confirmar reserva"}

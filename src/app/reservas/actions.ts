@@ -21,70 +21,32 @@ import {
 } from "@/lib/repositories/bookingRepository";
 
 /**
- * SERVER ACTION DE CRIAÇÃO DE RESERVA
+ * Server Action de criação de reserva.
  *
- * A diretiva "use server" no topo marca este arquivo como código que só executa
- * no servidor. O Next.js gera automaticamente o endpoint HTTP e o cliente que o
- * chama; o formulário apenas passa a função para o atributo action.
+ * Ela orquestra: recebe o formulário, valida o formato, pede os dados aos
+ * repositórios e entrega à regra. Nenhuma comparação de horário, capacidade ou
+ * recurso acontece aqui, o que permite a mesma regra atender a uma futura API
+ * pública (seção 2.2 da monografia).
  *
- * O QUE ESTE ARQUIVO FAZ, E O QUE DELIBERADAMENTE NÃO FAZ
+ * TRÊS CAMADAS DE VERIFICAÇÃO, E NENHUMA SUBSTITUI A OUTRA
  *
- * Ele orquestra. Recebe o formulário, valida o formato dos campos, pede os
- * dados aos repositórios, entrega tudo à regra de negócio, e traduz o veredito
- * em algo que a tela mostre.
+ *   1. Zod, aqui: o campo veio e tem o formato certo? Recusa lixo antes de
+ *      consultar o banco.
+ *   2. validateBooking: a reserva é possível? Trabalha com uma fotografia.
+ *   3. Constraints do PostgreSQL: a única dentro da transação, e a única que
+ *      sobrevive a duas requisições simultâneas.
  *
- * O que ele não faz é decidir. Nenhuma comparação de horário, capacidade ou
- * recurso acontece aqui: isso é responsabilidade de validateBooking. A
- * separação é o que permite que a mesma regra atenda, sem duplicação, a uma
- * futura API pública, conforme a seção 2.2 da monografia.
+ * SEM AUTENTICAÇÃO, ISTO NÃO PODE IR AO AR
  *
- * AS TRÊS CAMADAS DE VERIFICAÇÃO, E POR QUE SÃO TRÊS
+ * Esta função não verifica quem a chama. Server Action não é função interna: o
+ * Next publica um endpoint HTTP para ela, e qualquer um com esse identificador
+ * pode invocá-la sem passar pelo formulário. Somado à chave secreta, que ignora
+ * o RLS, hoje qualquer visitante cria reserva em nome de qualquer professor.
  *
- *   1. Zod, logo abaixo: o campo veio? tem o formato certo? É verificação de
- *      FORMA, e recusa lixo antes de qualquer consulta ao banco.
- *   2. validateBooking: a reserva é possível? É verificação de REGRA.
- *   3. As constraints do PostgreSQL: alguém gravou algo entre a consulta e a
- *      gravação? É a garantia de INTEGRIDADE, e é a única que sobrevive a duas
- *      requisições simultâneas.
- *
- * Nenhuma substitui a outra. A primeira não sabe nada do mundo, a segunda
- * trabalha com uma fotografia dele, e a terceira é a única dentro da transação.
- *
- * ---------------------------------------------------------------------------
- * O QUE FALTA AQUI, E POR QUE ISTO NÃO PODE IR AO AR ASSIM
- * ---------------------------------------------------------------------------
- *
- * Esta função NÃO verifica quem está chamando. Não há sessão, não há perfil,
- * não há autorização.
- *
- * O ponto que costuma passar despercebido: uma Server Action não é uma função
- * interna. O Next publica um endpoint HTTP para ela, e qualquer pessoa com o
- * identificador desse endpoint pode invocá-la diretamente, sem passar pelo
- * formulário. Para efeitos de segurança, ela é tão pública quanto uma rota de
- * API escrita à mão.
- *
- * Some-se a isso que o cliente do Supabase usa a chave secreta, que ignora o
- * RLS. O import "server-only" impede a chave de vazar para o navegador, e é
- * tudo o que ele faz: não impede chamadas não autorizadas a esta função.
- *
- * Na prática, hoje: qualquer visitante pode criar reserva, em nome de qualquer
- * professor, para qualquer turma, e created_by fica nulo porque não há autor
- * conhecido.
- *
- * Isso é aceitável enquanto o sistema roda apenas em desenvolvimento, que é o
- * caso desta entrega. É bloqueador antes de qualquer publicação, e é
- * exatamente o que a entrega de 28/09 resolve: identificar o usuário da sessão,
- * verificar se ele pode reservar para aquele professor e aquela turma, e
- * preencher created_by com quem de fato registrou.
+ * Aceitável em desenvolvimento, bloqueador antes de publicar. É o que a entrega
+ * de 28/09 resolve.
  */
-
-/**
- * O que o formulário envia.
- *
- * Data e hora chegam separadas porque é assim que os campos nativos do HTML
- * funcionam: um input type="date" e dois type="time". A junção em instantes
- * acontece logo abaixo.
- */
+/** Data e hora chegam separadas, como os campos do HTML as enviam. */
 const schema = z.object({
   roomId: z.uuid("Selecione um espaço."),
   professorId: z.uuid("Selecione um professor."),
@@ -101,21 +63,16 @@ const schema = z.object({
 });
 
 /**
- * FormData devolve string ou File. Este helper reduz ao texto, tratando o campo
- * ausente como string vazia, para que o Zod recuse com a mensagem escrita no
- * schema em vez de com um erro genérico de tipo.
+ * FormData devolve string ou File. Campo ausente vira string vazia, para o Zod
+ * recusar com a mensagem do schema em vez de um erro genérico de tipo.
  */
 function texto(valor: FormDataEntryValue | null): string {
   return typeof valor === "string" ? valor : "";
 }
 
 /**
- * O estado que o formulário lê.
- *
- * Modelado como união discriminada pela mesma razão dos tipos do domínio: o
- * campo "messages" só existe no erro, e "bookingId" só no sucesso. A tela não
- * consegue, por construção, exibir a lista de problemas de uma reserva que deu
- * certo.
+ * União discriminada: "messages" só existe no erro e "bookingId" só no sucesso,
+ * então a tela não consegue exibir problemas de uma reserva que deu certo.
  */
 export type BookingFormState =
   | { status: "idle" }
@@ -127,18 +84,9 @@ export type BookingFormState =
       /** Problemas ligados a um campo específico, para exibir junto dele. */
       fieldErrors: Record<string, string[]>;
       /**
-       * O que o usuário havia preenchido.
-       *
-       * Devolver os valores parece redundante, já que eles acabaram de sair do
-       * navegador. Não é: o React 19 limpa um formulário com action assim que a
-       * action termina, como faz um formulário HTML tradicional.
-       *
-       * Sem isto, uma reserva recusada por quatro motivos apagaria os sete
-       * campos, e o professor teria de preencher tudo de novo para corrigir um
-       * horário. Estes valores voltam à tela como conteúdo inicial dos campos.
-       *
-       * São os dados brutos, exatamente como chegaram, e não os dados já
-       * validados: se o Zod recusou a data, é a data recusada que precisa
+       * O que o usuário havia preenchido, em bruto. O React 19 limpa o
+       * formulário quando a action termina, e sem isto uma recusa apagaria os
+       * sete campos. Se o Zod recusou a data, é a data recusada que precisa
        * reaparecer para ser corrigida.
        */
       values: SubmittedValues;
@@ -165,23 +113,15 @@ function erro(
 }
 
 /**
- * Cria uma reserva a partir do formulário.
- *
- * A assinatura com estado anterior é o formato que o hook useActionState do
- * React espera. O primeiro parâmetro não é usado aqui porque cada envio é
- * julgado do zero, mas precisa existir na posição.
+ * O primeiro parâmetro existe porque useActionState o exige na posição; cada
+ * envio é julgado do zero.
  */
 export async function criarReserva(
   _prevState: BookingFormState,
   formData: FormData
 ): Promise<BookingFormState> {
-  // -------------------------------------------------------------------------
-  // 1. Forma
-  // -------------------------------------------------------------------------
-
-  // Os valores brutos são extraídos antes de qualquer validação, porque são
-  // eles que voltam à tela em caso de recusa, inclusive quando a recusa é
-  // justamente por um deles estar mal preenchido.
+  // 1. Forma. Os valores brutos são extraídos antes de validar, porque são eles
+  // que voltam à tela em caso de recusa.
   const values: SubmittedValues = {
     roomId: texto(formData.get("roomId")),
     professorId: texto(formData.get("professorId")),
@@ -190,8 +130,7 @@ export async function criarReserva(
     date: texto(formData.get("date")),
     startTime: texto(formData.get("startTime")),
     endTime: texto(formData.get("endTime")),
-    // getAll, e não get: os recursos são caixas de seleção múltipla, e get
-    // devolveria apenas a primeira marcada.
+    // getAll: get devolveria só a primeira caixa marcada.
     resourceIds: formData.getAll("resourceIds").map(texto),
   };
 
@@ -213,13 +152,7 @@ export async function criarReserva(
     requiredResourceIds: input.resourceIds,
   };
 
-  // -------------------------------------------------------------------------
-  // 2. Regra
-  //
-  // As quatro consultas são independentes entre si, então rodam em paralelo. Em
-  // sequência, o tempo de resposta seria a soma das quatro idas ao banco em vez
-  // do tempo da mais lenta.
-  // -------------------------------------------------------------------------
+  // 2. Regra. As quatro consultas são independentes, então rodam em paralelo.
 
   const [room, classGroup, conflictingBookings, resources] = await Promise.all([
     findRoomSnapshot(request.roomId),
@@ -230,8 +163,8 @@ export async function criarReserva(
 
   const resourceNames = toResourceNameMap(resources);
 
-  // O "agora" é capturado uma vez e injetado. Fosse lido dentro da regra, duas
-  // verificações da mesma chamada poderiam usar instantes diferentes.
+  // Capturado uma vez, para que duas verificações da mesma chamada não usem
+  // instantes diferentes.
   const now = new Date();
 
   const veredito = validateBooking(request, {
@@ -245,9 +178,7 @@ export async function criarReserva(
     return erro(values, describeViolations(veredito.violations, { resourceNames }));
   }
 
-  // -------------------------------------------------------------------------
-  // 3. Integridade
-  // -------------------------------------------------------------------------
+  // 3. Integridade.
 
   const resultado = await createBooking({
     roomId: request.roomId,
@@ -256,21 +187,14 @@ export async function criarReserva(
     purpose: request.purpose,
     startsAt: request.startsAt,
     endsAt: request.endsAt,
-    // A regra já removeu duplicatas ao calcular o que falta, mas o pedido
-    // original ainda pode tê-las. O Set garante que a gravação não tente
-    // inserir a mesma linha duas vezes.
+    // O pedido original pode ter duplicatas, que violariam a chave primária.
     resourceIds: [...new Set(request.requiredResourceIds)],
   });
 
   if (resultado.status === "conflict") {
-    // Chegar aqui significa que a validação aprovou e o banco recusou, ou seja,
-    // outra reserva foi gravada nos milissegundos entre uma coisa e outra.
-    //
-    // Em vez de exibir um aviso genérico, o contexto é recarregado e a regra
-    // roda de novo. Agora a reserva concorrente já está no banco, então a
-    // violação vem completa, com a finalidade e o horário de quem ocupou o
-    // lugar. É a mesma mensagem que o usuário teria visto se tivesse chegado um
-    // instante depois.
+    // A validação aprovou e o banco recusou: outra reserva foi gravada no
+    // intervalo. Recarregar o contexto e revalidar produz a mensagem completa,
+    // com quem ocupou o lugar, em vez de um aviso genérico.
     const conflitosAtuais = await findConflictCandidates(request);
 
     const revalidacao = validateBooking(request, {
@@ -287,10 +211,8 @@ export async function criarReserva(
       );
     }
 
-    // A revalidação não encontrou nada: a reserva concorrente foi removida
-    // depois de ter causado a recusa. Situação rara o bastante para não merecer
-    // tratamento próprio, mas o usuário precisa saber que pode simplesmente
-    // tentar de novo.
+    // A concorrente foi removida depois de causar a recusa. Raro, mas o usuário
+    // precisa saber que basta tentar de novo.
     return erro(values, [
       "Outra reserva foi criada ao mesmo tempo e ocupou este horário. Tente enviar novamente.",
     ]);
@@ -300,14 +222,8 @@ export async function criarReserva(
     return erro(values, [resultado.message]);
   }
 
-  // -------------------------------------------------------------------------
-  // 4. Sucesso
-  //
-  // revalidatePath descarta o cache da listagem no servidor. Sem isso, a página
-  // continuaria servindo a versão anterior e a reserva recém-criada só
-  // apareceria depois de um recarregamento manual.
-  // -------------------------------------------------------------------------
-
+  // Sem revalidatePath a listagem continuaria servindo a versão em cache, e a
+  // reserva só apareceria após recarregar a página à mão.
   revalidatePath("/reservas");
 
   return { status: "success", bookingId: resultado.bookingId };

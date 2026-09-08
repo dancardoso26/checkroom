@@ -18,28 +18,18 @@ import {
 } from "@/domain/booking/businessHours";
 
 /**
- * SELETOR DE HORÁRIO EM DUAS COLUNAS
+ * Seletor de horário em duas colunas, no lugar do campo type="time".
  *
- * Substitui o campo type="time" do HTML, e passou por duas versões antes desta.
+ * O campo nativo não serve porque o Chrome ignora min, max e step ao montar o
+ * seletor: exibe as 24 horas, deixa escolher 23:47 e só então marca o campo como
+ * inválido. Oferecer uma opção para em seguida recusá-la é o pior dos mundos.
  *
- * A primeira usava o campo nativo com min, max e step. Não funciona: o Chrome
- * ignora os três ao montar o seletor. Ele exibe as 24 horas e os 60 minutos,
- * deixa escolher 23:47 e só depois marca o campo como inválido, o que é a pior
- * combinação possível: oferecer uma opção para em seguida recusá-la.
+ * Uma lista única com os 181 horários válidos corrigia isso e criava outro
+ * problema: achar 19:15 exigia rolar por quase duzentos itens. Duas colunas
+ * deixam 28 opções na tela, e nenhuma inválida.
  *
- * A segunda trocou por uma lista única com os 181 horários válidos. Corrigia o
- * problema e criava outro: encontrar 19:15 exigia rolar por quase duzentos
- * itens, um de cada vez.
- *
- * Esta versão separa a escolha em duas colunas, como faz o seletor nativo, mas
- * com os valores certos: 16 horas de um lado, 12 minutos do outro. São 28
- * opções na tela no lugar de 181, e nenhuma delas é inválida.
- *
- * O QUE ISTO NÃO É
- *
- * Não é validação. Continua sendo validateBooking, no servidor, quem recusa uma
- * reserva fora do expediente, e há teste para isso. Este componente faz o erro
- * não existir na tela; a regra é quem o impede de ser gravado.
+ * Não é validação: quem recusa uma reserva fora do expediente é validateBooking,
+ * no servidor, e há teste para isso.
  */
 
 type TimeSelectProps = {
@@ -54,12 +44,8 @@ type TimeSelectProps = {
    */
   minimo?: string;
   /**
-   * Quando informado, esconde os horários posteriores a ele.
-   *
-   * Usado no campo de início: o expediente termina às 22:00 e o término precisa
-   * ser posterior ao início, então 22:00 como início deixaria o usuário sem
-   * nenhuma opção de término. O servidor recusaria essa reserva, mas a
-   * interface o teria conduzido a um estado sem saída.
+   * Usado no campo de início: 22:00 como início deixaria o usuário sem nenhuma
+   * opção de término, um estado sem saída que só o servidor recusaria.
    */
   maximo?: string;
 };
@@ -76,9 +62,8 @@ function horasDisponiveis(
     hora <= Math.floor(FECHAMENTO_EM_MINUTOS / 60);
     hora++
   ) {
-    // Uma hora só aparece se existir ao menos um minuto válido dentro dela.
-    // É o que remove as horas inteiramente anteriores ao mínimo, e é também o
-    // que faz a hora 22 sumir do campo de início, onde o máximo é 21:55.
+    // Uma hora só aparece se tiver ao menos um minuto válido: é o que remove as
+    // anteriores ao mínimo e faz a hora 22 sumir do campo de início.
     const primeiroMinutoDaHora = hora * 60;
     const ultimoMinutoDaHora = Math.min(hora * 60 + 59, maximoEmMinutos);
 
@@ -105,9 +90,8 @@ function minutosDisponiveis(
   for (let minuto = 0; minuto < 60; minuto += PASSO_EM_MINUTOS) {
     const total = base + minuto;
 
-    // O limite superior é o fechamento, ou o máximo recebido quando ele for
-    // mais restritivo. Às 22h no campo de término, só 22:00 é válido; no campo
-    // de início, a hora 22 nem chega a aparecer.
+    // Às 22h no campo de término só 22:00 é válido; no de início, a hora 22 nem
+    // chega a aparecer.
     if (total > maximoEmMinutos) break;
     if (total <= minimoEmMinutos) continue;
 
@@ -127,11 +111,8 @@ export function TimeSelect({
   const [aberto, setAberto] = useState(false);
 
   /**
-   * A hora escolhida antes de o minuto ter sido escolhido.
-   *
-   * Existe porque a seleção acontece em dois cliques. Entre um e outro não há
-   * horário completo para entregar a quem chama, e sem guardar este valor a
-   * coluna de minutos não saberia de qual hora falar.
+   * A seleção acontece em dois cliques, e entre eles não há horário completo
+   * para entregar a quem chama.
    */
   const [horaParcial, setHoraParcial] = useState<string | null>(null);
 
@@ -144,27 +125,15 @@ export function TimeSelect({
   const minutoSelecionado = value ? value.slice(3, 5) : null;
 
   /**
-   * A hora que a coluna de minutos está descrevendo.
-   *
-   * A hora provisória vem PRIMEIRO, e essa ordem é o conserto de um defeito.
-   *
-   * Antes era o contrário, e com um valor já escolhido a hora dele sempre
-   * vencia. O efeito prático: com 22:00 no campo, clicar em 21 não mudava nada.
-   * Como o minuto 00 não é válido às 21h quando o mínimo é 21:00, a escolha era
-   * guardada como provisória, e a provisória era justamente a que se ignorava.
-   * A hora 21 ficava inalcançável.
-   *
-   * O clique mais recente é o que descreve a intenção de quem está escolhendo,
-   * então é ele que manda.
+   * A hora provisória vem PRIMEIRO, e a ordem conserta um defeito: com o valor
+   * vencendo, ter 22:00 no campo tornava a hora 21 inalcançável, porque o minuto
+   * 00 não é válido às 21h e a escolha virava provisória, que era ignorada.
    */
   const horaEmFoco = horaParcial ?? horaSelecionada;
 
   /**
-   * O minuto só aparece destacado quando pertence à hora que está em foco.
-   *
-   * Sem esta checagem, ao trocar de 22:00 para a hora 21 o minuto 00 continuaria
-   * marcado em azul, sugerindo que 21:00 estava escolhido quando o campo ainda
-   * marcava 22:00.
+   * Sem esta checagem, trocar de 22:00 para a hora 21 deixaria o minuto 00
+   * marcado, sugerindo uma escolha que o campo ainda não reflete.
    */
   const minutoEmFoco =
     horaEmFoco === horaSelecionada ? minutoSelecionado : null;
@@ -183,8 +152,7 @@ export function TimeSelect({
       maximoEmMinutos
     );
 
-    // Trocar de hora preserva o minuto quando ele continua válido: quem vai de
-    // 19:15 para 20:15 não deveria precisar reescolher o 15.
+    // Quem vai de 19:15 para 20:15 não deveria reescolher o 15.
     if (minutoSelecionado && candidatos.includes(minutoSelecionado)) {
       onChange(`${hora}:${minutoSelecionado}`);
       setHoraParcial(null);
@@ -208,8 +176,8 @@ export function TimeSelect({
       open={aberto}
       onOpenChange={(estado) => {
         setAberto(estado);
-        // Ao fechar sem completar a escolha, a hora provisória é descartada.
-        // Mantê-la faria o seletor reabrir num estado que o campo não reflete.
+        // Descarta a hora provisória: mantê-la faria o seletor reabrir num
+        // estado que o campo não reflete.
         if (!estado) setHoraParcial(null);
       }}
     >
@@ -218,8 +186,7 @@ export function TimeSelect({
           id={id}
           type="button"
           variant="outline"
-          // role e aria-expanded fazem o leitor de tela anunciar isto como um
-          // controle de seleção, e não como um botão comum.
+          // Anuncia como controle de seleção, e não como botão comum.
           role="combobox"
           aria-expanded={aberto}
           className={cn(
@@ -275,11 +242,8 @@ function Coluna({
   const itemSelecionado = useRef<HTMLButtonElement>(null);
 
   /**
-   * Rola até a opção já escolhida quando o seletor abre.
-   *
-   * Sem isto, reabrir um campo que marca 19:15 mostraria a lista no começo, nas
-   * sete da manhã, e o valor atual ficaria fora da tela. O usuário teria de
-   * procurar onde já estava.
+   * Sem isto, reabrir um campo que marca 19:15 mostraria a lista nas sete da
+   * manhã, com o valor atual fora da tela.
    */
   useEffect(() => {
     if (aberto && itemSelecionado.current) {

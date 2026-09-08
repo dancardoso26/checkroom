@@ -15,30 +15,15 @@ import { findBookingsInPeriod } from "@/lib/repositories/bookingRepository";
 import { combineDateTime } from "@/lib/datetime";
 
 /**
- * ANÁLISE PRÉVIA DE UM PEDIDO DE RESERVA
+ * Server Action de leitura: responde o que aconteceria se o pedido fosse enviado
+ * agora. É o que alimenta as etapas intermediárias do formulário.
  *
- * Server Action de LEITURA. Ela não grava nada: responde o que aconteceria se o
- * pedido fosse enviado agora.
+ * Roda no servidor porque o insumo não pode ir ao navegador: responder "quais
+ * espaços estão livres" exige a agenda do período, e mandá-la ao cliente exporia
+ * as reservas de todo mundo a quem apenas abriu o formulário.
  *
- * É o que alimenta os passos intermediários do formulário. Ao escolher data e
- * horário, o professor já vê se ele próprio ou a turma estão comprometidos. Ao
- * chegar na escolha do espaço, vê quais servem e por que os outros não.
- *
- * POR QUE NO SERVIDOR, E NÃO NO NAVEGADOR
- *
- * A regra é uma função pura e rodaria no navegador sem alteração nenhuma. O que
- * não pode ir para lá é o insumo: responder "quais espaços estão livres" exige
- * a agenda daquele período, e mandá-la ao cliente significaria expor as
- * reservas de todo mundo para quem apenas abriu o formulário.
- *
- * Aqui o servidor consulta, decide e devolve só o veredito.
- *
- * ESTA FUNÇÃO NÃO SUBSTITUI A VALIDAÇÃO DO ENVIO
- *
- * O que ela mostra é uma fotografia, e a agenda muda. Entre ver "laboratório
- * disponível" e clicar em confirmar podem passar minutos. Por isso criarReserva
- * refaz a validação inteira, e o banco ainda tem a palavra final através das
- * constraints de exclusão.
+ * Não substitui a validação do envio. O que ela mostra é uma fotografia, e entre
+ * vê-la e confirmar podem passar minutos.
  */
 
 const schema = z.object({
@@ -92,17 +77,15 @@ export async function analisarReserva(
     findClassSnapshot(dados.classId),
     listRooms(),
     listResources(),
-    // Quando o período está invertido, o intervalo consultado é vazio e a
-    // consulta não traz nada. Isso não é problema: a regra recusa por
-    // INVALID_PERIOD antes de qualquer comparação de sobreposição.
+    // Período invertido produz intervalo vazio e consulta sem resultado. A regra
+    // recusa por INVALID_PERIOD antes de comparar sobreposição.
     findBookingsInPeriod({ startsAt, endsAt }),
   ]);
 
   const resourceNames = toResourceNameMap(resources);
 
-  // O pedido sem espaço e sem finalidade: nenhum dos dois participa das
-  // verificações que esta tela mostra. A finalidade é obrigatória no envio, e
-  // um texto qualquer aqui evitaria uma violação que confundiria a lista.
+  // A finalidade é obrigatória no envio, mas não participa desta análise: um
+  // texto qualquer evita uma violação que confundiria a lista.
   const pedido = {
     professorId: dados.professorId,
     classId: dados.classId,

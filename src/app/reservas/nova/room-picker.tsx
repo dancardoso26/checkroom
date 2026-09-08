@@ -10,18 +10,12 @@ import type { ResourceOption } from "@/lib/repositories/resourceRepository";
 import type { RoomVerdict } from "./analise";
 
 /**
- * ESCOLHA DO ESPAÇO
+ * A tela onde a regra fica visível: em vez de o professor escolher e descobrir o
+ * erro depois, a lista mostra os espaços já julgados, com o motivo em cada
+ * incompatível.
  *
- * A tela onde a regra de negócio fica visível.
- *
- * Em vez de um seletor onde o professor escolhe e descobre o erro depois, a
- * lista mostra todos os espaços já julgados: os que servem em cima, e os que
- * não servem com o motivo escrito. Trocar uma recusa por uma explicação é a
- * diferença entre o sistema dizer "você errou" e dizer "isto aqui resolve".
- *
- * O julgamento não acontece neste arquivo. Ele chega pronto da Server Action de
- * análise, que roda a mesma validateBooking usada no envio. É o que garante que
- * a lista e a recusa final nunca discordem.
+ * O julgamento chega pronto da Server Action de análise, que roda a mesma
+ * validateBooking do envio. É o que garante que a lista não discorde da recusa.
  */
 
 type RoomPickerProps = {
@@ -54,19 +48,12 @@ export function RoomPicker({
 
   const compativeis = itens.filter((i) => i.verdict.compatible).length;
 
-  /**
-   * Os elementos dos cartões, para que a navegação por teclado consiga mover o
-   * foco. Um radiogroup move o foco junto com a seleção, e sem as referências
-   * só daria para mudar o valor, deixando o foco parado no cartão anterior.
-   */
+  /** Um radiogroup move o foco junto com a seleção, não só o valor. */
   const cartoes = useRef<(HTMLDivElement | null)[]>([]);
 
   /**
-   * Qual cartão participa da ordem de tabulação.
-   *
-   * É o selecionado. Sem seleção, o primeiro que pode ser escolhido. Sem nenhum
-   * compatível, nenhum: uma lista em que nada pode ser escolhido não deve
-   * capturar o Tab.
+   * O selecionado; sem seleção, o primeiro escolhível. Sem nenhum compatível,
+   * nenhum: uma lista em que nada pode ser escolhido não deve capturar o Tab.
    */
   const indiceFocalizavel = (() => {
     const selecionado = itens.findIndex(
@@ -77,13 +64,10 @@ export function RoomPicker({
     return itens.findIndex((i) => i.verdict.compatible);
   })();
 
-  /**
-   * Move a seleção para o próximo espaço disponível, pulando os incompatíveis.
-   *
-   * Pular os incompatíveis é o mesmo motivo pelo qual eles têm tabIndex -1:
-   * parar em uma opção que não pode ser escolhida transforma a navegação em
-   * obstáculo. A busca dá a volta na lista, comportamento esperado de um
-   * radiogroup.
+/**
+   * Pula os incompatíveis pelo mesmo motivo de eles terem tabIndex -1: parar em
+   * uma opção inescolhível transforma a navegação em obstáculo. Dá a volta na
+   * lista, como manda o padrão do radiogroup.
    */
   function navegar(deIndice: number, direcao: 1 | -1) {
     const total = itens.length;
@@ -123,15 +107,9 @@ export function RoomPicker({
         </Badge>
       </div>
 
-      {/* radiogroup, e não uma lista de divs clicáveis. É o que faz o leitor de
-          tela anunciar "opção 3 de 12" em vez de ler doze blocos soltos.
-          
-          O papel ARIA sozinho não traz comportamento nenhum: quem implementa a
-          navegação por setas e o roving tabindex é o código abaixo. Uma versão
-          anterior deste arquivo declarava o papel e prometia as setas em um
-          comentário sem tê-las implementado, o que é pior do que não usar o
-          papel, porque um leitor de tela anuncia um controle que não responde
-          como deveria. */}
+      {/* radiogroup faz o leitor de tela anunciar "opção 3 de 12" em vez de ler
+          doze blocos soltos. O papel sozinho não traz comportamento: quem
+          implementa as setas e o roving tabindex é o código acima. */}
       <div role="radiogroup" aria-label="Espaços disponíveis" className="space-y-3">
         {itens.map(({ room, verdict }, indice) => (
           <CartaoEspaco
@@ -147,9 +125,8 @@ export function RoomPicker({
               verdict.compatible && itens.find((i) => i.verdict.compatible)?.room.id === room.id
             }
             selecionado={selectedRoomId === room.id}
-            // Roving tabindex: só um cartão participa da ordem de tabulação, e
-            // as setas movem entre eles. Sem isso, alcançar o décimo espaço
-            // exigiria dez toques em Tab, e sair da lista exigiria mais doze.
+            // Roving tabindex: sem ele, alcançar o décimo espaço exigiria dez
+            // toques em Tab.
             focalizavel={indice === indiceFocalizavel}
             onSelect={() => onSelect(room.id)}
             onNavegar={(direcao) => navegar(indice, direcao)}
@@ -196,18 +173,14 @@ function CartaoEspaco({
       role="radio"
       aria-checked={selecionado}
       aria-disabled={!disponivel}
-      // Roving tabindex. Apenas um cartão do grupo entra na ordem de tabulação,
-      // e os incompatíveis nunca entram: parar em uma opção que não pode ser
-      // escolhida transforma a navegação em obstáculo.
+      // Apenas um cartão entra na ordem de tabulação, e os incompatíveis nunca.
       tabIndex={disponivel && focalizavel ? 0 : -1}
       onClick={disponivel ? onSelect : undefined}
       onKeyDown={(evento) => {
         if (!disponivel) return;
 
-        // As quatro setas movem entre as opções, como manda o padrão ARIA para
-        // radiogroup. Para baixo e para a direita avançam; para cima e para a
-        // esquerda voltam. Em um grupo empilhado as verticais são as usadas na
-        // prática, mas as horizontais fazem parte do contrato do papel.
+        // As quatro setas, como manda o padrão ARIA. Em um grupo empilhado as
+        // verticais são as usadas, mas as horizontais fazem parte do contrato.
         if (evento.key === "ArrowDown" || evento.key === "ArrowRight") {
           evento.preventDefault();
           onNavegar(1);
@@ -220,9 +193,7 @@ function CartaoEspaco({
           return;
         }
 
-        // Espaço e Enter ativam a opção, que é o comportamento esperado de um
-        // controle de formulário. Sem isso, quem navega por teclado consegue
-        // chegar ao cartão mas não consegue escolhê-lo.
+        // Sem isto, quem navega por teclado chega ao cartão mas não o escolhe.
         if (evento.key === " " || evento.key === "Enter") {
           evento.preventDefault();
           onSelect();
@@ -241,9 +212,8 @@ function CartaoEspaco({
           <div className="flex flex-wrap items-center gap-2">
             <p className="font-medium">{room.name}</p>
             {recomendado && (
-              // "Recomendado" não é enfeite: sinaliza o espaço de capacidade
-              // mais próxima da turma, que é o que evita ocupar o auditório com
-              // uma aula de 38 alunos.
+              // Sinaliza o espaço de capacidade mais próxima da turma, o que
+              // evita ocupar o auditório com uma aula de 38 alunos.
               <Badge className="bg-success-subtle text-success border-success/30 border">
                 Recomendado
               </Badge>
