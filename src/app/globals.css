@@ -1,0 +1,172 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   TEMA DO CHECKROOM
+
+   Os valores desta seção vêm do documento "IDV CheckRoom.md", na raiz do
+   repositório do PFC. Aquele documento é a fonte de verdade: se uma cor mudar
+   lá, muda aqui, e não o contrário.
+
+   As cores estão em HSL sem a função hsl() porque é o formato que o shadcn/ui
+   espera. Ele monta a cor final como hsl(var(--primary)), e essa separação é o
+   que permite aplicar transparência depois, como em hsl(var(--primary) / 0.5).
+
+   Todas as combinações de texto sobre fundo previstas aqui foram verificadas
+   contra a WCAG 2.1 e atingem no mínimo o nível AA. Introduzir cor nova sem
+   verificar o contraste quebra essa garantia.
+--------------------------------------------------------------------------- */
+
+:root {
+  /* superfícies e texto */
+  --background: 208 68% 96%;      /* #EFF6FC - fundo geral */
+  --foreground: 207 30% 12%;      /* #152028 - quase-preto azulado, no lugar do preto puro */
+  --card: 0 0% 100%;
+  --card-foreground: 207 30% 12%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 207 30% 12%;
+
+  /* azul principal da marca */
+  --primary: 202 46% 31%;         /* #2A5872 */
+  --primary-foreground: 0 0% 100%;
+
+  /* apoio */
+  --secondary: 207 40% 94%;
+  --secondary-foreground: 207 30% 12%;
+  --muted: 207 40% 94%;
+  --muted-foreground: 207 18% 38%;
+  --accent: 202 46% 92%;
+  --accent-foreground: 202 46% 20%;
+
+  /* erro, usado pelo shadcn em botões e alertas destrutivos */
+  --destructive: 4 65% 41%;
+  --destructive-foreground: 0 0% 100%;
+
+  /* contornos e indicador de foco */
+  --border: 207 25% 88%;
+  --input: 207 25% 88%;
+  --ring: 202 46% 31%;
+
+  /* Estados próprios do CheckRoom. O shadcn não conhece estes tokens, então
+     eles precisam ser registrados no bloco @theme abaixo para virarem classes
+     utilitárias do Tailwind. Servem aos badges de status e prioridade dos
+     chamados e à sinalização da grade de ocupação. */
+  --primary-hover: 202 46% 25%;
+  --primary-active: 202 46% 20%;
+  --primary-subtle: 202 46% 92%;
+  --success: 165 50% 26%;
+  --success-subtle: 165 45% 93%;
+  --warning: 32 85% 30%;
+  --warning-subtle: 38 80% 92%;
+  --destructive-subtle: 4 70% 94%;
+
+  --radius: 0.5rem;
+}
+
+/* ---------------------------------------------------------------------------
+   REGISTRO NO TAILWIND V4
+
+   Na v4 não existe mais tailwind.config.js. O bloco @theme é o que transforma
+   uma variável CSS em classe utilitária: declarar --color-success aqui é o que
+   faz "bg-success" e "text-success" passarem a existir.
+--------------------------------------------------------------------------- */
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  /* tokens específicos do CheckRoom */
+  --color-primary-hover: hsl(var(--primary-hover));
+  --color-primary-active: hsl(var(--primary-active));
+  --color-primary-subtle: hsl(var(--primary-subtle));
+  --color-success: hsl(var(--success));
+  --color-success-subtle: hsl(var(--success-subtle));
+  --color-warning: hsl(var(--warning));
+  --color-warning-subtle: hsl(var(--warning-subtle));
+  --color-destructive-subtle: hsl(var(--destructive-subtle));
+
+  /* A fonte Inter é carregada em layout.tsx pelo next/font, que expõe a
+     variável --font-inter. Aqui ela é apenas ligada à família padrão. */
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+}
+
+/* ---------------------------------------------------------------------------
+   BASE
+--------------------------------------------------------------------------- */
+
+* {
+  border-color: hsl(var(--border));
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: var(--font-sans);
+  /* Suaviza o desenho das fontes, o que melhora a leitura da Inter em
+     tamanhos pequenos, comuns em tabelas e formulários deste sistema. */
+  -webkit-font-smoothing: antialiased;
+}
+
+/* O indicador de foco nunca deve ser removido: é ele que permite navegar o
+   sistema inteiro pelo teclado, requisito de acessibilidade assumido na
+   monografia. Aqui ele é padronizado na cor da marca. */
+:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* CURSOR EM ELEMENTOS INTERATIVOS
+
+   O Tailwind v4 mudou este comportamento em relação à v3. Antes, o preflight
+   aplicava cursor: pointer nos botões automaticamente. A partir da v4 ele
+   passou a seguir o padrão do navegador, que usa cursor: default em <button>.
+
+   O resultado prático é que o botão deixa de parecer clicável, o que é uma
+   perda de affordance: o usuário depende de outros sinais para saber onde pode
+   clicar. A regra abaixo restaura o comportamento esperado.
+
+   Fica na camada base, e não em cada componente, para que todo elemento
+   interativo criado daqui em diante já nasça correto, incluindo os
+   componentes que vierem prontos do shadcn/ui. */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+a[href],
+label[for],
+summary,
+input[type="submit"],
+input[type="button"],
+input[type="reset"],
+input[type="checkbox"],
+input[type="radio"] {
+  cursor: pointer;
+}
+
+/* O inverso também comunica: quando o elemento está desabilitado, o cursor
+   avisa que clicar não vai adiantar, em vez de deixar o usuário tentando. */
+button:disabled,
+[aria-disabled="true"],
+input:disabled,
+select:disabled,
+textarea:disabled {
+  cursor: not-allowed;
+}
