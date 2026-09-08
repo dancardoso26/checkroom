@@ -47,6 +47,8 @@ export type Database = {
       bookings: {
         Row: {
           activity_type: Database["public"]["Enums"]["activity_type"]
+          cancellation_reason: string | null
+          cancelled_at: string | null
           class_id: string
           created_at: string
           created_by: string | null
@@ -56,10 +58,13 @@ export type Database = {
           purpose: string
           room_id: string
           starts_at: string
+          status: Database["public"]["Enums"]["booking_status"]
           subject_id: string | null
         }
         Insert: {
           activity_type?: Database["public"]["Enums"]["activity_type"]
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
           class_id: string
           created_at?: string
           created_by?: string | null
@@ -69,10 +74,13 @@ export type Database = {
           purpose: string
           room_id: string
           starts_at: string
+          status?: Database["public"]["Enums"]["booking_status"]
           subject_id?: string | null
         }
         Update: {
           activity_type?: Database["public"]["Enums"]["activity_type"]
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
           class_id?: string
           created_at?: string
           created_by?: string | null
@@ -82,6 +90,7 @@ export type Database = {
           purpose?: string
           room_id?: string
           starts_at?: string
+          status?: Database["public"]["Enums"]["booking_status"]
           subject_id?: string | null
         }
         Relationships: [
@@ -347,6 +356,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cancel_booking: {
+        Args: { p_booking_id: string; p_reason?: string }
+        Returns: string
+      }
       create_booking: {
         Args: {
           p_activity_type?: Database["public"]["Enums"]["activity_type"]
@@ -364,6 +377,7 @@ export type Database = {
     }
     Enums: {
       activity_type: "class" | "lecture" | "exam" | "defense" | "event"
+      booking_status: "active" | "cancelled"
       room_type: "classroom" | "laboratory" | "auditorium"
     }
     CompositeTypes: {
@@ -493,6 +507,7 @@ export const Constants = {
   public: {
     Enums: {
       activity_type: ["class", "lecture", "exam", "defense", "event"],
+      booking_status: ["active", "cancelled"],
       room_type: ["classroom", "laboratory", "auditorium"],
     },
   },

@@ -51,6 +51,22 @@ O intervalo é fechado no início e aberto no fim. Uma aula que termina às 20h4
 outra que começa às 20h40 **não** conflitam, que é o caso normal de uma grade
 horária encadeada.
 
+## Cancelamento
+
+A reserva não é apagada: ela passa a **cancelada**, com data e motivo. O registro
+de que existiu é o que sustenta a entrega de registros de auditoria, porque
+"quem cancelou a aula de sexta, quando e por quê" precisa ter resposta.
+
+Isso exigiu um cuidado nas constraints de exclusão. A linha cancelada continua na
+tabela, e sem a cláusula `where (status = 'active')` ela seguiria bloqueando o
+horário: cancelar não liberaria a sala, o oposto do objetivo. Há um teste de
+ponta a ponta que reserva o horário recém-liberado justamente para provar que a
+cláusula está lá.
+
+Cancelar é uma função no banco, e não um `update` pela API: ela garante que as
+três colunas mudem juntas, trava a linha contra cancelamentos simultâneos e
+recusa cancelar o que já terminou.
+
 ## Como a regra é verificada, em três camadas
 
 1. **Zod**, na Server Action. Verificação de *forma*: o campo veio, tem o
@@ -127,8 +143,11 @@ Registrado aqui de propósito, porque são decisões de escopo e não omissões.
 **Autenticação e autorização.** A entrega seguinte. Enquanto não existem, o
 acesso ao banco usa a chave secreta dentro das Server Actions, o que ignora as
 políticas de Row Level Security. As políticas estão preparadas no banco, mas sem
-`auth.uid()` não há como escrevê-las. **O sistema não deve ser publicado neste
-estado.**
+`auth.uid()` não há como escrevê-las.
+
+Isso pesa mais no cancelamento do que na criação: hoje qualquer visitante pode
+cancelar a reserva de qualquer professor. **O sistema não deve ser publicado
+neste estado.**
 
 **Calendário acadêmico.** O período letivo existe como rótulo no vínculo
 docente (`2026.2`), mas não como calendário com datas de início, fim, recesso e

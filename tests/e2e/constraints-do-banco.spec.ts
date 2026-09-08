@@ -25,6 +25,9 @@ import {
  *
  * Se algum destes testes passar a aceitar a inserção, a garantia de integridade
  * deixou de existir, e nenhum teste unitário perceberia.
+ *
+ * As três constraints valem apenas entre reservas ativas. O efeito disso, que é
+ * cancelar liberar o horário, é verificado em cancelar-reserva.spec.ts.
  */
 
 /** A reserva do seed contra a qual os conflitos são testados. */

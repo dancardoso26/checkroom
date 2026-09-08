@@ -37,6 +37,9 @@ export async function findConflictCandidates(params: {
     .or(
       `room_id.eq.${params.roomId},professor_id.eq.${params.professorId},class_id.eq.${params.classId}`
     )
+    // Reserva cancelada não ocupa nada. Sem este filtro, cancelar não liberaria
+    // o horário na visão da regra, ainda que o banco já o liberasse.
+    .eq("status", "active")
     .lt("starts_at", params.endsAt.toISOString())
     .gt("ends_at", params.startsAt.toISOString());
 
@@ -72,6 +75,7 @@ export async function findBookingsInPeriod(params: {
   const { data, error } = await supabaseServer
     .from("bookings")
     .select("id, room_id, professor_id, class_id, purpose, starts_at, ends_at")
+    .eq("status", "active")
     .lt("starts_at", params.endsAt.toISOString())
     .gt("ends_at", params.startsAt.toISOString());
 
@@ -228,6 +232,7 @@ export async function listUpcomingBookings(
        classes(name),
        booking_resources(resources(name))`
     )
+    .eq("status", "active")
     .gte("ends_at", now.toISOString())
     .order("starts_at");
 
@@ -250,4 +255,40 @@ export async function listUpcomingBookings(
       (vinculo) => vinculo.resources.name
     ),
   }));
+}
+
+/**
+ * O que aconteceu ao tentar cancelar.
+ *
+ * Os quatro casos vêm da função do banco, e distingui-los permite à tela dizer
+ * o motivo em vez de um "não foi possível" genérico.
+ */
+export type CancelBookingOutcome =
+  | "cancelled"
+  | "not_found"
+  | "already_cancelled"
+  | "already_finished";
+
+/**
+ * Cancela uma reserva, preservando o registro.
+ *
+ * Chama a função do banco em vez de um update direto porque ela garante que as
+ * três colunas mudem juntas, trava a linha contra cancelamentos simultâneos e
+ * recusa cancelar o que já terminou.
+ */
+export async function cancelBooking(
+  bookingId: string,
+  reason: string | null
+): Promise<CancelBookingOutcome> {
+  const { data, error } = await supabaseServer.rpc("cancel_booking", {
+    p_booking_id: bookingId,
+    p_reason: reason ?? undefined,
+  });
+
+  if (error) {
+    console.error("Falha ao cancelar reserva:", error);
+    throw new Error("Não foi possível cancelar a reserva.");
+  }
+
+  return data as CancelBookingOutcome;
 }

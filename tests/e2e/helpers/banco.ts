@@ -61,6 +61,9 @@ export type LinhaReserva = {
   purpose: string;
   starts_at: string;
   ends_at: string;
+  status: string;
+  cancelled_at: string | null;
+  cancellation_reason: string | null;
 };
 
 async function pedir(caminho: string, init?: RequestInit) {
@@ -73,7 +76,7 @@ async function pedir(caminho: string, init?: RequestInit) {
 
 export async function listarReservas(): Promise<LinhaReserva[]> {
   const { corpo } = await pedir(
-    "bookings?select=id,room_id,professor_id,class_id,purpose,starts_at,ends_at&order=starts_at"
+    "bookings?select=id,room_id,professor_id,class_id,purpose,starts_at,ends_at,status,cancelled_at,cancellation_reason&order=starts_at"
   );
   return corpo;
 }

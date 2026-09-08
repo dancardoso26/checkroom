@@ -26,7 +26,8 @@ dependem da extensão.
 | 9 | `migrations/20260908000100_create_booking_with_subject.sql` | Atualiza `create_booking` para gravar a disciplina |
 | 10 | `migrations/20260908000200_activity_type.sql` | Cria o tipo de atividade e a coluna em `bookings` |
 | 11 | `migrations/20260908000300_create_booking_with_activity_type.sql` | Atualiza `create_booking` para gravar o tipo |
-| 12 | `seed.sql` | Popula com dados de exemplo (opcional, só em desenvolvimento) |
+| 12 | `migrations/20260908000400_booking_cancellation.sql` | Cancelamento, e as constraints valendo só entre reservas ativas |
+| 13 | `seed.sql` | Popula com dados de exemplo (opcional, só em desenvolvimento) |
 
 O `seed.sql` **apaga** o conteúdo das tabelas antes de inserir. É intencional,
 para que ele possa ser reexecutado durante o desenvolvimento, mas não deve ser

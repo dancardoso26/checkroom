@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { listUpcomingBookings } from "@/lib/repositories/bookingRepository";
 import { formatFullDate, formatTimeRange } from "@/lib/datetime";
+import { CancelarReserva } from "./cancelar-reserva";
 import type { BookingListItem } from "@/lib/repositories/bookingRepository";
 
 /**
@@ -142,15 +143,21 @@ function CartaoReserva({ reserva }: { reserva: BookingListItem }) {
           )}
         </div>
 
-        {/* <time> com dateTime em formato legível por máquina. É o que permite a
-            um leitor de tela, ou a um buscador, interpretar o horário como data
-            e não como texto solto. */}
-        <time
-          dateTime={reserva.startsAt.toISOString()}
-          className="text-primary text-sm font-semibold whitespace-nowrap"
-        >
-          {formatTimeRange(reserva.startsAt, reserva.endsAt)}
-        </time>
+        <div className="flex flex-col items-end gap-2">
+          {/* <time> com dateTime legível por máquina: é o que permite a um
+              leitor de tela interpretar o horário como data, e não como texto. */}
+          <time
+            dateTime={reserva.startsAt.toISOString()}
+            className="text-primary text-sm font-semibold whitespace-nowrap"
+          >
+            {formatTimeRange(reserva.startsAt, reserva.endsAt)}
+          </time>
+
+          <CancelarReserva
+            bookingId={reserva.id}
+            descricao={`${reserva.purpose}, ${reserva.building} · ${reserva.roomName}`}
+          />
+        </div>
       </CardContent>
     </Card>
   );
