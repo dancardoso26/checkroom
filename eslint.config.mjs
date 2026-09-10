@@ -40,6 +40,12 @@ const config = [
       ".next/**",
       "node_modules/**",
       "coverage/**",
+      // Artefatos do Playwright. O relatório HTML embute bundles minificados, e
+      // sem esta linha o lint analisa milhares de linhas de código que ninguém
+      // escreveu, afogando os avisos que importam.
+      "playwright-report/**",
+      "test-results/**",
+      "blob-report/**",
       "next-env.d.ts",
       "src/lib/supabase/database.types.ts",
     ],

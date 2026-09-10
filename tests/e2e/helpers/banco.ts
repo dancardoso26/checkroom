@@ -127,6 +127,45 @@ export async function apagarReserva(id: string) {
   await pedir(`bookings?id=eq.${id}`, { method: "DELETE" });
 }
 
+/** A reserva existe no banco? Usado para provar que excluir apaga de verdade. */
+export async function buscarReserva(id: string): Promise<LinhaReserva | null> {
+  const { corpo } = await pedir(
+    `bookings?id=eq.${id}&select=id,room_id,professor_id,class_id,purpose,starts_at,ends_at,status,cancelled_at,cancellation_reason`
+  );
+  return corpo.length > 0 ? corpo[0] : null;
+}
+
+/**
+ * Os recursos vinculados a uma reserva.
+ *
+ * Serve para verificar o "on delete cascade": apagar a reserva precisa levar
+ * essas linhas junto, senão sobrariam órfãs apontando para nada.
+ */
+export async function contarRecursosDaReserva(id: string): Promise<number> {
+  const { corpo } = await pedir(
+    `booking_resources?booking_id=eq.${id}&select=resource_id`
+  );
+  return corpo.length;
+}
+
+/** Vincula recursos a uma reserva, para o teste do cascade ter o que verificar. */
+export async function vincularRecursos(
+  bookingId: string,
+  resourceIds: string[]
+) {
+  await pedir("booking_resources", {
+    method: "POST",
+    body: JSON.stringify(
+      resourceIds.map((resource_id) => ({ booking_id: bookingId, resource_id }))
+    ),
+  });
+}
+
+export async function listarRecursos() {
+  const { corpo } = await pedir("resources?select=id,name");
+  return corpo as { id: string; name: string }[];
+}
+
 /**
  * O prefixo que marca tudo o que os testes criam.
  *

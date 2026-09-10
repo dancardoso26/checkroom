@@ -51,11 +51,29 @@ O intervalo é fechado no início e aberto no fim. Uma aula que termina às 20h4
 outra que começa às 20h40 **não** conflitam, que é o caso normal de uma grade
 horária encadeada.
 
-## Cancelamento
+## Cancelar e excluir
 
-A reserva não é apagada: ela passa a **cancelada**, com data e motivo. O registro
-de que existiu é o que sustenta a entrega de registros de auditoria, porque
-"quem cancelou a aula de sexta, quando e por quê" precisa ter resposta.
+São operações diferentes, e a interface deixa isso explícito:
+
+| | Significado | O registro |
+|---|---|---|
+| **Cancelar** | a atividade não vai acontecer | preservado, com data e motivo |
+| **Excluir** | a reserva não deveria existir | apagado do banco |
+
+Cancelar é fato acadêmico e sustenta a entrega de registros de auditoria, porque
+"quem cancelou a aula de sexta, quando e por quê" precisa ter resposta. Excluir é
+correção de erro: engano de digitação, duplicata, dado de teste. A confirmação de
+exclusão sugere cancelar a quem só quer desmarcar a aula.
+
+Reservas canceladas somem da agenda, mas continuam alcançáveis pelo filtro "Ver
+canceladas" da listagem. Sem ele, o histórico existiria só no banco e a reserva
+cancelada nunca poderia ser excluída.
+
+Excluir apaga também os recursos vinculados, pelo `on delete cascade` de
+`booking_resources`. Não há registro de quem excluiu, e não haveria como: a linha
+que o guardaria é justamente a que se apaga. Quando os logs de auditoria
+existirem como tabela própria, a exclusão passa a gravar um evento lá antes de
+remover a reserva.
 
 Isso exigiu um cuidado nas constraints de exclusão. A linha cancelada continua na
 tabela, e sem a cláusula `where (status = 'active')` ela seguiria bloqueando o
@@ -119,6 +137,14 @@ Ou separadamente:
 Os testes de ponta a ponta precisam do banco populado com `supabase/seed.sql`,
 porque verificam conflitos contra as reservas de exemplo.
 
+Eles sobem o servidor na porta **3100**, e não na 3000, para não esbarrar em
+outro projeto. Se você já tem um `npm run dev` aberto, informe a porta dele em
+vez de encerrá-lo:
+
+```bash
+CHECKROOM_PORT=3002 npm run test:e2e
+```
+
 ## Organização do código
 
 ```
@@ -145,9 +171,9 @@ acesso ao banco usa a chave secreta dentro das Server Actions, o que ignora as
 políticas de Row Level Security. As políticas estão preparadas no banco, mas sem
 `auth.uid()` não há como escrevê-las.
 
-Isso pesa mais no cancelamento do que na criação: hoje qualquer visitante pode
-cancelar a reserva de qualquer professor. **O sistema não deve ser publicado
-neste estado.**
+Isso pesa mais nas operações destrutivas do que na criação: hoje qualquer
+visitante pode cancelar ou excluir a reserva de qualquer professor. **O sistema
+não deve ser publicado neste estado.**
 
 **Calendário acadêmico.** O período letivo existe como rótulo no vínculo
 docente (`2026.2`), mas não como calendário com datas de início, fim, recesso e

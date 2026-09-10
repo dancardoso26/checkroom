@@ -22,6 +22,23 @@ import { defineConfig, devices } from "@playwright/test";
  * são escritos para tolerar isso: cada um limpa o que criou e nenhum depende da
  * ordem de execução.
  */
+/**
+ * Porta dedicada aos testes.
+ *
+ * A 3000 é a padrão do Next e costuma estar ocupada por outro projeto. Com
+ * reuseExistingServer, a suíte se conectava ao que estivesse ali e rodava contra
+ * a aplicação errada: as verificações de banco passavam, as de navegador
+ * falhavam, e a causa não aparecia em lugar nenhum.
+ *
+ * CHECKROOM_PORT permite apontar para um servidor já aberto em outra porta. O
+ * "next dev" recusa subir duas vezes no mesmo diretório, então quem já está
+ * desenvolvendo informa a porta em vez de encerrar o que tem aberto:
+ *
+ *   CHECKROOM_PORT=3002 npm run test:e2e
+ */
+const PORTA = Number(process.env.CHECKROOM_PORT ?? 3100);
+const BASE_URL = `http://localhost:${PORTA}`;
+
 export default defineConfig({
   testDir: "./tests/e2e",
 
@@ -36,7 +53,7 @@ export default defineConfig({
   reporter: process.env.CI ? "list" : [["list"], ["html", { open: "never" }]],
 
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL: BASE_URL,
     locale: "pt-BR",
     // O fuso é fixado porque o sistema inteiro trabalha com o horário de
     // Brasília. Rodar os testes em outro fuso mediria outra coisa.
@@ -47,10 +64,11 @@ export default defineConfig({
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
 
   webServer: {
-    command: "npm run dev",
-    url: "http://localhost:3000",
-    // Reaproveita um servidor já em execução em vez de subir outro. Sem isto, a
-    // suíte falharia sempre que alguém estivesse desenvolvendo em paralelo.
+    command: `npm run dev -- --port ${PORTA}`,
+    url: BASE_URL,
+    // Reaproveita um servidor já em execução em vez de subir outro. Combinado
+    // com a porta dedicada, isso reaproveita apenas um CheckRoom, e nunca outra
+    // aplicação.
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },

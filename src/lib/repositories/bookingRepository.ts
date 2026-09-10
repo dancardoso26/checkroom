@@ -214,27 +214,41 @@ export type BookingListItem = {
   professorName: string;
   className: string;
   resourceNames: string[];
+  cancelled: boolean;
+  cancellationReason: string | null;
 };
 
 /**
+ * As reservas que ainda não terminaram.
+ *
  * O corte é por ends_at: uma aula que começou há dez minutos ainda está
  * acontecendo e precisa aparecer na grade.
+ *
+ * As canceladas ficam de fora por padrão, porque a agenda mostra o que vai
+ * acontecer. Elas entram sob demanda para que o histórico de cancelamentos seja
+ * visível na tela, e não apenas no banco, e para que possam ser excluídas.
  */
 export async function listUpcomingBookings(
+  { incluirCanceladas = false } = {},
   now: Date = new Date()
 ): Promise<BookingListItem[]> {
-  const { data, error } = await supabaseServer
+  let query = supabaseServer
     .from("bookings")
     .select(
-      `id, purpose, starts_at, ends_at,
+      `id, purpose, starts_at, ends_at, status, cancellation_reason,
        rooms(name, building),
        professors(name),
        classes(name),
        booking_resources(resources(name))`
     )
-    .eq("status", "active")
     .gte("ends_at", now.toISOString())
     .order("starts_at");
+
+  if (!incluirCanceladas) {
+    query = query.eq("status", "active");
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     throw new Error(`Falha ao listar as reservas: ${error.message}`);
@@ -254,6 +268,10 @@ export async function listUpcomingBookings(
     resourceNames: linha.booking_resources.map(
       (vinculo) => vinculo.resources.name
     ),
+    // A tela precisa do booleano, não do enum: ela decide se mostra o badge, e
+    // não qual dos estados possíveis exibir.
+    cancelled: linha.status === "cancelled",
+    cancellationReason: linha.cancellation_reason,
   }));
 }
 
@@ -291,4 +309,37 @@ export async function cancelBooking(
   }
 
   return data as CancelBookingOutcome;
+}
+
+export type DeleteBookingOutcome = "deleted" | "not_found";
+
+/**
+ * Apaga a reserva do banco.
+ *
+ * Diferente de cancelar, que preserva o registro: excluir é para a reserva que
+ * não deveria ter existido, como um engano de digitação ou um dado de teste.
+ *
+ * Não há função no banco aqui, ao contrário do cancelamento, porque não há
+ * regra a aplicar nem colunas a manter coerentes. O ".select()" no fim é o que
+ * distingue "apagou" de "não existia": o PostgREST devolve as linhas removidas,
+ * e uma lista vazia significa que nada foi encontrado.
+ *
+ * Os recursos vinculados somem junto, pelo "on delete cascade" declarado em
+ * booking_resources na migration 20260904000100.
+ */
+export async function deleteBooking(
+  bookingId: string
+): Promise<DeleteBookingOutcome> {
+  const { data, error } = await supabaseServer
+    .from("bookings")
+    .delete()
+    .eq("id", bookingId)
+    .select("id");
+
+  if (error) {
+    console.error("Falha ao excluir reserva:", error);
+    throw new Error("Não foi possível excluir a reserva.");
+  }
+
+  return data.length > 0 ? "deleted" : "not_found";
 }

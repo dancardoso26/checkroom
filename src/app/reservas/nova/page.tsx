@@ -34,13 +34,13 @@ export const dynamic = "force-dynamic";
 export default async function NovaReservaPage() {
   const [rooms, professors, classes, resources, subjects, assignments] =
     await Promise.all([
-    listRooms(),
-    listProfessors(),
-    listClasses(),
-    listResources(),
-    listSubjects(),
-    listTeachingAssignments(PERIODO_LETIVO_VIGENTE),
-  ]);
+      listRooms(),
+      listProfessors(),
+      listClasses(),
+      listResources(),
+      listSubjects(),
+      listTeachingAssignments(PERIODO_LETIVO_VIGENTE),
+    ]);
 
   return (
     <>
@@ -50,10 +50,10 @@ export default async function NovaReservaPage() {
         <div className="space-y-1">
           <Link
             href="/reservas"
-            className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm"
+            className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm mb-6 rounded-[6px] px-2 py-1 hover:bg-accent/50 transition-colors"
           >
             <ArrowLeft className="size-3.5" />
-            Reservas
+            Voltar
           </Link>
 
           <h1 className="text-2xl font-semibold tracking-tight">
@@ -61,7 +61,7 @@ export default async function NovaReservaPage() {
           </h1>
 
           <p className="text-muted-foreground text-sm">
-            Encontre um espaço compatível com a atividade acadêmica.
+            Reserve um espaço para sua atividade acadêmica.
           </p>
         </div>
 

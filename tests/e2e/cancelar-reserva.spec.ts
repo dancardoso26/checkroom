@@ -96,7 +96,8 @@ test("cancela pela listagem e some da agenda", async ({ page }) => {
 
   await expect(cartao).toBeVisible();
 
-  await cartao.getByRole("button", { name: "Cancelar" }).click();
+  await cartao.getByRole("button", { name: /Ações da reserva/ }).click();
+  await page.getByRole("menuitem", { name: "Cancelar" }).click();
   await page.getByLabel(/Motivo/).fill("Professor afastado");
   await page.getByRole("button", { name: "Confirmar" }).click();
 

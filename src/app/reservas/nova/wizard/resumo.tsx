@@ -12,7 +12,11 @@ import {
 } from "lucide-react";
 
 import { Separator } from "@/components/ui/separator";
-import { combineDateTime, formatFullDate, formatTimeRange } from "@/lib/datetime";
+import {
+  combineDateTime,
+  formatFullDate,
+  formatTimeRange,
+} from "@/lib/datetime";
 import { cn } from "@/lib/utils";
 
 import type { RoomOption } from "@/lib/repositories/roomRepository";
@@ -76,7 +80,7 @@ export function Resumo({
             temPeriodo
               ? `${formatFullDate(combineDateTime(campos.date, campos.startTime))}, ${formatTimeRange(
                   combineDateTime(campos.date, campos.startTime),
-                  combineDateTime(campos.date, campos.endTime)
+                  combineDateTime(campos.date, campos.endTime),
                 )}`
               : undefined
           }
@@ -125,7 +129,7 @@ export function LinhaResumo({
         aria-hidden
         className={cn(
           "mt-0.5 size-4 shrink-0",
-          valor ? "text-primary" : "text-muted-foreground/60"
+          valor ? "text-primary" : "text-muted-foreground/60",
         )}
       />
 

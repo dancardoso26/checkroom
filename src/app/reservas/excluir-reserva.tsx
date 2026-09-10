@@ -2,7 +2,7 @@
 
 import { startTransition, useActionState, useRef } from "react";
 
-import { cancelarReserva, type CancelamentoState } from "./cancelar";
+import { excluirReserva, type ExclusaoState } from "./excluir";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -12,40 +12,39 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 /**
- * Confirmação de cancelamento.
+ * Confirmação de exclusão.
  *
- * A confirmação não é formalidade: cancelar desfaz a aula de outra pessoa, e um
- * clique acidental na listagem bastaria. O motivo é opcional, mas pedi-lo aqui
- * aproveita o momento em que quem cancela ainda sabe por quê.
+ * O texto faz o trabalho principal: quem só quer desmarcar a aula precisa sair
+ * daqui sabendo que cancelar preserva o registro. Sem isso, cancelar e excluir
+ * viram dois botões que parecem fazer a mesma coisa, e a escolha entre eles
+ * passa a ser acidental.
  *
- * É um Dialog, e não um Popover, por dois motivos. Um popover aberto a partir de
- * um menu suspenso fecha junto com ele, porque o Radix trata o clique como um
- * toque fora do popover. E ação destrutiva merece interromper o fluxo, em vez de
- * aparecer ao lado do que se está prestes a desfazer.
+ * Não há campo de motivo, ao contrário do cancelamento. Motivo é informação que
+ * se guarda, e aqui não sobra linha onde guardá-la.
  */
 
-const ESTADO_INICIAL: CancelamentoState = { status: "idle" };
+const ESTADO_INICIAL: ExclusaoState = { status: "idle" };
 
-export function CancelarReserva({
+export function ExcluirReserva({
   bookingId,
   descricao,
   aberto,
   onAbertoChange,
+  cancelada,
 }: {
   bookingId: string;
-  /** Aparece na confirmação, para não cancelar a reserva errada. */
   descricao: string;
   aberto: boolean;
   onAbertoChange: (aberto: boolean) => void;
+  /** Quando já cancelada, não faz sentido sugerir cancelar. */
+  cancelada: boolean;
 }) {
   const formulario = useRef<HTMLFormElement>(null);
 
-  const [state, formAction, cancelando] = useActionState(
-    cancelarReserva,
+  const [state, formAction, excluindo] = useActionState(
+    excluirReserva,
     ESTADO_INICIAL
   );
 
@@ -59,26 +58,18 @@ export function CancelarReserva({
     <Dialog open={aberto} onOpenChange={onAbertoChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Cancelar esta reserva?</DialogTitle>
+          <DialogTitle>Excluir permanentemente?</DialogTitle>
           <DialogDescription>{descricao}</DialogDescription>
         </DialogHeader>
 
         <form ref={formulario} onSubmit={enviar} className="space-y-4">
           <p className="text-muted-foreground text-sm">
-            O horário fica livre, e o registro do cancelamento é preservado.
+            A reserva será apagada do sistema e não poderá ser recuperada.
+            {!cancelada &&
+              " Se a atividade apenas não vai acontecer, cancele: o registro fica preservado."}
           </p>
 
           <input type="hidden" name="bookingId" value={bookingId} />
-
-          <div className="space-y-2">
-            <Label htmlFor={`motivo-${bookingId}`}>Motivo (opcional)</Label>
-            <Input
-              id={`motivo-${bookingId}`}
-              name="reason"
-              placeholder="Professor afastado"
-              maxLength={200}
-            />
-          </div>
 
           {state.status === "error" && (
             <p className="text-destructive text-sm" role="alert">
@@ -95,18 +86,13 @@ export function CancelarReserva({
               Voltar
             </Button>
 
-            {/*
-              type="button" com requestSubmit, e não type="submit": o React 19
-              limpa formulários com action, e alternar o tipo de um botão durante
-              o clique já produziu um envio acidental neste projeto.
-            */}
             <Button
               type="button"
               variant="destructive"
-              disabled={cancelando}
+              disabled={excluindo}
               onClick={() => formulario.current?.requestSubmit()}
             >
-              {cancelando ? "Cancelando..." : "Confirmar"}
+              {excluindo ? "Excluindo..." : "Excluir"}
             </Button>
           </DialogFooter>
         </form>
