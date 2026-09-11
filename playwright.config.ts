@@ -1,41 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
 
-/**
- * CONFIGURAÇÃO DOS TESTES DE PONTA A PONTA
- *
- * O Vitest cobre a regra de negócio isolada: funções puras, sem banco e sem
- * navegador. Esta suíte cobre o que aquela não alcança, e que é justamente
- * onde os defeitos deste projeto apareceram na prática.
- *
- * Os testes daqui abrem o sistema de verdade, preenchem o formulário e
- * verificam o resultado no banco real. Foram eles que revelaram, durante o
- * desenvolvimento, que o botão "Continuar" criava a reserva sem passar pela
- * revisão, que o formulário apagava o preenchimento ao recusar, e que o Chrome
- * ignora min e max no campo de horário. Nenhum teste unitário pegaria isso.
- *
- * POR QUE ESTA SUÍTE PRECISA DO BANCO REAL
- *
- * Ela verifica as constraints de exclusão do PostgreSQL, que só existem no
- * banco. Substituí-lo por um dublê testaria o dublê.
- *
- * O custo é depender de um banco populado com supabase/seed.sql, e os testes
- * são escritos para tolerar isso: cada um limpa o que criou e nenhum depende da
- * ordem de execução.
- */
-/**
- * Porta dedicada aos testes.
- *
- * A 3000 é a padrão do Next e costuma estar ocupada por outro projeto. Com
- * reuseExistingServer, a suíte se conectava ao que estivesse ali e rodava contra
- * a aplicação errada: as verificações de banco passavam, as de navegador
- * falhavam, e a causa não aparecia em lugar nenhum.
- *
- * CHECKROOM_PORT permite apontar para um servidor já aberto em outra porta. O
- * "next dev" recusa subir duas vezes no mesmo diretório, então quem já está
- * desenvolvendo informa a porta em vez de encerrar o que tem aberto:
- *
- *   CHECKROOM_PORT=3002 npm run test:e2e
- */
 const PORTA = Number(process.env.CHECKROOM_PORT ?? 3100);
 const BASE_URL = `http://localhost:${PORTA}`;
 
@@ -66,9 +30,6 @@ export default defineConfig({
   webServer: {
     command: `npm run dev -- --port ${PORTA}`,
     url: BASE_URL,
-    // Reaproveita um servidor já em execução em vez de subir outro. Combinado
-    // com a porta dedicada, isso reaproveita apenas um CheckRoom, e nunca outra
-    // aplicação.
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },

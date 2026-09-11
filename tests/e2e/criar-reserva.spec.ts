@@ -9,44 +9,6 @@ import {
   preencherAtividade,
 } from "./helpers/wizard";
 
-/**
- * CRIAÇÃO DE RESERVA PELO NAVEGADOR
- *
- * Percorre o formulário como um professor faria, e verifica o roteiro descrito
- * no fim de supabase/seed.sql.
- *
- * O QUE ESTA SUÍTE PEGA E OS TESTES UNITÁRIOS NÃO
- *
- * Os testes do domínio provam que validateBooking decide certo. Não provam que
- * a decisão chega à tela, que o formulário envia o que mostra, nem que o
- * caminho inteiro funciona junto.
- *
- * Três defeitos reais deste projeto viveram exatamente nesse vão: o botão
- * "Continuar" que criava a reserva pulando a revisão, o formulário que apagava
- * tudo ao recusar, e o campo de horário que oferecia opções inválidas. Os 70
- * testes unitários passavam durante os três.
- *
- * DEPENDÊNCIA DO SEED
- *
- * Os cenários usam os dados de supabase/seed.sql: a aula de segunda das 19h às
- * 20h40 com Ana Beatriz Moura e a turma SI 8º semestre A, e a sala 102 sem
- * projetor. Sem o seed aplicado, a suíte falha por falta de dado, não por
- * defeito no sistema.
- */
-
-/**
- * A próxima segunda-feira, que é o dia usado pelas reservas do seed.
- *
- * Duas armadilhas aqui, e as duas custaram uma execução vermelha.
- *
- * A primeira é o cálculo: quando hoje já é segunda, a resposta precisa ser a
- * segunda seguinte, e não hoje. O "|| 7" cobre esse caso, porque o resto zero
- * significa "estamos no dia".
- *
- * A segunda é a formatação. toISOString converte para UTC antes de recortar, e
- * à noite isso adianta a data em um dia. As partes locais são montadas à mão
- * justamente para evitar essa conversão.
- */
 function proximaSegunda(): string {
   const hoje = new Date();
   const diasAteSegunda = (8 - hoje.getDay()) % 7 || 7;
@@ -175,9 +137,6 @@ test("mostra por que cada espaço incompatível foi descartado", async ({
 });
 
 test("preserva o preenchimento quando a reserva é recusada", async ({ page }) => {
-  // O React 19 limpa um formulário com action assim que ela termina, e nos
-  // componentes do Radix isso zerava os seletores. Recusar uma reserva e
-  // devolver o formulário em branco obrigaria a preencher tudo de novo.
   await page.goto("/reservas/nova");
 
   await preencherAtividade(page, {
@@ -206,9 +165,6 @@ test("preserva o preenchimento quando a reserva é recusada", async ({ page }) =
 test("só oferece as turmas com vínculo quando a atividade é aula", async ({
   page,
 }) => {
-  // Marina leciona apenas Saúde Coletiva para ENF 6º. Em uma aula, nenhuma outra
-  // turma deve aparecer: a escolha impossível deixa de existir em vez de ser
-  // recusada duas etapas adiante.
   await page.goto("/reservas/nova");
 
   await page.click("#professorField");

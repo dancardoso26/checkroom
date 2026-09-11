@@ -22,12 +22,6 @@ import type {
 import { CAMPO_FINALIDADE, ROTULO_DA_ATIVIDADE } from "./campos";
 import { Aviso, Cabecalho } from "./ui";
 
-/**
- * Os tipos de atividade, com o rótulo que aparece na tela.
- *
- * Só a aula pede disciplina. Os demais não pertencem a nenhuma, e exibir o campo
- * para eles seria pedir um dado que não existe.
- */
 const TIPOS = Object.entries(ROTULO_DA_ATIVIDADE) as [ActivityType, string][];
 
 export function EtapaAtividade({
@@ -56,13 +50,6 @@ export function EtapaAtividade({
 }) {
   const ehAula = campos.activityType === "class";
 
-  /**
-   * As turmas para as quais ESTE professor leciona, quando a atividade é aula.
-   *
-   * Palestra, prova, defesa e evento não dependem de vínculo, então oferecem
-   * todas. Em aula, oferecer uma turma sem vínculo seria oferecer uma escolha
-   * que a etapa seguinte recusaria.
-   */
   const turmasPermitidas =
     ehAula && campos.professorId
       ? classes.filter((c) =>
@@ -72,17 +59,6 @@ export function EtapaAtividade({
         )
       : classes;
 
-  /**
-   * As disciplinas que ESTE professor leciona para ESTA turma.
-   *
-   * Antes a lista trazia todas as disciplinas do curso, e a combinação errada só
-   * era recusada duas etapas adiante, quando a análise rodava. Filtrar pelo
-   * vínculo faz a escolha impossível deixar de existir, que é o mesmo princípio
-   * do seletor de horário.
-   *
-   * A regra no servidor continua verificando: esta lista é conveniência, não
-   * garantia, e um envio vindo de fora do formulário é recusado do mesmo jeito.
-   */
   const disciplinasPermitidas =
     campos.professorId && campos.classId
       ? subjects.filter((s) =>
@@ -113,9 +89,6 @@ export function EtapaAtividade({
           value={campos.activityType}
           onValueChange={(v) => {
             alterar("activityType", v);
-            // Sair de "aula" descarta a disciplina: os outros tipos não têm uma.
-            // Entrar em "aula" descarta a turma, que pode não ter vínculo com o
-            // professor escolhido.
             alterar("subjectId", "");
             if (v === "class") alterar("classId", "");
           }}

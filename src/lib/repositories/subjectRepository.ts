@@ -2,14 +2,6 @@ import "server-only";
 import { supabaseServer } from "@/lib/supabase/server";
 import type { TeachingAssignmentSnapshot } from "@/domain/booking/types";
 
-/**
- * Disciplinas e o vínculo docente.
- *
- * O vínculo é o que responde se a professora leciona aquela disciplina para
- * aquela turma no período, e é a consulta que torna o modelo exclusivo de
- * educação.
- */
-
 export type SubjectOption = {
   id: string;
   name: string;
@@ -36,16 +28,6 @@ export type TeachingAssignmentOption = {
   classId: string;
 };
 
-/**
- * Todos os vínculos do período letivo.
- *
- * A lista inteira vai para o formulário em vez de uma consulta a cada troca de
- * professor ou turma. São poucos registros, e o filtro no cliente responde no
- * mesmo instante em que a pessoa escolhe, sem ida ao servidor.
- *
- * É o que permite mostrar apenas as disciplinas possíveis: em vez de oferecer o
- * catálogo inteiro e recusar depois, a combinação errada deixa de existir.
- */
 export async function listTeachingAssignments(
   term: string
 ): Promise<TeachingAssignmentOption[]> {
@@ -65,12 +47,6 @@ export async function listTeachingAssignments(
   }));
 }
 
-/**
- * O vínculo específico, ou nulo quando não existe.
- *
- * Devolve nulo também quando o pedido não informa disciplina: sem disciplina não
- * há vínculo a procurar, e a regra distingue os dois casos pelo subjectId.
- */
 export async function findTeachingAssignment(params: {
   professorId: string;
   subjectId: string | null;

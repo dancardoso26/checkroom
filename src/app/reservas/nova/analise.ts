@@ -16,18 +16,6 @@ import { findTeachingAssignment } from "@/lib/repositories/subjectRepository";
 import { PERIODO_LETIVO_VIGENTE } from "@/domain/booking/businessHours";
 import { combineDateTime } from "@/lib/datetime";
 
-/**
- * Server Action de leitura: responde o que aconteceria se o pedido fosse enviado
- * agora. É o que alimenta as etapas intermediárias do formulário.
- *
- * Roda no servidor porque o insumo não pode ir ao navegador: responder "quais
- * espaços estão livres" exige a agenda do período, e mandá-la ao cliente exporia
- * as reservas de todo mundo a quem apenas abriu o formulário.
- *
- * Não substitui a validação do envio. O que ela mostra é uma fotografia, e entre
- * vê-la e confirmar podem passar minutos.
- */
-
 const schema = z.object({
   professorId: z.uuid(),
   classId: z.uuid(),
@@ -52,10 +40,6 @@ export type RoomVerdict = {
 export type AnaliseResult =
   | {
       status: "ok";
-      /**
-       * Problemas que valem para todos os espaços: professor ocupado, turma
-       * ocupada, período inválido. Aparecem uma vez só, fora da lista.
-       */
       scheduleMessages: string[];
       rooms: RoomVerdict[];
     }

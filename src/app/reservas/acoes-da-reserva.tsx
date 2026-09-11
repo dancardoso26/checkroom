@@ -14,18 +14,6 @@ import {
 import { CancelarReserva } from "./cancelar-reserva";
 import { ExcluirReserva } from "./excluir-reserva";
 
-/**
- * O menu de ações de uma reserva.
- *
- * Cancelar e excluir ficam juntos aqui, e não como dois botões no cartão, por
- * duas razões. A primeira é espaço: a agenda tem muitos cartões, e dois botões
- * destrutivos em cada um competem com a informação. A segunda é hierarquia: são
- * ações ocasionais, e deixá-las a um clique de distância reduz o acidente.
- *
- * Uma reserva já cancelada não oferece cancelar de novo. Excluir aparece sempre,
- * porque tanto o engano recém-criado quanto o registro antigo podem precisar
- * sair do sistema.
- */
 export function AcoesDaReserva({
   bookingId,
   descricao,
@@ -35,12 +23,6 @@ export function AcoesDaReserva({
   descricao: string;
   cancelada: boolean;
 }) {
-  /**
-   * Qual confirmação está aberta.
-   *
-   * Um estado só, e não um por popover, porque as duas nunca aparecem juntas: o
-   * menu fecha ao escolher, e abrir uma precisa fechar a outra.
-   */
   const [confirmacao, setConfirmacao] = useState<
     "nenhuma" | "cancelar" | "excluir"
   >("nenhuma");

@@ -5,24 +5,6 @@ import { revalidatePath } from "next/cache";
 
 import { cancelBooking } from "@/lib/repositories/bookingRepository";
 
-/**
- * Server Action de cancelamento.
- *
- * A reserva não é apagada: ela passa a cancelada, com data e motivo. O registro
- * de que existiu é o que sustenta os registros de auditoria, e apagá-la
- * responderia "quem cancelou a aula de sexta" com silêncio.
- *
- * Cancelar libera o horário no mesmo instante, porque as constraints de exclusão
- * do banco passaram a valer só entre reservas ativas.
- *
- * SEM AUTENTICAÇÃO, ISTO É MAIS GRAVE QUE CRIAR
- *
- * Como toda Server Action, esta é um endpoint HTTP público, e hoje não verifica
- * quem chama. Criar uma reserva indevida é um estorvo; cancelar a aula de outra
- * pessoa é destrutivo. Em 28/09 esta função passa a exigir que quem cancela seja
- * o professor da reserva, quem a registrou, ou a coordenação.
- */
-
 const schema = z.object({
   bookingId: z.uuid(),
   reason: z

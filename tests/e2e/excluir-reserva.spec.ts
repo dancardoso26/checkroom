@@ -14,18 +14,6 @@ import {
   PREFIXO_TESTE,
 } from "./helpers/banco";
 
-/**
- * EXCLUSÃO DE RESERVA
- *
- * O que estes testes provam, e que os de cancelamento não provam, é que a linha
- * some do banco.
- *
- * A distinção importa porque as duas operações se parecem na tela: em ambas o
- * cartão desaparece da agenda. A diferença está no que sobra. Cancelar preserva
- * o registro, com data e motivo; excluir não deixa rastro, e é para a reserva
- * que não deveria ter existido.
- */
-
 let salaLivre: string;
 let professorLivre: string;
 let turmaLivre: string;

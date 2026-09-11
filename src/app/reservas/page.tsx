@@ -10,33 +10,6 @@ import { cn } from "@/lib/utils";
 import { AcoesDaReserva } from "./acoes-da-reserva";
 import type { BookingListItem } from "@/lib/repositories/bookingRepository";
 
-/**
- * LISTAGEM DE RESERVAS
- *
- * Server Component: esta função roda no servidor, e o que chega ao navegador é
- * apenas o HTML resultante.
- *
- * A consequência mais importante é o await direto no repositório, algumas
- * linhas abaixo. Não existe endpoint de API, nem useEffect, nem estado de
- * carregamento, nem a chave do banco viajando até o cliente. A página é uma
- * função que devolve marcação, e a consulta acontece antes de ela existir.
- *
- * É essa característica do App Router que a seção 2.2 da monografia descreve, e
- * esta tela é a demonstração concreta dela.
- */
-
-/**
- * force-dynamic desliga o cache da rota.
- *
- * Por padrão, o Next tentaria renderizar esta página uma vez e reaproveitar o
- * resultado. Para uma agenda de salas isso seria errado: o professor criaria
- * uma reserva e voltaria para uma lista sem ela.
- *
- * A Server Action já chama revalidatePath depois de gravar, o que resolveria o
- * caso principal. A instrução aqui cobre também as gravações que acontecem por
- * fora, como um INSERT feito direto no painel do Supabase durante a validação
- * com o orientador.
- */
 export const dynamic = "force-dynamic";
 
 export default async function ReservasPage({
@@ -44,13 +17,6 @@ export default async function ReservasPage({
 }: {
   searchParams: Promise<{ canceladas?: string }>;
 }) {
-  /**
-   * O filtro vive na URL, e não em estado do cliente.
-   *
-   * Assim a página continua sendo Server Component, o filtro sobrevive a um
-   * recarregamento, e o endereço com as canceladas visíveis pode ser
-   * compartilhado.
-   */
   const { canceladas } = await searchParams;
   const mostrarCanceladas = canceladas === "1";
 
@@ -58,9 +24,6 @@ export default async function ReservasPage({
     incluirCanceladas: mostrarCanceladas,
   });
 
-  // Agrupar por dia é o que transforma uma lista corrida em uma agenda. Sem
-  // isso, a data se repetiria em cada linha e a leitura exigiria comparar
-  // valores em vez de reconhecer blocos.
   const porDia = agruparPorDia(reservas);
 
   return (
@@ -118,16 +81,6 @@ export default async function ReservasPage({
   );
 }
 
-/**
- * Agrupa as reservas por dia, preservando a ordem cronológica.
- *
- * Um Map, e não um objeto comum, porque o Map garante a ordem de inserção. Um
- * objeto com chaves de texto também preservaria neste caso, mas depender disso
- * é frágil: basta uma chave que pareça número para a ordem mudar sem aviso.
- *
- * A lista já vem ordenada por starts_at do banco, então percorrer uma vez
- * basta: reservas do mesmo dia chegam em sequência.
- */
 function agruparPorDia(reservas: BookingListItem[]) {
   const grupos = new Map<string, BookingListItem[]>();
 
@@ -149,9 +102,6 @@ function CartaoReserva({ reserva }: { reserva: BookingListItem }) {
   return (
     <Card
       className={cn(
-        // A cancelada fica atenuada, e não escondida: ela está na lista porque
-        // alguém pediu para vê-la, mas não disputa atenção com o que vai
-        // acontecer de fato.
         reserva.cancelled && "bg-muted/40 border-dashed",
       )}
     >

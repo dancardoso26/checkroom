@@ -49,9 +49,6 @@ export function EtapaHorario({
             id="startField"
             value={campos.startTime}
             onChange={(v) => alterar("startTime", v)}
-            // O último início possível é um passo antes do fechamento. Oferecer
-            // 22:00 aqui levaria a um estado sem saída: o término precisa ser
-            // posterior, e não existe horário posterior ao fechamento.
             maximo={ULTIMO_INICIO}
           />
         </div>
@@ -117,7 +114,3 @@ export function ResultadoDaAgenda({
     </Aviso>
   );
 }
-
-// ---------------------------------------------------------------------------
-// Etapa 3
-// ---------------------------------------------------------------------------

@@ -2,16 +2,6 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 
-/**
- * A fonte é carregada pelo next/font em vez de uma tag <link> para o Google
- * Fonts. A diferença prática é que o arquivo da fonte passa a ser servido junto
- * com a aplicação, o que elimina uma requisição a servidor externo e evita o
- * salto de layout que acontece quando o texto é desenhado primeiro com a fonte
- * do sistema e depois trocado.
- *
- * A opção "variable" expõe a fonte como variável CSS, que é consumida em
- * globals.css através de --font-sans.
- */
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",

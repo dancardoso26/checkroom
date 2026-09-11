@@ -10,21 +10,6 @@ import {
   PREFIXO_TESTE,
 } from "./helpers/banco";
 
-/**
- * CANCELAMENTO DE RESERVA
- *
- * O que mais interessa aqui não é o botão funcionar, e sim o horário voltar a
- * ficar livre.
- *
- * A reserva cancelada continua na tabela, porque o registro de que ela existiu
- * sustenta os registros de auditoria. As constraints de exclusão do PostgreSQL
- * não sabem disso por conta própria: sem a cláusula "where (status = 'active')"
- * acrescentada na migration 20260908000400, a linha cancelada continuaria
- * bloqueando o horário, e cancelar não liberaria a sala.
- *
- * O último teste deste arquivo é o que prova que a cláusula está lá.
- */
-
 let salaLivre: string;
 let professorLivre: string;
 let turmaLivre: string;
@@ -84,12 +69,6 @@ test("cancela pela listagem e some da agenda", async ({ page }) => {
 
   await page.goto("/reservas");
 
-  // O cartão inteiro é o contexto: sem ele o clique pegaria o botão de outra
-  // reserva da lista.
-  //
-  // O seletor usa data-slot, o atributo que o shadcn põe em cada componente.
-  // Filtrar por "div" com o texto encontraria o parágrafo mais interno, que não
-  // contém o botão.
   const cartao = page
     .locator('[data-slot="card"]')
     .filter({ hasText: `${PREFIXO_TESTE} a cancelar` });
@@ -121,9 +100,6 @@ test("a reserva cancelada continua no banco, com data e motivo", async () => {
 });
 
 test("cancelar libera o horário para uma nova reserva", async () => {
-  // O teste que prova a cláusula "where (status = 'active')" nas constraints.
-  // Sem ela, a linha cancelada continuaria ocupando o horário e este insert
-  // seria recusado com 23P01.
   const resultado = await inserirReservaDireto({
     room_id: salaLivre,
     professor_id: professorLivre,

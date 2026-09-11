@@ -22,33 +22,6 @@ import {
 import { findTeachingAssignment } from "@/lib/repositories/subjectRepository";
 import { PERIODO_LETIVO_VIGENTE } from "@/domain/booking/businessHours";
 
-/**
- * Server Action de criação de reserva.
- *
- * Ela orquestra: recebe o formulário, valida o formato, pede os dados aos
- * repositórios e entrega à regra. Nenhuma comparação de horário, capacidade ou
- * recurso acontece aqui, o que permite a mesma regra atender a uma futura API
- * pública (seção 2.2 da monografia).
- *
- * TRÊS CAMADAS DE VERIFICAÇÃO, E NENHUMA SUBSTITUI A OUTRA
- *
- *   1. Zod, aqui: o campo veio e tem o formato certo? Recusa lixo antes de
- *      consultar o banco.
- *   2. validateBooking: a reserva é possível? Trabalha com uma fotografia.
- *   3. Constraints do PostgreSQL: a única dentro da transação, e a única que
- *      sobrevive a duas requisições simultâneas.
- *
- * SEM AUTENTICAÇÃO, ISTO NÃO PODE IR AO AR
- *
- * Esta função não verifica quem a chama. Server Action não é função interna: o
- * Next publica um endpoint HTTP para ela, e qualquer um com esse identificador
- * pode invocá-la sem passar pelo formulário. Somado à chave secreta, que ignora
- * o RLS, hoje qualquer visitante cria reserva em nome de qualquer professor.
- *
- * Aceitável em desenvolvimento, bloqueador antes de publicar. É o que a entrega
- * de 28/09 resolve.
- */
-/** Data e hora chegam separadas, como os campos do HTML as enviam. */
 const schema = z.object({
   roomId: z.uuid("Selecione um espaço."),
   professorId: z.uuid("Selecione um professor."),
@@ -68,18 +41,10 @@ const schema = z.object({
   resourceIds: z.array(z.uuid()),
 });
 
-/**
- * FormData devolve string ou File. Campo ausente vira string vazia, para o Zod
- * recusar com a mensagem do schema em vez de um erro genérico de tipo.
- */
 function texto(valor: FormDataEntryValue | null): string {
   return typeof valor === "string" ? valor : "";
 }
 
-/**
- * União discriminada: "messages" só existe no erro e "bookingId" só no sucesso,
- * então a tela não consegue exibir problemas de uma reserva que deu certo.
- */
 export type BookingFormState =
   | { status: "idle" }
   | { status: "success"; bookingId: string }
@@ -89,12 +54,6 @@ export type BookingFormState =
       messages: string[];
       /** Problemas ligados a um campo específico, para exibir junto dele. */
       fieldErrors: Record<string, string[]>;
-      /**
-       * O que o usuário havia preenchido, em bruto. O React 19 limpa o
-       * formulário quando a action termina, e sem isto uma recusa apagaria os
-       * sete campos. Se o Zod recusou a data, é a data recusada que precisa
-       * reaparecer para ser corrigida.
-       */
       values: SubmittedValues;
     };
 
@@ -120,10 +79,6 @@ function erro(
   return { status: "error", messages, fieldErrors, values };
 }
 
-/**
- * O primeiro parâmetro existe porque useActionState o exige na posição; cada
- * envio é julgado do zero.
- */
 export async function criarReserva(
   _prevState: BookingFormState,
   formData: FormData
@@ -214,9 +169,6 @@ export async function criarReserva(
   });
 
   if (resultado.status === "conflict") {
-    // A validação aprovou e o banco recusou: outra reserva foi gravada no
-    // intervalo. Recarregar o contexto e revalidar produz a mensagem completa,
-    // com quem ocupou o lugar, em vez de um aviso genérico.
     const conflitosAtuais = await findConflictCandidates(request);
 
     const revalidacao = validateBooking(request, {

@@ -1,27 +1,10 @@
 import { formatPeriod } from "@/lib/datetime";
 import type { BookingViolation, ExistingBooking } from "./types";
 
-/**
- * Traduz as violações em frases para o usuário.
- *
- * Fica separado da regra porque os dois mudam por motivos diferentes: texto por
- * razão de produto, regra por razão de negócio. Assim os testes de
- * validateBooking comparam códigos e continuam passando mesmo que todo o texto
- * seja reescrito.
- */
-
-/**
- * A formatação é compartilhada com as telas, para a mesma reserva não aparecer
- * em formatos diferentes na mensagem de erro e na listagem.
- */
 function periodOf(booking: ExistingBooking): string {
   return formatPeriod(booking.startsAt, booking.endsAt);
 }
 
-/**
- * A regra trabalha com ids, a mensagem precisa de nomes. Opcional de propósito:
- * uma mensagem de erro nunca deve falhar por falta de um dado acessório.
- */
 export type ViolationLabels = {
   resourceNames?: Record<string, string>;
 };
@@ -86,11 +69,6 @@ export function describeViolation(
   }
 }
 
-/**
- * O switch acima não tem "default" de propósito: acrescentar um código novo em
- * types.ts sem tratá-lo aqui faz o typecheck falhar, em vez de o usuário
- * descobrir um espaço em branco na tela.
- */
 export function describeViolations(
   violations: BookingViolation[],
   labels: ViolationLabels = {}

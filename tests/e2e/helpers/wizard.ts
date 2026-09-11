@@ -1,15 +1,5 @@
 import { expect, type Page } from "@playwright/test";
 
-/**
- * AÇÕES DO FORMULÁRIO DE RESERVA
- *
- * Concentra o "como" mexer na tela para que os testes falem apenas do "o quê".
- *
- * Sem isto, cada teste repetiria a sequência de cliques do seletor de horário,
- * e trocar aquele componente, coisa que já aconteceu três vezes neste projeto,
- * exigiria reescrever a suíte inteira. Aqui, muda um arquivo.
- */
-
 /** As colunas do seletor de horário, na ordem em que aparecem. */
 function colunaDoHorario(page: Page, indice: 0 | 1) {
   return page.locator('[data-slot="popover-content"] > div > div').nth(indice);
@@ -38,11 +28,6 @@ export type TipoDeAtividade =
   | "Defesa"
   | "Evento";
 
-/**
- * A ordem dos campos importa e reflete a da tela: o professor define quais
- * turmas aparecem, e a turma define quais disciplinas. Preencher fora de ordem
- * encontraria listas ainda vazias.
- */
 export async function preencherAtividade(
   page: Page,
   dados: {
@@ -76,14 +61,6 @@ export async function avancar(page: Page) {
   await page.getByRole("button", { name: "Continuar" }).click();
 }
 
-/**
- * Espera a análise do servidor terminar.
- *
- * O botão fica desabilitado enquanto ela acontece, então esperar por ele
- * habilitado é mais confiável do que esperar um tempo fixo. Quando há conflito
- * ele nunca habilita, e por isso o teste que verifica bloqueio não usa esta
- * função.
- */
 export async function esperarAnalise(page: Page) {
   await expect(page.getByRole("button", { name: "Continuar" })).toBeEnabled({
     timeout: 20_000,

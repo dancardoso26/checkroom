@@ -35,9 +35,6 @@ export function EtapaEspaco({
       {!analisando && analise?.status === "ok" && (
         <>
           {analise.scheduleMessages.length > 0 && (
-            // O conflito de agenda aparece aqui uma vez só, e não repetido em
-            // cada cartão: ele vale para todos os espaços, e trocar de sala não
-            // resolve. O que resolve é voltar e trocar o horário.
             <Aviso tom="erro" titulo="Nenhum espaço resolve este conflito">
               <ul className="list-disc space-y-1 pl-4">
                 {analise.scheduleMessages.map((m) => (
@@ -65,7 +62,3 @@ export function EtapaEspaco({
     </>
   );
 }
-
-// ---------------------------------------------------------------------------
-// Etapa 5
-// ---------------------------------------------------------------------------

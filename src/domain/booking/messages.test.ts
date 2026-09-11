@@ -2,18 +2,6 @@ import { describe, it, expect } from "vitest";
 import { describeViolation, describeViolations } from "./messages";
 import type { ExistingBooking } from "./types";
 
-/**
- * TESTES DAS MENSAGENS
- *
- * Ficam separados dos testes da regra pelo mesmo motivo que os arquivos são
- * separados: texto e decisão mudam por razões diferentes.
- *
- * As asserções aqui evitam comparar a frase inteira. Uma comparação exata
- * quebraria a cada ajuste de redação e ensinaria a ignorar a suíte. O que
- * interessa verificar é o que a frase precisa conter para ser útil: o horário
- * certo, os números certos, o nome do recurso em vez do id.
- */
-
 const conflito: ExistingBooking = {
   id: "b1",
   roomId: "room-101",
@@ -28,9 +16,6 @@ const conflito: ExistingBooking = {
 
 describe("describeViolation", () => {
   it("exibe o horário no fuso de Brasília, e não em UTC", () => {
-    // Se a formatação usasse o fuso do ambiente, este teste passaria na máquina
-    // do desenvolvedor e falharia no servidor da Vercel, que roda em UTC. A
-    // reserva das 19h apareceria como 22h para o usuário.
     const texto = describeViolation({ code: "ROOM_CONFLICT", conflict: conflito });
 
     expect(texto).toContain("14/09");

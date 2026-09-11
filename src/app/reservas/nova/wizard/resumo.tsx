@@ -51,14 +51,11 @@ export function Resumo({
   const temPeriodo = ehPeriodoValido(campos);
 
   return (
-    // A ordem no DOM é depois do formulário, e o CSS o posiciona ao lado. Assim
-    // quem navega por teclado percorre os campos antes do resumo, que é apenas
-    // leitura.
     <aside className="bg-card h-fit space-y-4 rounded-lg border p-5">
       <p className="text-sm font-semibold">Resumo</p>
       <Separator />
 
-      <dl className="space-y-3 text-sm">
+      <dl className="space-y-4 text-sm">
         <LinhaResumo
           icone={Tag}
           termo="Tipo"
@@ -106,14 +103,6 @@ export function Resumo({
   );
 }
 
-/**
- * O ícone fica no azul da marca quando o campo está preenchido, e no cinza de
- * texto secundário quando não está. É a mesma distinção que o valor já faz, e
- * juntas elas permitem varrer o resumo pela cor, sem ler.
- *
- * aria-hidden porque o ícone repete o que o rótulo ao lado já diz: anunciá-lo
- * faria o leitor de tela dizer a mesma informação duas vezes.
- */
 export function LinhaResumo({
   icone: Icone,
   termo,

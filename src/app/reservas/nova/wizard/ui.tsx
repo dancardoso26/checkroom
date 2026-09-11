@@ -2,14 +2,6 @@
 
 import { cn } from "@/lib/utils";
 
-/**
- * PEÇAS COMPARTILHADAS ENTRE AS ETAPAS
- *
- * Cabeçalho e aviso aparecem em mais de uma etapa. Ficam juntos aqui para que
- * título, descrição e os três tons de aviso tenham uma definição só, em vez de
- * variarem conforme quem escreveu a etapa.
- */
-
 export function Cabecalho({ titulo, descricao }: { titulo: string; descricao: string }) {
   return (
     <div className="space-y-1">

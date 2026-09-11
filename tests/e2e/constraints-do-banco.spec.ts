@@ -11,25 +11,6 @@ import {
   type LinhaReserva,
 } from "./helpers/banco";
 
-/**
- * AS CONSTRAINTS DE EXCLUSÃO DO POSTGRESQL
- *
- * Nenhum destes testes abre o navegador nem chama a aplicação. Eles inserem
- * direto na API REST, que é o mesmo caminho de um INSERT digitado no editor SQL
- * do Supabase.
- *
- * Essa escolha é o ponto do arquivo. validateBooking julga o pedido contra uma
- * fotografia do banco tirada momentos antes, e entre a consulta e a gravação
- * outra reserva pode ter sido criada. Só as constraints, avaliadas dentro da
- * transação do INSERT, sobrevivem a duas requisições simultâneas.
- *
- * Se algum destes testes passar a aceitar a inserção, a garantia de integridade
- * deixou de existir, e nenhum teste unitário perceberia.
- *
- * As três constraints valem apenas entre reservas ativas. O efeito disso, que é
- * cancelar liberar o horário, é verificado em cancelar-reserva.spec.ts.
- */
-
 /** A reserva do seed contra a qual os conflitos são testados. */
 const RESERVA_BASE = "Aula de Engenharia de Software";
 
@@ -56,9 +37,6 @@ test.describe("constraints de sobreposição", () => {
     ).toBeDefined();
     base = encontrada!;
 
-    // Quem já está ocupado no período da reserva base. Escolher um professor ou
-    // uma turma desta lista faria a constraint errada disparar primeiro, e o
-    // teste mediria outra coisa.
     const inicio = new Date(base.starts_at);
     const fim = new Date(base.ends_at);
     const sobrepostas = reservas.filter(
@@ -91,9 +69,6 @@ test.describe("constraints de sobreposição", () => {
     });
 
     expect(resultado.aceitou).toBe(false);
-    // 23P01 é o código do PostgreSQL para exclusion_violation. O nome da
-    // constraint faz parte da interface: bookingRepository o lê para saber qual
-    // dos três conflitos ocorreu.
     expect(resultado.codigo).toBe("23P01");
     expect(resultado.mensagem).toContain("bookings_no_room_overlap");
   });
@@ -127,9 +102,6 @@ test.describe("constraints de sobreposição", () => {
   });
 
   test("aceita uma reserva que começa quando a anterior termina", async () => {
-    // O contraponto dos três acima, e tão importante quanto. Uma implementação
-    // que recusasse tudo passaria em todos os testes de recusa e inviabilizaria
-    // qualquer grade horária encadeada.
     const fim = new Date(base.ends_at);
     const duasHorasDepois = new Date(fim.getTime() + 100 * 60 * 1000);
 
@@ -148,9 +120,6 @@ test.describe("constraints de sobreposição", () => {
   });
 
   test("recusa um período com término anterior ao início", async () => {
-    // Sem este check, o período invertido produziria um intervalo vazio, e
-    // intervalo vazio não se sobrepõe a nada: a reserva escaparia das três
-    // constraints de exclusão e ficaria invisível à detecção de conflito.
     const resultado = await inserirReservaDireto({
       room_id: salaLivre,
       professor_id: professorLivre,

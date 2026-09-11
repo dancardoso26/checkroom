@@ -9,15 +9,6 @@ import type { RoomOption } from "@/lib/repositories/roomRepository";
 import type { ResourceOption } from "@/lib/repositories/resourceRepository";
 import type { RoomVerdict } from "./analise";
 
-/**
- * A tela onde a regra fica visível: em vez de o professor escolher e descobrir o
- * erro depois, a lista mostra os espaços já julgados, com o motivo em cada
- * incompatível.
- *
- * O julgamento chega pronto da Server Action de análise, que roda a mesma
- * validateBooking do envio. É o que garante que a lista não discorde da recusa.
- */
-
 type RoomPickerProps = {
   rooms: RoomOption[];
   resources: ResourceOption[];
@@ -51,10 +42,6 @@ export function RoomPicker({
   /** Um radiogroup move o foco junto com a seleção, não só o valor. */
   const cartoes = useRef<(HTMLDivElement | null)[]>([]);
 
-  /**
-   * O selecionado; sem seleção, o primeiro escolhível. Sem nenhum compatível,
-   * nenhum: uma lista em que nada pode ser escolhido não deve capturar o Tab.
-   */
   const indiceFocalizavel = (() => {
     const selecionado = itens.findIndex(
       (i) => i.room.id === selectedRoomId && i.verdict.compatible
@@ -64,11 +51,6 @@ export function RoomPicker({
     return itens.findIndex((i) => i.verdict.compatible);
   })();
 
-/**
-   * Pula os incompatíveis pelo mesmo motivo de eles terem tabIndex -1: parar em
-   * uma opção inescolhível transforma a navegação em obstáculo. Dá a volta na
-   * lista, como manda o padrão do radiogroup.
-   */
   function navegar(deIndice: number, direcao: 1 | -1) {
     const total = itens.length;
     if (total === 0) return;
@@ -107,9 +89,6 @@ export function RoomPicker({
         </Badge>
       </div>
 
-      {/* radiogroup faz o leitor de tela anunciar "opção 3 de 12" em vez de ler
-          doze blocos soltos. O papel sozinho não traz comportamento: quem
-          implementa as setas e o roving tabindex é o código acima. */}
       <div role="radiogroup" aria-label="Espaços disponíveis" className="space-y-3">
         {itens.map(({ room, verdict }, indice) => (
           <CartaoEspaco

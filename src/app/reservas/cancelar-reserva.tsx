@@ -15,19 +15,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-/**
- * Confirmação de cancelamento.
- *
- * A confirmação não é formalidade: cancelar desfaz a aula de outra pessoa, e um
- * clique acidental na listagem bastaria. O motivo é opcional, mas pedi-lo aqui
- * aproveita o momento em que quem cancela ainda sabe por quê.
- *
- * É um Dialog, e não um Popover, por dois motivos. Um popover aberto a partir de
- * um menu suspenso fecha junto com ele, porque o Radix trata o clique como um
- * toque fora do popover. E ação destrutiva merece interromper o fluxo, em vez de
- * aparecer ao lado do que se está prestes a desfazer.
- */
-
 const ESTADO_INICIAL: CancelamentoState = { status: "idle" };
 
 export function CancelarReserva({
@@ -95,11 +82,8 @@ export function CancelarReserva({
               Voltar
             </Button>
 
-            {/*
-              type="button" com requestSubmit, e não type="submit": o React 19
-              limpa formulários com action, e alternar o tipo de um botão durante
-              o clique já produziu um envio acidental neste projeto.
-            */}
+            {/* type fixo em "button" com requestSubmit: alternar o type durante
+                o clique já produziu envio acidental neste projeto. */}
             <Button
               type="button"
               variant="destructive"

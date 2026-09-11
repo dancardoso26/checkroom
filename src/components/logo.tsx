@@ -1,22 +1,6 @@
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 
-/**
- * Logo do CheckRoom.
- *
- * Existe como componente, e não como <img> espalhada pelas telas, para que
- * qualquer ajuste futuro (troca do arquivo, mudança de tamanho padrão, versão
- * nova da marca) aconteça em um lugar só.
- *
- * Duas variações, conforme definido na seção 9 da IDV:
- *   - "azul"   para uso sobre fundo claro, que é o caso da maior parte do sistema
- *   - "branca" para uso sobre o azul da marca, como em cabeçalhos preenchidos
- *
- * O SVG original tem 603x109, proporção de aproximadamente 5.53 para 1. A
- * altura é o parâmetro controlado e a largura é calculada a partir dela, para
- * a marca nunca aparecer distorcida.
- */
-
 const PROPORCAO = 603 / 109;
 
 type LogoProps = {

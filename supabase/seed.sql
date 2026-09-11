@@ -1,16 +1,3 @@
--- ---------------------------------------------------------------------------
--- DADOS DE EXEMPLO
---
--- Não é uma migration: popula um banco de desenvolvimento com o mínimo para
--- exercitar a regra e demonstrá-la.
---
--- ATENÇÃO: a primeira instrução APAGA o conteúdo das oito tabelas, o que torna o
--- arquivo repetível. Não execute em um banco com dados que importem.
---
--- Os dados não são aleatórios: cada registro existe para um caso de teste
--- específico. O roteiro está no fim do arquivo.
--- ---------------------------------------------------------------------------
-
 truncate table
   public.booking_resources,
   public.bookings,
@@ -24,14 +11,6 @@ truncate table
   public.courses
   cascade;
 
-
--- Horários calculados a partir da próxima segunda, e não como datas fixas: uma
--- data fixa envelhece, e em outubro o seed criaria reservas no passado.
---
--- O "at time zone" existe porque as colunas são timestamptz. Sem ele, "19:00"
--- seria interpretado em UTC e as aulas noturnas apareceriam de madrugada.
---
--- A função é removida no fim: serve ao seed, não ao sistema.
 create or replace function public.seed_slot(dias integer, hora time)
 returns timestamptz
 language sql
@@ -44,11 +23,6 @@ as $$
     + hora
   ) at time zone 'America/Sao_Paulo';
 $$;
-
-
--- ---------------------------------------------------------------------------
--- Catálogos
--- ---------------------------------------------------------------------------
 
 insert into public.courses (name, department) values
   ('Sistemas de Informação', 'Ciências Exatas'),
@@ -67,7 +41,6 @@ insert into public.resources (name) values
   ('Ar-condicionado'),
   ('Sistema de som');
 
-
 -- A turma de 55 alunos não cabe em nenhum espaço além do auditório, e é o que
 -- produz o teste de capacidade.
 insert into public.classes (name, course_id, student_count) values
@@ -75,7 +48,6 @@ insert into public.classes (name, course_id, student_count) values
   ('SI 4º semestre B', (select id from public.courses where name = 'Sistemas de Informação'), 55),
   ('ENG 2º semestre A', (select id from public.courses where name = 'Engenharia Civil'),      38),
   ('ENF 6º semestre A', (select id from public.courses where name = 'Enfermagem'),            30);
-
 
 -- As disciplinas, e quem leciona cada uma para cada turma. É o vínculo que
 -- impede uma professora de Enfermagem reservar em nome da turma de Engenharia.
@@ -98,7 +70,6 @@ join public.professors p on p.email = v.email
 join public.subjects s   on s.name = v.subject_name
 join public.classes c    on c.name = v.class_name;
 
-
 -- A sala 102 é pequena e mal equipada de propósito: é ela que faz as
 -- verificações de capacidade e de recurso falharem quando precisam falhar.
 insert into public.rooms (name, building, capacity, room_type) values
@@ -106,7 +77,6 @@ insert into public.rooms (name, building, capacity, room_type) values
   ('102',       'Bloco A', 30,  'classroom'),
   ('Lab 01',    'Bloco B', 40,  'laboratory'),
   ('Auditório', 'Bloco C', 120, 'auditorium');
-
 
 -- A sala 102 não tem projetor, único dado necessário para demonstrar a recusa
 -- por recurso ausente.
@@ -126,7 +96,6 @@ join (values
 ) as v (building, room_name, resource_name)
   on v.building = r.building and v.room_name = r.name
 join public.resources res on res.name = v.resource_name;
-
 
 -- As três reservas contra as quais os conflitos são testados, no período
 -- noturno, quando a disputa por espaço realmente acontece.
@@ -172,7 +141,6 @@ values
     public.seed_slot(1, '21:40')
   );
 
-
 -- O que cada reserva exige.
 insert into public.booking_resources (booking_id, resource_id)
 select b.id, res.id
@@ -186,53 +154,4 @@ join (values
   on v.purpose = b.purpose
 join public.resources res on res.name = v.resource_name;
 
-
 drop function public.seed_slot(integer, time);
-
-
--- ---------------------------------------------------------------------------
--- ROTEIRO DE VERIFICAÇÃO
---
--- Com estes dados, cada caso previsto no plano tem um cenário pronto. Os cinco
--- primeiros devem ser RECUSADOS, os dois últimos ACEITOS.
---
---  1. Conflito de espaço
---     Bloco A 101, segunda 19:00-20:40, com outro professor e outra turma.
---
---  2. Conflito de professor
---     Ana Beatriz Moura, segunda 19:30-21:00, em qualquer outro espaço.
---     Nenhum espaço está ocupado, mas a professora está.
---
---  3. Conflito de turma
---     SI 8º semestre A, segunda 19:30-21:00, com outro professor e outro
---     espaço. É o conflito que a revisão do orientador acrescentou.
---
---  4. Capacidade insuficiente
---     SI 4º semestre B (55 alunos) na sala Bloco A 101 (45 lugares).
---
---  5. Recurso ausente
---     Qualquer turma na sala Bloco A 102 exigindo Projetor. A sala tem apenas
---     lousa digital.
---
---  6. Limites que se tocam
---     Bloco A 101, segunda 20:40-22:20, logo após a aula existente. Deve ser
---     ACEITO: o intervalo é fechado no início e aberto no fim, então 20:40 não
---     conta como sobreposição. É o caso que mais falha em implementações
---     ingênuas de comparação de horário.
---
---  7. Vínculo acadêmico ausente
---     Aula com Marina Alves Prado e a turma SI 8º semestre A. Ela não leciona
---     nenhuma disciplina para essa turma, e o formulário nem oferece opção.
---
---  8. Aula sem disciplina
---     Tipo "aula" com o campo de disciplina vazio. Recusada: o tipo é o que
---     torna a disciplina obrigatória.
---
---  9. Reserva válida
---     SI 4º semestre B no Bloco C Auditório, quarta 19:00-20:40, exigindo
---     Projetor. Cabe, tem o recurso, e nada está ocupado.
---
--- Os casos 1, 2, 3 e 6 valem ser verificados nas duas camadas: pelo formulário,
--- onde a resposta vem de validateBooking, e por INSERT direto no editor SQL,
--- onde vem das constraints. A suíte em tests/e2e faz isso automaticamente.
--- ---------------------------------------------------------------------------

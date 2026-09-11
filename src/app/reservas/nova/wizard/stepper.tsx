@@ -3,10 +3,6 @@
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/**
- * As cinco etapas, na ordem. Vive aqui porque o indicador é quem as desenha, e
- * o orquestrador só precisa saber quantas são.
- */
 export const ETAPAS = [
   "Atividade",
   "Data e horário",
@@ -17,14 +13,6 @@ export const ETAPAS = [
 
 export function Stepper({ etapaAtual }: { etapaAtual: number }) {
   return (
-    // ol, e não uma linha de divs: é uma sequência ordenada, e o leitor de tela
-    // anuncia "item 2 de 5" sem precisar de nenhum atributo extra.
-    // justify-between espalha as cinco etapas da borda esquerda à direita, em
-    // vez de agrupá-las no início. Com isso a barra passa a comunicar progresso
-    // pela posição: a etapa atual ocupa um ponto proporcional ao avanço.
-    //
-    // O flex-wrap continua para telas estreitas, e o gap-y separa as linhas
-    // quando a quebra acontece.
     <ol className="bg-card flex flex-wrap justify-between gap-x-6 gap-y-3 rounded-lg border px-6 py-4">
       {ETAPAS.map((nome, indice) => {
         const concluida = indice < etapaAtual;
@@ -62,7 +50,3 @@ export function Stepper({ etapaAtual }: { etapaAtual: number }) {
     </ol>
   );
 }
-
-// ---------------------------------------------------------------------------
-// Etapa 1
-// ---------------------------------------------------------------------------

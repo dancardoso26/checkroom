@@ -17,36 +17,11 @@ import {
   horaParaMinutos,
 } from "@/domain/booking/businessHours";
 
-/**
- * Seletor de horário em duas colunas, no lugar do campo type="time".
- *
- * O campo nativo não serve porque o Chrome ignora min, max e step ao montar o
- * seletor: exibe as 24 horas, deixa escolher 23:47 e só então marca o campo como
- * inválido. Oferecer uma opção para em seguida recusá-la é o pior dos mundos.
- *
- * Uma lista única com os 181 horários válidos corrigia isso e criava outro
- * problema: achar 19:15 exigia rolar por quase duzentos itens. Duas colunas
- * deixam 28 opções na tela, e nenhuma inválida.
- *
- * Não é validação: quem recusa uma reserva fora do expediente é validateBooking,
- * no servidor, e há teste para isso.
- */
-
 type TimeSelectProps = {
   id: string;
   value: string;
   onChange: (valor: string) => void;
-  /**
-   * Quando informado, só aparecem horários posteriores a ele.
-   *
-   * Usado no campo de término, para que não seja possível escolher um horário
-   * antes do início.
-   */
   minimo?: string;
-  /**
-   * Usado no campo de início: 22:00 como início deixaria o usuário sem nenhuma
-   * opção de término, um estado sem saída que só o servidor recusaria.
-   */
   maximo?: string;
 };
 
@@ -110,10 +85,6 @@ export function TimeSelect({
 }: TimeSelectProps) {
   const [aberto, setAberto] = useState(false);
 
-  /**
-   * A seleção acontece em dois cliques, e entre eles não há horário completo
-   * para entregar a quem chama.
-   */
   const [horaParcial, setHoraParcial] = useState<string | null>(null);
 
   const minimoEmMinutos = minimo ? horaParaMinutos(minimo) : -1;
@@ -124,17 +95,10 @@ export function TimeSelect({
   const horaSelecionada = value ? value.slice(0, 2) : null;
   const minutoSelecionado = value ? value.slice(3, 5) : null;
 
-  /**
-   * A hora provisória vem PRIMEIRO, e a ordem conserta um defeito: com o valor
-   * vencendo, ter 22:00 no campo tornava a hora 21 inalcançável, porque o minuto
-   * 00 não é válido às 21h e a escolha virava provisória, que era ignorada.
-   */
+  // A hora recém-clicada vence a já gravada. Na ordem inversa, a hora 22 ficava
+  // inalcançável porque o valor antigo sobrescrevia o clique.
   const horaEmFoco = horaParcial ?? horaSelecionada;
 
-  /**
-   * Sem esta checagem, trocar de 22:00 para a hora 21 deixaria o minuto 00
-   * marcado, sugerindo uma escolha que o campo ainda não reflete.
-   */
   const minutoEmFoco =
     horaEmFoco === horaSelecionada ? minutoSelecionado : null;
 
@@ -241,10 +205,6 @@ function Coluna({
 }) {
   const itemSelecionado = useRef<HTMLButtonElement>(null);
 
-  /**
-   * Sem isto, reabrir um campo que marca 19:15 mostraria a lista nas sete da
-   * manhã, com o valor atual fora da tela.
-   */
   useEffect(() => {
     if (aberto && itemSelecionado.current) {
       itemSelecionado.current.scrollIntoView({ block: "center" });

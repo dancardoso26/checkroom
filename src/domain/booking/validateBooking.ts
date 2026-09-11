@@ -14,26 +14,8 @@ import type {
   ExistingBooking,
 } from "./types";
 
-/**
- * A regra de negócio do CheckRoom.
- *
- * Função pura: não consulta o banco, não lê o relógio e não conhece HTTP. O
- * contexto chega pronto, e o instante presente vem em context.now. É isso que
- * permite testá-la sem infraestrutura e reaproveitá-la em outros pontos de
- * entrada, conforme as seções 2.2 e 2.6 da monografia.
- *
- * Ela julga o pedido contra uma fotografia do banco, então não protege de duas
- * gravações simultâneas. Quem faz isso são as constraints de exclusão da
- * migration 20260904000200: aqui nasce a explicação, no banco a garantia.
- */
-
-/**
- * Comparação estrita nos dois lados, o que faz aulas consecutivas conviverem:
- * 19h-20h40 e 20h40-22h20 não conflitam.
- *
- * É a mesma semântica do tstzrange [início, fim) usado nas constraints. Se as
- * duas divergissem, o formulário aceitaria o que o banco recusa.
- */
+// Intervalo semiaberto: uma reserva que termina 20:40 não conflita com outra
+// que começa 20:40. É a mesma regra do tstzrange usado nas constraints.
 function overlaps(
   a: { startsAt: Date; endsAt: Date },
   b: { startsAt: Date; endsAt: Date }
@@ -41,14 +23,6 @@ function overlaps(
   return a.startsAt < b.endsAt && a.endsAt > b.startsAt;
 }
 
-/**
- * Três condições: começar após a abertura, terminar antes do fechamento e as
- * duas pontas caírem no mesmo dia. Sem a terceira, uma reserva das 21h às 8h do
- * dia seguinte passaria com o prédio fechado no meio dela.
- *
- * Usa minutos no fuso de São Paulo em vez de getHours(), que leria o fuso do
- * servidor e responderia outro dia para uma aula noturna.
- */
 function dentroDoExpediente(request: {
   startsAt: Date;
   endsAt: Date;
@@ -63,10 +37,6 @@ function dentroDoExpediente(request: {
   return inicio >= ABERTURA_EM_MINUTOS && fim <= FECHAMENTO_EM_MINUTOS;
 }
 
-/**
- * Devolve TODAS as violações, e não apenas a primeira: recusar por um motivo de
- * cada vez transforma o formulário em adivinhação.
- */
 export function validateBooking(
   request: BookingRequest,
   context: BookingContext
@@ -107,21 +77,12 @@ export function validateBooking(
     });
   }
 
-  // 2. Parada antecipada.
-  //
-  // Sem período válido não há o que sobrepor, e sem espaço ou turma não há o que
-  // comparar. Seguir produziria um "nenhum conflito encontrado" que na verdade
-  // significa "não foi possível verificar".
   if (!hasValidPeriod || context.room === null || context.classGroup === null) {
     return { valid: false, violations };
   }
 
   const room = context.room;
   const classGroup = context.classGroup;
-
-  // 3. Conflito triplo: espaço, professor e turma só podem estar em um lugar por
-  // vez. Cada categoria é reportada uma única vez, porque as três exigem
-  // correções diferentes e repetir a mesma não acrescenta nada.
 
   let roomConflict: ExistingBooking | undefined;
   let professorConflict: ExistingBooking | undefined;
@@ -157,16 +118,6 @@ export function validateBooking(
     violations.push({ code: "CLASS_CONFLICT", conflict: classConflict });
   }
 
-  // 4. Vínculo acadêmico.
-  //
-  // É a verificação que torna o modelo exclusivo de educação: uma agenda de
-  // consultórios ou de coworking não tem onde encaixar a relação entre docente,
-  // disciplina e turma.
-  //
-  // O tipo da atividade decide se ela se aplica. Aula exige disciplina, e a
-  // disciplina exige vínculo; palestra, prova, defesa e evento não pertencem a
-  // disciplina nenhuma. Antes do tipo existir, a exigência dependia de o campo
-  // vir preenchido, e bastava deixá-lo vazio para contorná-la.
   if (request.activityType === "class") {
     if (request.subjectId === null) {
       violations.push({ code: "SUBJECT_REQUIRED" });

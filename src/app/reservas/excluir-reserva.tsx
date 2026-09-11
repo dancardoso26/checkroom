@@ -13,18 +13,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-/**
- * Confirmação de exclusão.
- *
- * O texto faz o trabalho principal: quem só quer desmarcar a aula precisa sair
- * daqui sabendo que cancelar preserva o registro. Sem isso, cancelar e excluir
- * viram dois botões que parecem fazer a mesma coisa, e a escolha entre eles
- * passa a ser acidental.
- *
- * Não há campo de motivo, ao contrário do cancelamento. Motivo é informação que
- * se guarda, e aqui não sobra linha onde guardá-la.
- */
-
 const ESTADO_INICIAL: ExclusaoState = { status: "idle" };
 
 export function ExcluirReserva({

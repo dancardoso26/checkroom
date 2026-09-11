@@ -2,24 +2,11 @@ import "server-only";
 import { supabaseServer } from "@/lib/supabase/server";
 import type { ActivityType, ExistingBooking } from "@/domain/booking/types";
 
-/**
- * Repositório de reservas. Concentra os nomes das constraints, os códigos de
- * erro do PostgreSQL e a conversão entre as datas do banco e os Date do domínio.
- */
-
 /** O PostgREST entrega timestamptz como string ISO com fuso. */
 function toDate(valor: string): Date {
   return new Date(valor);
 }
 
-/**
- * O retrato do conflito triplo em SQL: qualquer reserva que compartilhe espaço,
- * professor ou turma e toque a mesma faixa de tempo.
- *
- * O filtro de período é a mesma condição de overlaps, com os dois lados
- * estritos, e é o que mantém o custo constante conforme a agenda cresce. A regra
- * reconfere cada linha, então alterar esta consulta não corrompe a decisão.
- */
 export async function findConflictCandidates(params: {
   roomId: string;
   professorId: string;
@@ -64,10 +51,6 @@ export async function findConflictCandidates(params: {
   }));
 }
 
-/**
- * Todas as reservas do período, sem filtrar por espaço: a tela de escolha
- * pergunta "quais salas estão livres", e não "esta sala está livre".
- */
 export async function findBookingsInPeriod(params: {
   startsAt: Date;
   endsAt: Date;
@@ -94,11 +77,6 @@ export async function findBookingsInPeriod(params: {
   }));
 }
 
-/**
- * "conflict" não é erro: é a validação ter aprovado e o banco recusado, o que só
- * acontece quando outra reserva foi gravada no intervalo. Quem chama precisa
- * distinguir isso de uma falha real.
- */
 export type CreateBookingOutcome =
   | { status: "created"; bookingId: string }
   | {
@@ -107,20 +85,12 @@ export type CreateBookingOutcome =
     }
   | { status: "error"; message: string };
 
-/**
- * Os nomes das constraints são interface: renomear uma na migration
- * 20260904000200 obriga a atualizar este mapa.
- */
 const CONSTRAINT_TO_VIOLATION = {
   bookings_no_room_overlap: "ROOM_CONFLICT",
   bookings_no_professor_overlap: "PROFESSOR_CONFLICT",
   bookings_no_class_overlap: "CLASS_CONFLICT",
 } as const;
 
-/**
- * Chama create_booking em vez de dois inserts seguidos, porque a gravação toca
- * bookings e booking_resources e precisa ser atômica.
- */
 export async function createBooking(input: {
   roomId: string;
   professorId: string;
@@ -137,9 +107,6 @@ export async function createBooking(input: {
     p_professor_id: input.professorId,
     p_class_id: input.classId,
     p_activity_type: input.activityType,
-    // undefined omite o parâmetro na chamada, e o banco aplica o default null.
-    // Enviar null explícito seria equivalente no PostgreSQL, mas o tipo gerado
-    // descreve o parâmetro como opcional, e respeitá-lo evita um cast.
     p_subject_id: input.subjectId ?? undefined,
     p_purpose: input.purpose.trim(),
     p_starts_at: input.startsAt.toISOString(),
@@ -188,12 +155,6 @@ export async function createBooking(input: {
     };
   }
 
-  // Erro não previsto: o detalhe fica no log e o usuário recebe texto genérico,
-  // porque mensagens do banco citam nomes de tabela e de constraint.
-  //
-  // Os "throw" deste arquivo continuam carregando o detalhe de propósito: exceção
-  // não tratada em Server Action é substituída pelo Next por uma mensagem neutra.
-  // O caso perigoso é este, um retorno normal, que chega à tela como foi escrito.
   console.error("Falha inesperada ao gravar reserva:", error);
 
   return {
@@ -218,16 +179,6 @@ export type BookingListItem = {
   cancellationReason: string | null;
 };
 
-/**
- * As reservas que ainda não terminaram.
- *
- * O corte é por ends_at: uma aula que começou há dez minutos ainda está
- * acontecendo e precisa aparecer na grade.
- *
- * As canceladas ficam de fora por padrão, porque a agenda mostra o que vai
- * acontecer. Elas entram sob demanda para que o histórico de cancelamentos seja
- * visível na tela, e não apenas no banco, e para que possam ser excluídas.
- */
 export async function listUpcomingBookings(
   { incluirCanceladas = false } = {},
   now: Date = new Date()
@@ -275,25 +226,12 @@ export async function listUpcomingBookings(
   }));
 }
 
-/**
- * O que aconteceu ao tentar cancelar.
- *
- * Os quatro casos vêm da função do banco, e distingui-los permite à tela dizer
- * o motivo em vez de um "não foi possível" genérico.
- */
 export type CancelBookingOutcome =
   | "cancelled"
   | "not_found"
   | "already_cancelled"
   | "already_finished";
 
-/**
- * Cancela uma reserva, preservando o registro.
- *
- * Chama a função do banco em vez de um update direto porque ela garante que as
- * três colunas mudem juntas, trava a linha contra cancelamentos simultâneos e
- * recusa cancelar o que já terminou.
- */
 export async function cancelBooking(
   bookingId: string,
   reason: string | null
@@ -313,20 +251,6 @@ export async function cancelBooking(
 
 export type DeleteBookingOutcome = "deleted" | "not_found";
 
-/**
- * Apaga a reserva do banco.
- *
- * Diferente de cancelar, que preserva o registro: excluir é para a reserva que
- * não deveria ter existido, como um engano de digitação ou um dado de teste.
- *
- * Não há função no banco aqui, ao contrário do cancelamento, porque não há
- * regra a aplicar nem colunas a manter coerentes. O ".select()" no fim é o que
- * distingue "apagou" de "não existia": o PostgREST devolve as linhas removidas,
- * e uma lista vazia significa que nada foi encontrado.
- *
- * Os recursos vinculados somem junto, pelo "on delete cascade" declarado em
- * booking_resources na migration 20260904000100.
- */
 export async function deleteBooking(
   bookingId: string
 ): Promise<DeleteBookingOutcome> {

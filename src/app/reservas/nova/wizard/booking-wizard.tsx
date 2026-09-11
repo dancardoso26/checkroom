@@ -37,23 +37,6 @@ import { EtapaConfirmacao } from "./etapa-confirmacao";
 import { Resumo } from "./resumo";
 import { Confirmada } from "./reserva-confirmada";
 
-/**
- * Formulário de nova reserva, em cinco etapas: atividade, data e horário,
- * necessidades, espaço e confirmação. Cada uma mora em seu arquivo nesta pasta;
- * aqui ficam só o estado dos campos, o disparo da análise e o avanço.
- *
- * As etapas 2 e 4 consultam o servidor pela Server Action de análise, que roda a
- * mesma regra usada na gravação. Nada é reimplementado no cliente.
- *
- * Ainda não há disciplina, vínculo professor-turma nem calendário letivo, então
- * a etapa 1 não confirma que a professora leciona para aquela turma e a etapa 2
- * não verifica o período letivo. Dependem de tabelas das entregas seguintes.
- *
- * O envio é feito no onSubmit, e não no atributo action, porque o React 19 limpa
- * o formulário quando a action termina, e nos componentes do Radix esse reset
- * dispara onValueChange("") e onCheckedChange(false), zerando o preenchimento.
- */
-
 type BookingWizardProps = {
   rooms: RoomOption[];
   professors: ProfessorOption[];
@@ -83,10 +66,6 @@ export function BookingWizard({
 
   const [recursos, setRecursos] = useState<string[]>([]);
 
-  /**
-   * A etapa 2 lê os conflitos de agenda e a etapa 4 lê a lista de espaços: são
-   * recortes da mesma chamada.
-   */
   const [analise, setAnalise] = useState<AnaliseResult | null>(null);
   const [analisando, iniciarAnalise] = useTransition();
 
@@ -108,17 +87,7 @@ export function BookingWizard({
   const dadosParaAnalise =
     campos.professorId !== "" && campos.classId !== "" && periodoPreenchido;
 
-  /**
-   * Pede uma análise nova sempre que muda algo que altera a resposta.
-   *
-   * roomId fica fora das dependências de propósito: escolher um espaço não muda
-   * o julgamento dos outros, e refazer a análise a cada clique apagaria a
-   * seleção.
-   */
   useEffect(() => {
-    // Limpar o estado daqui seria escrever de dentro de um efeito, o que provoca
-    // renderização em cascata. Quem descarta o resultado antigo é a derivação
-    // logo abaixo.
     if (!dadosParaAnalise) return;
 
     // Descarta a resposta de uma análise que ficou obsoleta enquanto viajava:
@@ -155,17 +124,8 @@ export function BookingWizard({
     recursos,
   ]);
 
-  /**
-   * A análise que vale para os dados que estão na tela agora. Quando falta
-   * preencher algo, o resultado guardado descreve um pedido que não existe mais.
-   */
   const analiseAtual = dadosParaAnalise ? analise : null;
 
-  /**
-   * O espaço escolhido, só enquanto continuar servindo. Sem isto, trocar o
-   * horário depois de escolher levaria à confirmação com um espaço ocupado, e o
-   * erro só apareceria na gravação.
-   */
   const roomIdValido =
     campos.roomId !== "" &&
     analiseAtual?.status === "ok" &&
@@ -181,30 +141,12 @@ export function BookingWizard({
     );
   }
 
-  /**
-   * Falso também enquanto a análise está em andamento: avançar sem saber é pior
-   * do que esperar meio segundo.
-   */
   const agendaLivre =
     !analisando &&
     analiseAtual?.status === "ok" &&
     analiseAtual.scheduleMessages.length === 0;
 
-  /**
-   * O que cada etapa exige para liberar o avanço.
-   *
-   * A etapa 2 é a única que bloqueia por resultado do servidor, contrariando o
-   * padrão de avisar em vez de impedir. A razão: conflito de agenda não se
-   * resolve nas etapas seguintes, ao contrário do aviso de capacidade. Deixar
-   * avançar levaria a pessoa por três telas para recusar no fim.
-   *
-   * O botão desabilitado nunca aparece sozinho, o aviso acima diz o motivo. E
-   * nada disso é validação: quem recusa é a regra no servidor.
-   */
   const podeAvancar = [
-    // A disciplina entra na condição porque, sendo aula, o vínculo docente é
-    // exigido e a informação para verificá-lo já está toda aqui. Sem isto, o
-    // erro só apareceria duas etapas adiante, quando a análise roda.
     campos.professorId !== "" &&
       campos.classId !== "" &&
       campos.purpose.trim() !== "" &&
@@ -218,17 +160,13 @@ export function BookingWizard({
   /** Usada pelo botão da última etapa; o motivo está na declaração dele. */
   const formulario = useRef<HTMLFormElement>(null);
 
-  /**
-   * As violações da regra e os erros de formato do Zod em uma lista só: do ponto
-   * de vista de quem preencheu, ambos respondem a mesma pergunta. Os fieldErrors
-   * eram descartados em silêncio, e uma requisição vinda de fora do formulário
-   * recusava a reserva sem dizer por quê.
-   */
   const motivosDaRecusa =
     state.status === "error"
       ? [...state.messages, ...Object.values(state.fieldErrors).flat()]
       : [];
 
+  // Envio manual em vez de <form action>: o action do React 19 limpa o
+  // formulário ao responder, zerando os campos quando a reserva é recusada.
   function enviar(evento: React.FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     const dados = new FormData(evento.currentTarget);
@@ -350,18 +288,8 @@ export function BookingWizard({
               </Button>
             )}
 
-            {/*
-              Os dois botões são type="button" e têm key diferente, o que evita um
-              defeito real: quando eles alternavam entre button e submit, clicar
-              em "Continuar" na etapa do espaço CRIAVA a reserva, pulando a
-              revisão.
-
-              O onClick avança a etapa, o React re-renderiza de forma síncrona
-              reaproveitando o mesmo nó do DOM e trocando o type, e só então o
-              navegador aplica o comportamento padrão do clique, encontrando um
-              submit. As chaves impedem o reaproveitamento; o type fixo garante
-              que o envio aconteça só onde está escrito.
-            */}
+            {/* Os dois botões precisam de key distinta: reaproveitando o mesmo
+                nó, o React trocava o type durante o clique e criava a reserva. */}
             {etapa < ETAPAS.length - 1 ? (
               <Button
                 key="avancar"
@@ -369,9 +297,6 @@ export function BookingWizard({
                 disabled={!podeAvancar}
                 onClick={() => setEtapa((e) => e + 1)}
               >
-                {/* Na etapa da agenda, o rótulo diz por que o botão está
-                    parado. Sem isso, meio segundo de espera pareceria um botão
-                    quebrado. */}
                 {etapa === 1 && analisando ? "Verificando..." : "Continuar"}
                 <ArrowRight />
               </Button>

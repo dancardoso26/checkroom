@@ -1,26 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-/**
- * ACESSO AO BANCO A PARTIR DOS TESTES
- *
- * Os testes de ponta a ponta rodam fora do Next, então não têm acesso aos
- * repositórios da aplicação, que importam "server-only". Falam direto com a API
- * REST do Supabase.
- *
- * Isso não é uma limitação, é o que dá valor à suíte: as constraints de
- * exclusão são verificadas pelo mesmo caminho de um INSERT feito no editor SQL,
- * ou seja, sem passar por validateBooking. Se a garantia dependesse da
- * aplicação, estes testes falhariam, que é exatamente o que deveriam fazer.
- */
-
-/**
- * Lê o .env.local à mão em vez de usar uma biblioteca.
- *
- * O arquivo é carregado pelo Next em tempo de execução, mas os testes rodam em
- * outro processo e não herdam nada dele. Acrescentar dotenv só para ler três
- * linhas seria uma dependência a mais para um problema que cabe em cinco.
- */
 function lerEnv(): Record<string, string> {
   const arquivo = path.resolve(process.cwd(), ".env.local");
   const conteudo = readFileSync(arquivo, "utf8");
@@ -39,13 +19,6 @@ function lerEnv(): Record<string, string> {
 const env = lerEnv();
 const BASE = `${env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1`;
 
-/**
- * A chave secreta, a mesma que o servidor usa.
- *
- * Ela ignora o RLS, o que aqui é intencional: os testes precisam preparar e
- * conferir o estado do banco livremente. É também o motivo de esta suíte nunca
- * dever apontar para um banco de produção.
- */
 const headers = {
   apikey: env.SUPABASE_SECRET_KEY,
   Authorization: `Bearer ${env.SUPABASE_SECRET_KEY}`,
@@ -96,12 +69,6 @@ export async function listarTurmas() {
   return corpo as { id: string; name: string; student_count: number }[];
 }
 
-/**
- * Insere uma reserva sem passar pela aplicação.
- *
- * Devolve o erro em vez de lançar, porque nos testes de constraint a falha é o
- * resultado esperado e precisa ser inspecionada.
- */
 export async function inserirReservaDireto(linha: {
   room_id: string;
   professor_id: string;
@@ -135,12 +102,6 @@ export async function buscarReserva(id: string): Promise<LinhaReserva | null> {
   return corpo.length > 0 ? corpo[0] : null;
 }
 
-/**
- * Os recursos vinculados a uma reserva.
- *
- * Serve para verificar o "on delete cascade": apagar a reserva precisa levar
- * essas linhas junto, senão sobrariam órfãs apontando para nada.
- */
 export async function contarRecursosDaReserva(id: string): Promise<number> {
   const { corpo } = await pedir(
     `booking_resources?booking_id=eq.${id}&select=resource_id`
@@ -166,13 +127,6 @@ export async function listarRecursos() {
   return corpo as { id: string; name: string }[];
 }
 
-/**
- * O prefixo que marca tudo o que os testes criam.
- *
- * Serve para a limpeza encontrar exatamente as próprias reservas e nunca tocar
- * nas três que vêm do seed, que são a base contra a qual os conflitos são
- * testados.
- */
 export const PREFIXO_TESTE = "[e2e]";
 
 export async function limparReservasDeTeste() {

@@ -15,20 +15,6 @@ import {
 import { PERIODO_LETIVO_VIGENTE } from "@/domain/booking/businessHours";
 import { toDateInputValue } from "@/lib/datetime";
 
-/**
- * TELA DE NOVA RESERVA
- *
- * Server Component. Ele carrega os catálogos e entrega ao formulário, que é o
- * componente de cliente.
- *
- * A divisão importa: os repositórios importam "server-only" e usam a chave
- * secreta do Supabase. Se este arquivo tivesse "use client" no topo, o build
- * falharia, e é essa falha proposital que impede a chave de vazar por um import
- * descuidado.
- *
- * As quatro consultas são independentes, então rodam em paralelo. Em sequência,
- * a página só começaria a renderizar depois de quatro idas ao banco enfileiradas.
- */
 export const dynamic = "force-dynamic";
 
 export default async function NovaReservaPage() {
@@ -72,9 +58,6 @@ export default async function NovaReservaPage() {
           resources={resources}
           subjects={subjects}
           assignments={assignments}
-          // A data de hoje é calculada aqui, no servidor, e não dentro do
-          // componente de cliente. Assim o valor inicial do campo é o mesmo na
-          // renderização do servidor e na hidratação do navegador.
           hoje={toDateInputValue(new Date())}
         />
       </main>

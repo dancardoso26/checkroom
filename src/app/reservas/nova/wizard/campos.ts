@@ -1,13 +1,6 @@
 import { combineDateTime } from "@/lib/datetime";
 import type { ActivityType } from "@/domain/booking/types";
 
-/**
- * O ESTADO DO FORMULÁRIO
- *
- * Um tipo só para os sete campos, compartilhado entre o orquestrador e as
- * etapas. Antes cada etapa declarava a fatia que consumia, e acrescentar um
- * campo obrigava a caçar essas declarações pelo arquivo.
- */
 export type CamposDaReserva = {
   activityType: ActivityType;
   professorId: string;
@@ -42,16 +35,6 @@ export function ehPeriodoValido(campos: { date: string; startTime: string; endTi
   );
 }
 
-// ---------------------------------------------------------------------------
-// Indicador de etapas
-// ---------------------------------------------------------------------------
-
-/**
- * O rótulo de cada tipo, em um lugar só.
- *
- * O formulário, o resumo lateral e a tela de confirmação exibem o mesmo texto, e
- * repeti-lo em três arquivos garantiria que um dia divergissem.
- */
 export const ROTULO_DA_ATIVIDADE: Record<ActivityType, string> = {
   class: "Aula",
   lecture: "Palestra",
@@ -60,17 +43,6 @@ export const ROTULO_DA_ATIVIDADE: Record<ActivityType, string> = {
   event: "Evento",
 };
 
-/**
- * Como o campo de texto livre se chama em cada tipo de atividade.
- *
- * "Finalidade" servia para tudo e não descrevia nada: em uma palestra o que se
- * espera ali é o título, e em uma defesa, o trabalho e o autor. O rótulo genérico
- * transferia para quem preenche a tarefa de adivinhar o que escrever.
- *
- * O exemplo acompanha pelo mesmo motivo, e corrige um defeito: o placeholder
- * anterior distinguia apenas aula das demais, então uma palestra sugeria
- * "Defesa de TCC".
- */
 export const CAMPO_FINALIDADE: Record<
   ActivityType,
   { rotulo: string; exemplo: string }
