@@ -1,11 +1,13 @@
 import "server-only";
-import { supabaseServer } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { RoomSnapshot } from "@/domain/booking/types";
 
 export async function findRoomSnapshot(
   roomId: string
 ): Promise<RoomSnapshot | null> {
-  const { data, error } = await supabaseServer
+  const supabase = await createSupabaseServerClient();
+
+  const { data, error } = await supabase
     .from("rooms")
     .select("id, name, building, capacity, room_resources(resource_id)")
     .eq("id", roomId)
@@ -38,7 +40,9 @@ export type RoomOption = {
 };
 
 export async function listRooms(): Promise<RoomOption[]> {
-  const { data, error } = await supabaseServer
+  const supabase = await createSupabaseServerClient();
+
+  const { data, error } = await supabase
     .from("rooms")
     .select("id, name, building, capacity, room_resources(resource_id)")
     .order("building")

@@ -17,8 +17,6 @@ export default defineConfig({
 
       include: ["src/domain/**", "src/lib/**"],
 
-      all: true,
-
       exclude: ["src/lib/supabase/database.types.ts"],
       reporter: ["text", "html"],
 

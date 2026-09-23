@@ -14,10 +14,13 @@ import {
 } from "@/lib/repositories/subjectRepository";
 import { PERIODO_LETIVO_VIGENTE } from "@/domain/booking/businessHours";
 import { toDateInputValue } from "@/lib/datetime";
+import { exigirSessao } from "@/lib/sessao";
 
 export const dynamic = "force-dynamic";
 
 export default async function NovaReservaPage() {
+  const sessao = await exigirSessao();
+
   const [rooms, professors, classes, resources, subjects, assignments] =
     await Promise.all([
       listRooms(),
@@ -59,6 +62,7 @@ export default async function NovaReservaPage() {
           subjects={subjects}
           assignments={assignments}
           hoje={toDateInputValue(new Date())}
+          professorFixo={sessao.papel === "admin" ? null : sessao.professorId}
         />
       </main>
     </>

@@ -1,5 +1,5 @@
 import "server-only";
-import { supabaseServer } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { TeachingAssignmentSnapshot } from "@/domain/booking/types";
 
 export type SubjectOption = {
@@ -9,7 +9,9 @@ export type SubjectOption = {
 };
 
 export async function listSubjects(): Promise<SubjectOption[]> {
-  const { data, error } = await supabaseServer
+  const supabase = await createSupabaseServerClient();
+
+  const { data, error } = await supabase
     .from("subjects")
     .select("id, name, course_id")
     .order("name");
@@ -31,7 +33,9 @@ export type TeachingAssignmentOption = {
 export async function listTeachingAssignments(
   term: string
 ): Promise<TeachingAssignmentOption[]> {
-  const { data, error } = await supabaseServer
+  const supabase = await createSupabaseServerClient();
+
+  const { data, error } = await supabase
     .from("teaching_assignments")
     .select("professor_id, subject_id, class_id")
     .eq("term", term);
@@ -53,9 +57,11 @@ export async function findTeachingAssignment(params: {
   classId: string;
   term: string;
 }): Promise<TeachingAssignmentSnapshot | null> {
+  const supabase = await createSupabaseServerClient();
+
   if (params.subjectId === null) return null;
 
-  const { data, error } = await supabaseServer
+  const { data, error } = await supabase
     .from("teaching_assignments")
     .select("professor_id, subject_id, class_id, term")
     .eq("professor_id", params.professorId)

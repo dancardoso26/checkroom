@@ -57,8 +57,13 @@ já estão aqui em SQL puro, o ganho não compensa a dependência.
 O CLI é usado apenas para uma coisa, e via `npx`, sem instalação:
 
 ```bash
-npx supabase gen types typescript --project-id kalzmyjwqpphwxsmngbf > src/lib/supabase/database.types.ts
+npm run types
 ```
+
+O script envolve esse comando do CLI porque o redirecionamento do PowerShell
+grava em UTF-16, que o TypeScript aceita mas suja o diff do git. Ele também
+extrai o identificador do projeto da URL em `.env.local`, em vez de deixá-lo
+fixo aqui, onde poderia divergir do projeto em uso.
 
 Esse comando gera os tipos TypeScript a partir do esquema real do banco. Ele
 deve ser rodado sempre que uma migration alterar a estrutura das tabelas. É o

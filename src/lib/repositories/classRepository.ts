@@ -1,11 +1,13 @@
 import "server-only";
-import { supabaseServer } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { ClassSnapshot } from "@/domain/booking/types";
 
 export async function findClassSnapshot(
   classId: string
 ): Promise<ClassSnapshot | null> {
-  const { data, error } = await supabaseServer
+  const supabase = await createSupabaseServerClient();
+
+  const { data, error } = await supabase
     .from("classes")
     .select("id, name, student_count")
     .eq("id", classId)
@@ -34,7 +36,9 @@ export type ClassOption = {
 };
 
 export async function listClasses(): Promise<ClassOption[]> {
-  const { data, error } = await supabaseServer
+  const supabase = await createSupabaseServerClient();
+
+  const { data, error } = await supabase
     .from("classes")
     .select("id, name, student_count, course_id, courses(name)")
     .order("name");

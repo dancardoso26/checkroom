@@ -21,6 +21,8 @@ import {
 } from "@/lib/repositories/bookingRepository";
 import { findTeachingAssignment } from "@/lib/repositories/subjectRepository";
 import { PERIODO_LETIVO_VIGENTE } from "@/domain/booking/businessHours";
+import { exigirSessao } from "@/lib/sessao";
+import { podeReservarPara } from "@/domain/auth/permissoes";
 
 const schema = z.object({
   roomId: z.uuid("Selecione um espaço."),
@@ -106,6 +108,15 @@ export async function criarReserva(
   }
 
   const input = parsed.data;
+  const sessao = await exigirSessao();
+
+  // O campo professor nem aparece para quem é professor, mas a Server Action é
+  // um endpoint HTTP: quem souber o identificador pode chamá-la direto.
+  if (!podeReservarPara(sessao, input.professorId)) {
+    return erro(values, [
+      "Você só pode registrar reservas em seu próprio nome.",
+    ]);
+  }
 
   const request: BookingRequest = {
     roomId: input.roomId,
@@ -166,6 +177,7 @@ export async function criarReserva(
     endsAt: request.endsAt,
     // O pedido original pode ter duplicatas, que violariam a chave primária.
     resourceIds: [...new Set(request.requiredResourceIds)],
+    createdBy: sessao.profileId,
   });
 
   if (resultado.status === "conflict") {

@@ -1,5 +1,5 @@
 -- profiles entra na lista porque professors cascatearia até ela de qualquer
--- forma. Quem recria as contas é scripts/seed-usuarios.ts, que roda depois.
+-- forma. Quem recria as contas é scripts/seed-usuarios.mts, que roda depois.
 truncate table
   public.audit_logs,
   public.profiles,

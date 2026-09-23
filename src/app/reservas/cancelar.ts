@@ -3,7 +3,12 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 
-import { cancelBooking } from "@/lib/repositories/bookingRepository";
+import {
+  cancelBooking,
+  findBookingOwnership,
+} from "@/lib/repositories/bookingRepository";
+import { exigirSessao } from "@/lib/sessao";
+import { podeGerenciarReserva } from "@/domain/auth/permissoes";
 
 const schema = z.object({
   bookingId: z.uuid(),
@@ -37,6 +42,20 @@ export async function cancelarReserva(
 
   if (!parsed.success) {
     return { status: "error", message: "Reserva inválida." };
+  }
+
+  const sessao = await exigirSessao();
+  const reserva = await findBookingOwnership(parsed.data.bookingId);
+
+  if (!reserva) {
+    return { status: "error", message: MENSAGEM.not_found };
+  }
+
+  if (!podeGerenciarReserva(sessao, reserva)) {
+    return {
+      status: "error",
+      message: "Esta reserva é de outro professor, e só ele ou a coordenação podem cancelá-la.",
+    };
   }
 
   const resultado = await cancelBooking(

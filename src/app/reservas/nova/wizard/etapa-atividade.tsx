@@ -28,6 +28,7 @@ export function EtapaAtividade({
   campos,
   alterar,
   professors,
+  professorFixo,
   classes,
   subjects,
   assignments,
@@ -44,6 +45,7 @@ export function EtapaAtividade({
     valor: string
   ) => void;
   professors: ProfessorOption[];
+  professorFixo: string | null;
   classes: ClassOption[];
   subjects: SubjectOption[];
   assignments: TeachingAssignmentOption[];
@@ -128,27 +130,40 @@ export function EtapaAtividade({
       <div className="grid gap-5 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="professorField">Professor responsável</Label>
-          <Select
-            value={campos.professorId}
-            onValueChange={(v) => {
-              alterar("professorId", v);
-              // Trocar o professor muda quais turmas e disciplinas são
-              // possíveis, e as anteriores podem não estar entre elas.
-              alterar("classId", "");
-              alterar("subjectId", "");
-            }}
-          >
-            <SelectTrigger id="professorField" className="w-full">
-              <SelectValue placeholder="Selecione o professor" />
-            </SelectTrigger>
-            <SelectContent>
-              {professors.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+
+          {professorFixo ? (
+            // Quem é professor reserva em seu próprio nome, então não há o que
+            // escolher. A Server Action recusa de novo, por ser endpoint HTTP.
+            <div
+              id="professorField"
+              className="border-input bg-muted text-muted-foreground flex h-9 items-center rounded-md border px-3 text-sm"
+            >
+              {professors.find((p) => p.id === professorFixo)?.name ??
+                "Professor não identificado"}
+            </div>
+          ) : (
+            <Select
+              value={campos.professorId}
+              onValueChange={(v) => {
+                alterar("professorId", v);
+                // Trocar o professor muda quais turmas e disciplinas são
+                // possíveis, e as anteriores podem não estar entre elas.
+                alterar("classId", "");
+                alterar("subjectId", "");
+              }}
+            >
+              <SelectTrigger id="professorField" className="w-full">
+                <SelectValue placeholder="Selecione o professor" />
+              </SelectTrigger>
+              <SelectContent>
+                {professors.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
         <div className="space-y-2">

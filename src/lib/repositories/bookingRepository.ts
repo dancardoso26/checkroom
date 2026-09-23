@@ -1,5 +1,5 @@
 import "server-only";
-import { supabaseServer } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { ActivityType, ExistingBooking } from "@/domain/booking/types";
 
 /** O PostgREST entrega timestamptz como string ISO com fuso. */
@@ -16,7 +16,9 @@ export async function findConflictCandidates(params: {
   /** Ignora uma reserva específica. Servirá à edição, que entra depois. */
   excludeBookingId?: string;
 }): Promise<ExistingBooking[]> {
-  let query = supabaseServer
+  const supabase = await createSupabaseServerClient();
+
+  let query = supabase
     .from("bookings")
     .select("id, room_id, professor_id, class_id, purpose, starts_at, ends_at")
     // O "or" do PostgREST agrupa entre parênteses, então a expressão final é
@@ -55,7 +57,9 @@ export async function findBookingsInPeriod(params: {
   startsAt: Date;
   endsAt: Date;
 }): Promise<ExistingBooking[]> {
-  const { data, error } = await supabaseServer
+  const supabase = await createSupabaseServerClient();
+
+  const { data, error } = await supabase
     .from("bookings")
     .select("id, room_id, professor_id, class_id, purpose, starts_at, ends_at")
     .eq("status", "active")
@@ -91,6 +95,28 @@ const CONSTRAINT_TO_VIOLATION = {
   bookings_no_class_overlap: "CLASS_CONFLICT",
 } as const;
 
+// Só o necessário para decidir quem pode mexer na reserva. A verificação vale
+// pela mensagem: a garantia vem das políticas do banco.
+export async function findBookingOwnership(
+  bookingId: string
+): Promise<{ createdBy: string; professorId: string } | null> {
+  const supabase = await createSupabaseServerClient();
+
+  const { data, error } = await supabase
+    .from("bookings")
+    .select("created_by, professor_id")
+    .eq("id", bookingId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Falha ao carregar a reserva: ${error.message}`);
+  }
+
+  if (!data) return null;
+
+  return { createdBy: data.created_by, professorId: data.professor_id };
+}
+
 export async function createBooking(input: {
   roomId: string;
   professorId: string;
@@ -101,8 +127,11 @@ export async function createBooking(input: {
   startsAt: Date;
   endsAt: Date;
   resourceIds: string[];
+  createdBy: string;
 }): Promise<CreateBookingOutcome> {
-  const { data, error } = await supabaseServer.rpc("create_booking", {
+  const supabase = await createSupabaseServerClient();
+
+  const { data, error } = await supabase.rpc("create_booking", {
     p_room_id: input.roomId,
     p_professor_id: input.professorId,
     p_class_id: input.classId,
@@ -112,6 +141,7 @@ export async function createBooking(input: {
     p_starts_at: input.startsAt.toISOString(),
     p_ends_at: input.endsAt.toISOString(),
     p_resource_ids: input.resourceIds,
+    p_created_by: input.createdBy,
   });
 
   if (!error) {
@@ -183,7 +213,9 @@ export async function listUpcomingBookings(
   { incluirCanceladas = false } = {},
   now: Date = new Date()
 ): Promise<BookingListItem[]> {
-  let query = supabaseServer
+  const supabase = await createSupabaseServerClient();
+
+  let query = supabase
     .from("bookings")
     .select(
       `id, purpose, starts_at, ends_at, status, cancellation_reason,
@@ -236,7 +268,9 @@ export async function cancelBooking(
   bookingId: string,
   reason: string | null
 ): Promise<CancelBookingOutcome> {
-  const { data, error } = await supabaseServer.rpc("cancel_booking", {
+  const supabase = await createSupabaseServerClient();
+
+  const { data, error } = await supabase.rpc("cancel_booking", {
     p_booking_id: bookingId,
     p_reason: reason ?? undefined,
   });
@@ -254,7 +288,9 @@ export type DeleteBookingOutcome = "deleted" | "not_found";
 export async function deleteBooking(
   bookingId: string
 ): Promise<DeleteBookingOutcome> {
-  const { data, error } = await supabaseServer
+  const supabase = await createSupabaseServerClient();
+
+  const { data, error } = await supabase
     .from("bookings")
     .delete()
     .eq("id", bookingId)

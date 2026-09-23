@@ -1,12 +1,5 @@
-/**
- * Cria as contas de demonstração e as reservas que dependem delas.
- *
- * Roda depois de supabase/seed.sql, que zera o mundo acadêmico e as contas.
- * A ordem importa: profiles referencia professors, e bookings referencia
- * profiles, então nada disso cabe no arquivo SQL.
- *
- *   node scripts/seed-usuarios.ts
- */
+// Cria as contas de demonstração e as reservas que dependem delas. Roda depois
+// de supabase/seed.sql: profiles referencia professors, e bookings, profiles.
 
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
@@ -67,7 +60,7 @@ const CONTAS: Conta[] = [
   },
 ];
 
-/** Os horários são ancorados na próxima segunda para não envelhecerem. */
+// Ancorados na próxima segunda, para não envelhecerem.
 function slot(diasDepoisDaSegunda: number, hora: string): string {
   const hoje = new Date();
   const diaDaSemana = (hoje.getDay() + 6) % 7;
@@ -129,23 +122,38 @@ async function removerContasAntigas() {
   console.log(`${data.users.length} conta(s) removida(s)`);
 }
 
-async function idDoProfessor(email: string): Promise<string> {
-  const { data, error } = await supabase
-    .from("professors")
-    .select("id")
-    .eq("email", email)
-    .single();
+// Resolvidos de uma vez, antes de qualquer escrita: o e-mail do professor de
+// demonstração muda no fim, e buscas tardias por ele não achariam mais nada.
+async function mapearProfessores(): Promise<Map<string, string>> {
+  const { data, error } = await supabase.from("professors").select("id, email");
 
-  if (error) throw new Error(`Professor ${email} não encontrado. Rode o seed.sql antes.`);
-  return data.id;
+  if (error) throw error;
+
+  if (data.length === 0) {
+    throw new Error("Nenhum professor no banco. Rode o supabase/seed.sql antes.");
+  }
+
+  return new Map(data.map((professor) => [professor.email, professor.id]));
 }
 
-async function criarContas(): Promise<Map<string, string>> {
+function exigirProfessor(professores: Map<string, string>, email: string): string {
+  const id = professores.get(email);
+
+  if (!id) {
+    throw new Error(`Professor ${email} não encontrado. Rode o supabase/seed.sql antes.`);
+  }
+
+  return id;
+}
+
+async function criarContas(
+  professores: Map<string, string>
+): Promise<Map<string, string>> {
   const porEmailDoProfessor = new Map<string, string>();
 
   for (const conta of CONTAS) {
     const professorId = conta.professorEmail
-      ? await idDoProfessor(conta.professorEmail)
+      ? exigirProfessor(professores, conta.professorEmail)
       : null;
 
     // A trigger on_auth_user_created lê estes campos para montar o profile.
@@ -172,11 +180,8 @@ async function criarContas(): Promise<Map<string, string>> {
   return porEmailDoProfessor;
 }
 
-/**
- * O e-mail do professor de demonstração passa a ser o endereço real, para que
- * a notificação do Resend tenha onde chegar. O SQL fica com domínio de
- * exemplo, e o endereço real vive só no .env.local.
- */
+// O endereço real fica só no .env.local: o SQL versionado usa domínio de
+// exemplo, e sem isso a notificação do Resend não teria onde chegar.
 async function apontarProfessorDeDemonstracao() {
   const { error } = await supabase
     .from("professors")
@@ -186,7 +191,10 @@ async function apontarProfessorDeDemonstracao() {
   if (error) throw error;
 }
 
-async function criarReservas(profilePorProfessor: Map<string, string>) {
+async function criarReservas(
+  professores: Map<string, string>,
+  profilePorProfessor: Map<string, string>
+) {
   for (const reserva of RESERVAS) {
     const [sala, turma, disciplina, recursos] = await Promise.all([
       supabase
@@ -202,7 +210,7 @@ async function criarReservas(profilePorProfessor: Map<string, string>) {
       supabase.from("resources").select("id, name").in("name", reserva.resources),
     ]);
 
-    const professorId = await idDoProfessor(reserva.professor);
+    const professorId = exigirProfessor(professores, reserva.professor);
     const createdBy = profilePorProfessor.get(reserva.professor);
 
     if (!createdBy) throw new Error(`Sem conta para ${reserva.professor}`);
@@ -226,8 +234,9 @@ async function criarReservas(profilePorProfessor: Map<string, string>) {
 }
 
 await removerContasAntigas();
-const profilePorProfessor = await criarContas();
+const professores = await mapearProfessores();
+const profilePorProfessor = await criarContas(professores);
+await criarReservas(professores, profilePorProfessor);
 await apontarProfessorDeDemonstracao();
-await criarReservas(profilePorProfessor);
 
 console.log("\nPronto. Entre com qualquer e-mail acima e a senha de SEED_USER_PASSWORD.");

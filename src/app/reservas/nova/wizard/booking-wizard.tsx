@@ -45,6 +45,8 @@ type BookingWizardProps = {
   subjects: SubjectOption[];
   assignments: TeachingAssignmentOption[];
   hoje: string;
+  /** Preenchido quando quem reserva é professor: ele só reserva para si. */
+  professorFixo: string | null;
 };
 
 const ESTADO_INICIAL: BookingFormState = { status: "idle" };
@@ -57,12 +59,14 @@ export function BookingWizard({
   subjects,
   assignments,
   hoje,
+  professorFixo,
 }: BookingWizardProps) {
   const [etapa, setEtapa] = useState(0);
 
-  const [campos, setCampos] = useState<CamposDaReserva>(() =>
-    CAMPOS_VAZIOS(hoje)
-  );
+  const [campos, setCampos] = useState<CamposDaReserva>(() => ({
+    ...CAMPOS_VAZIOS(hoje),
+    professorId: professorFixo ?? "",
+  }));
 
   const [recursos, setRecursos] = useState<string[]>([]);
 
@@ -203,6 +207,7 @@ export function BookingWizard({
                   campos={campos}
                   alterar={alterar}
                   professors={professors}
+                  professorFixo={professorFixo}
                   classes={classes}
                   subjects={subjects}
                   assignments={assignments}

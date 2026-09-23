@@ -1,5 +1,5 @@
 import "server-only";
-import { supabaseServer } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type ProfessorOption = {
   id: string;
@@ -8,7 +8,9 @@ export type ProfessorOption = {
 };
 
 export async function listProfessors(): Promise<ProfessorOption[]> {
-  const { data, error } = await supabaseServer
+  const supabase = await createSupabaseServerClient();
+
+  const { data, error } = await supabase
     .from("professors")
     .select("id, name, email")
     .order("name");

@@ -1,5 +1,5 @@
 import "server-only";
-import { supabaseServer } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type ResourceOption = {
   id: string;
@@ -7,7 +7,9 @@ export type ResourceOption = {
 };
 
 export async function listResources(): Promise<ResourceOption[]> {
-  const { data, error } = await supabaseServer
+  const supabase = await createSupabaseServerClient();
+
+  const { data, error } = await supabase
     .from("resources")
     .select("id, name")
     .order("name");
