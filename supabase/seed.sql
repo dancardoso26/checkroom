@@ -1,4 +1,8 @@
+-- profiles entra na lista porque professors cascatearia até ela de qualquer
+-- forma. Quem recria as contas é scripts/seed-usuarios.ts, que roda depois.
 truncate table
+  public.audit_logs,
+  public.profiles,
   public.booking_resources,
   public.bookings,
   public.teaching_assignments,
@@ -11,28 +15,15 @@ truncate table
   public.courses
   cascade;
 
-create or replace function public.seed_slot(dias integer, hora time)
-returns timestamptz
-language sql
-stable
-as $$
-  select (
-    -- O cast para date é necessário: "date + time" existe no PostgreSQL,
-    -- "timestamp + time" não.
-    (date_trunc('week', current_date)::date + (7 + dias))
-    + hora
-  ) at time zone 'America/Sao_Paulo';
-$$;
-
 insert into public.courses (name, department) values
   ('Sistemas de Informação', 'Ciências Exatas'),
   ('Engenharia Civil',       'Ciências Exatas'),
   ('Enfermagem',             'Ciências da Saúde');
 
 insert into public.professors (name, email) values
-  ('Ana Beatriz Moura',   'ana.moura@umc.br'),
-  ('Carlos Eduardo Lima', 'carlos.lima@umc.br'),
-  ('Marina Alves Prado',  'marina.prado@umc.br');
+  ('Ana Beatriz Moura',   'ana.moura@exemplo.edu.br'),
+  ('Carlos Eduardo Lima', 'carlos.lima@exemplo.edu.br'),
+  ('Marina Alves Prado',  'marina.prado@exemplo.edu.br');
 
 insert into public.resources (name) values
   ('Projetor'),
@@ -60,11 +51,11 @@ insert into public.subjects (name, course_id) values
 insert into public.teaching_assignments (professor_id, subject_id, class_id, term)
 select p.id, s.id, c.id, v.term
 from (values
-  ('ana.moura@umc.br',    'Engenharia de Software',     'SI 8º semestre A',  '2026.2'),
-  ('ana.moura@umc.br',    'Banco de Dados II',          'SI 8º semestre A',  '2026.2'),
-  ('carlos.lima@umc.br',  'Banco de Dados II',          'SI 4º semestre B',  '2026.2'),
-  ('carlos.lima@umc.br',  'Resistência dos Materiais',  'ENG 2º semestre A', '2026.2'),
-  ('marina.prado@umc.br', 'Saúde Coletiva',             'ENF 6º semestre A', '2026.2')
+  ('ana.moura@exemplo.edu.br',    'Engenharia de Software',     'SI 8º semestre A',  '2026.2'),
+  ('ana.moura@exemplo.edu.br',    'Banco de Dados II',          'SI 8º semestre A',  '2026.2'),
+  ('carlos.lima@exemplo.edu.br',  'Banco de Dados II',          'SI 4º semestre B',  '2026.2'),
+  ('carlos.lima@exemplo.edu.br',  'Resistência dos Materiais',  'ENG 2º semestre A', '2026.2'),
+  ('marina.prado@exemplo.edu.br', 'Saúde Coletiva',             'ENF 6º semestre A', '2026.2')
 ) as v (email, subject_name, class_name, term)
 join public.professors p on p.email = v.email
 join public.subjects s   on s.name = v.subject_name
@@ -96,62 +87,3 @@ join (values
 ) as v (building, room_name, resource_name)
   on v.building = r.building and v.room_name = r.name
 join public.resources res on res.name = v.resource_name;
-
--- As três reservas contra as quais os conflitos são testados, no período
--- noturno, quando a disputa por espaço realmente acontece.
-insert into public.bookings (
-  room_id, professor_id, class_id, subject_id, activity_type,
-  purpose, starts_at, ends_at
-)
-values
-  -- Base dos três testes de conflito: espaço, professora e turma.
-  (
-    (select id from public.rooms where building = 'Bloco A' and name = '101'),
-    (select id from public.professors where email = 'ana.moura@umc.br'),
-    (select id from public.classes where name = 'SI 8º semestre A'),
-    (select id from public.subjects where name = 'Engenharia de Software'),
-    'class',
-    'Aula de Engenharia de Software',
-    public.seed_slot(0, '19:00'),
-    public.seed_slot(0, '20:40')
-  ),
-  -- Prova o contrário: reservas simultâneas são permitidas quando não
-  -- compartilham nenhum dos três vínculos.
-  (
-    (select id from public.rooms where building = 'Bloco B' and name = 'Lab 01'),
-    (select id from public.professors where email = 'carlos.lima@umc.br'),
-    (select id from public.classes where name = 'ENG 2º semestre A'),
-    (select id from public.subjects where name = 'Resistência dos Materiais'),
-    'class',
-    'Laboratório de Materiais',
-    public.seed_slot(0, '19:00'),
-    public.seed_slot(0, '20:40')
-  ),
-  -- Terça, 20:00 às 21:40, auditório.
-  (
-    (select id from public.rooms where building = 'Bloco C' and name = 'Auditório'),
-    (select id from public.professors where email = 'marina.prado@umc.br'),
-    (select id from public.classes where name = 'ENF 6º semestre A'),
-    -- Palestra não pertence a disciplina nenhuma, e é o caso que prova que a
-    -- reserva sem vínculo continua possível.
-    null,
-    'lecture',
-    'Seminário de Saúde Coletiva',
-    public.seed_slot(1, '20:00'),
-    public.seed_slot(1, '21:40')
-  );
-
--- O que cada reserva exige.
-insert into public.booking_resources (booking_id, resource_id)
-select b.id, res.id
-from public.bookings b
-join (values
-  ('Aula de Engenharia de Software', 'Projetor'),
-  ('Laboratório de Materiais',       'Computadores'),
-  ('Seminário de Saúde Coletiva',    'Projetor'),
-  ('Seminário de Saúde Coletiva',    'Sistema de som')
-) as v (purpose, resource_name)
-  on v.purpose = b.purpose
-join public.resources res on res.name = v.resource_name;
-
-drop function public.seed_slot(integer, time);

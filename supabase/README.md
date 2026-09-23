@@ -27,11 +27,26 @@ dependem da extensão.
 | 10 | `migrations/20260908000200_activity_type.sql` | Cria o tipo de atividade e a coluna em `bookings` |
 | 11 | `migrations/20260908000300_create_booking_with_activity_type.sql` | Atualiza `create_booking` para gravar o tipo |
 | 12 | `migrations/20260908000400_booking_cancellation.sql` | Cancelamento, e as constraints valendo só entre reservas ativas |
-| 13 | `seed.sql` | Popula com dados de exemplo (opcional, só em desenvolvimento) |
+| 13 | `migrations/20260922000000_profiles_and_roles.sql` | Cria `profiles`, o enum de papéis e a trigger que dá profile a toda conta |
+| 14 | `migrations/20260922000100_booking_authorship.sql` | Torna `created_by` obrigatória e acrescenta o autor a `create_booking` |
+| 15 | `migrations/20260922000200_audit_log.sql` | Cria `audit_logs` e a trigger que registra mudanças em `bookings` |
+| 16 | `seed.sql` | Popula o mundo acadêmico (opcional, só em desenvolvimento) |
 
-O `seed.sql` **apaga** o conteúdo das tabelas antes de inserir. É intencional,
-para que ele possa ser reexecutado durante o desenvolvimento, mas não deve ser
-usado em um banco com dados reais.
+Depois do `seed.sql`, rode no terminal:
+
+```bash
+npm run seed:usuarios
+```
+
+Ele cria as contas de demonstração e as três reservas. A ordem não é escolha de
+estilo: `profiles` referencia `professors`, e `bookings` referencia `profiles`,
+então as reservas não podem nascer no mesmo arquivo que cria os professores.
+
+O `seed.sql` **apaga** o conteúdo das tabelas antes de inserir, inclusive
+`profiles`. É intencional, para que possa ser reexecutado durante o
+desenvolvimento, mas deixa contas órfãs em `auth.users` até o
+`npm run seed:usuarios` rodar, que começa justamente removendo-as. Nada disso
+deve ser usado em um banco com dados reais.
 
 ## Por que não usar o Supabase CLI
 
@@ -88,11 +103,7 @@ que é o que a migration de grants faz.
 
 ## Estado do RLS
 
-Todas as tabelas têm Row Level Security habilitado e **nenhuma política**
-definida. No PostgreSQL isso significa negar tudo, o que é o comportamento
-desejado nesta etapa: o acesso acontece exclusivamente pelo servidor, com a
-chave secreta, que ignora o RLS.
-
-As políticas entram na entrega de **28/09**, junto com a autenticação. O
-raciocínio completo está comentado no arquivo
-`migrations/20260904000300_row_level_security.sql`.
+Todas as tabelas têm Row Level Security habilitado. As políticas estão sendo
+escritas nesta entrega, junto com a autenticação: enquanto não existirem, o
+PostgreSQL nega tudo a quem não é `service_role`, que é o comportamento
+desejado no intervalo.
