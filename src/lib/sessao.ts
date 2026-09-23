@@ -38,10 +38,13 @@ export async function sessaoAtual(): Promise<Sessao | null> {
   };
 }
 
+// O aceite é barrado aqui, e não no middleware: ele roda no edge e teria de
+// consultar o banco a cada requisição, inclusive as de arquivo estático.
 export async function exigirSessao(): Promise<Sessao> {
   const sessao = await sessaoAtual();
 
   if (!sessao) redirect("/login");
+  if (!sessao.aceitouTermosEm) redirect("/aceitar-termos");
 
   return sessao;
 }

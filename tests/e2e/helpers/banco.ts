@@ -69,6 +69,23 @@ export async function listarTurmas() {
   return corpo as { id: string; name: string; student_count: number }[];
 }
 
+// created_by é obrigatória desde a entrega de 28/09. Qualquer perfil serve
+// aqui: o que estes testes verificam é a constraint, não a autoria.
+let perfilDeTeste: string | null = null;
+
+async function algumPerfil(): Promise<string> {
+  if (perfilDeTeste) return perfilDeTeste;
+
+  const { corpo } = await pedir("profiles?select=id&limit=1");
+
+  if (corpo.length === 0) {
+    throw new Error('Nenhum perfil no banco. Rode "npm run seed:usuarios" antes.');
+  }
+
+  perfilDeTeste = corpo[0].id as string;
+  return perfilDeTeste;
+}
+
 export async function inserirReservaDireto(linha: {
   room_id: string;
   professor_id: string;
@@ -79,7 +96,7 @@ export async function inserirReservaDireto(linha: {
 }) {
   const { ok, corpo } = await pedir("bookings", {
     method: "POST",
-    body: JSON.stringify(linha),
+    body: JSON.stringify({ ...linha, created_by: await algumPerfil() }),
   });
 
   return {

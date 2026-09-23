@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { listUpcomingBookings } from "@/lib/repositories/bookingRepository";
 import { formatFullDate, formatTimeRange } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
+import { exigirSessao } from "@/lib/sessao";
 import { AcoesDaReserva } from "./acoes-da-reserva";
 import type { BookingListItem } from "@/lib/repositories/bookingRepository";
 
@@ -19,6 +20,8 @@ export default async function ReservasPage({
 }) {
   const { canceladas } = await searchParams;
   const mostrarCanceladas = canceladas === "1";
+
+  await exigirSessao();
 
   const reservas = await listUpcomingBookings({
     incluirCanceladas: mostrarCanceladas,

@@ -14,6 +14,7 @@ const schema = z.object({
 
 export type LoginState =
   | { status: "idle" }
+  | { status: "success"; destino: string }
   | { status: "error"; message: string };
 
 export async function entrar(
@@ -50,7 +51,13 @@ export async function entrar(
   await registrarEventoDeAutenticacao("login", data.user.id);
 
   const destino = parsed.data.proximo;
-  redirect(destino && destino.startsWith("/") ? destino : "/reservas");
+
+  // Sem redirect aqui: o Next resolve o destino sem passar pelo middleware, e
+  // a exigência de segundo fator seria pulada. Quem navega é a tela.
+  return {
+    status: "success",
+    destino: destino?.startsWith("/") ? destino : "/reservas",
+  };
 }
 
 export async function sair() {

@@ -9,6 +9,7 @@ import {
 } from "@/lib/repositories/bookingRepository";
 import { exigirSessao } from "@/lib/sessao";
 import { podeGerenciarReserva } from "@/domain/auth/permissoes";
+import { notificarProfessor } from "./actions";
 
 const schema = z.object({
   bookingId: z.uuid(),
@@ -66,6 +67,8 @@ export async function cancelarReserva(
   if (resultado !== "cancelled") {
     return { status: "error", message: MENSAGEM[resultado] };
   }
+
+  await notificarProfessor(parsed.data.bookingId, true, sessao.nome);
 
   revalidatePath("/reservas");
 

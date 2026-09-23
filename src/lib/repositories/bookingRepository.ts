@@ -117,6 +117,49 @@ export async function findBookingOwnership(
   return { createdBy: data.created_by, professorId: data.professor_id };
 }
 
+export type DadosParaNotificacao = {
+  professorNome: string;
+  professorEmail: string;
+  finalidade: string;
+  espaco: string;
+  turma: string;
+  startsAt: Date;
+  endsAt: Date;
+  motivo: string | null;
+};
+
+// Uma consulta só para montar o e-mail, feita depois da gravação: antes dela
+// nem todos os dados existem, e o envio não deve atrasar a resposta da tela.
+export async function findBookingNotificationData(
+  bookingId: string
+): Promise<DadosParaNotificacao | null> {
+  const supabase = await createSupabaseServerClient();
+
+  const { data, error } = await supabase
+    .from("bookings")
+    .select(
+      `purpose, starts_at, ends_at, cancellation_reason,
+       rooms(name, building),
+       professors(name, email),
+       classes(name)`
+    )
+    .eq("id", bookingId)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  return {
+    professorNome: data.professors.name,
+    professorEmail: data.professors.email,
+    finalidade: data.purpose,
+    espaco: `${data.rooms.building} · ${data.rooms.name}`,
+    turma: data.classes.name,
+    startsAt: new Date(data.starts_at),
+    endsAt: new Date(data.ends_at),
+    motivo: data.cancellation_reason,
+  };
+}
+
 export async function createBooking(input: {
   roomId: string;
   professorId: string;

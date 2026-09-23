@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { ADMIN, entrarComo } from "./helpers/autenticacao";
 import {
   apagarReserva,
   buscarReserva,
@@ -72,6 +73,10 @@ async function criarReservaDeTeste(sufixo: string) {
   expect(criada.aceitou, criada.mensagem ?? "").toBe(true);
   return criada.id!;
 }
+
+test.beforeEach(async ({ page }) => {
+  await entrarComo(page, ADMIN);
+});
 
 test("exclui pela listagem e a reserva some do banco", async ({ page }) => {
   const id = await criarReservaDeTeste("a excluir");

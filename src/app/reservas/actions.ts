@@ -17,8 +17,11 @@ import {
 } from "@/lib/repositories/resourceRepository";
 import {
   createBooking,
+  findBookingNotificationData,
   findConflictCandidates,
 } from "@/lib/repositories/bookingRepository";
+import { avisarSobreReserva } from "@/lib/email/enviar";
+import { formatPeriod } from "@/lib/datetime";
 import { findTeachingAssignment } from "@/lib/repositories/subjectRepository";
 import { PERIODO_LETIVO_VIGENTE } from "@/domain/booking/businessHours";
 import { exigirSessao } from "@/lib/sessao";
@@ -211,7 +214,31 @@ export async function criarReserva(
 
   // Sem revalidatePath a listagem continuaria servindo a versão em cache, e a
   // reserva só apareceria após recarregar a página à mão.
+  await notificarProfessor(resultado.bookingId, false, sessao.nome);
+
   revalidatePath("/reservas");
 
   return { status: "success", bookingId: resultado.bookingId };
+}
+
+// Exportada para o cancelamento reaproveitar. O await não atrasa o usuário de
+// forma perceptível, e garante que a falha apareça no log da mesma requisição.
+export async function notificarProfessor(
+  bookingId: string,
+  cancelada: boolean,
+  registradoPor: string
+): Promise<void> {
+  const dados = await findBookingNotificationData(bookingId);
+
+  if (!dados) return;
+
+  await avisarSobreReserva(dados.professorEmail, cancelada, {
+    professorNome: dados.professorNome,
+    finalidade: dados.finalidade,
+    espaco: dados.espaco,
+    periodo: formatPeriod(dados.startsAt, dados.endsAt),
+    turma: dados.turma,
+    registradoPor,
+    motivo: dados.motivo,
+  });
 }

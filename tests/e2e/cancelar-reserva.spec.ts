@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { ADMIN, entrarComo } from "./helpers/autenticacao";
 import {
   apagarReserva,
   inserirReservaDireto,
@@ -53,6 +54,10 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => {
   await limparReservasDeTeste();
+});
+
+test.beforeEach(async ({ page }) => {
+  await entrarComo(page, ADMIN);
 });
 
 test("cancela pela listagem e some da agenda", async ({ page }) => {

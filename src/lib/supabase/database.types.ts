@@ -445,6 +445,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      anonimizar_conta: { Args: never; Returns: undefined }
       cancel_booking: {
         Args: { p_booking_id: string; p_reason?: string }
         Returns: string
@@ -464,6 +465,8 @@ export type Database = {
         }
         Returns: string
       }
+      eh_admin: { Args: never; Returns: boolean }
+      professor_atual: { Args: never; Returns: string }
     }
     Enums: {
       activity_type: "class" | "lecture" | "exam" | "defense" | "event"

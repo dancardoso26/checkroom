@@ -1,24 +1,11 @@
-import { redirect } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Logo } from "@/components/logo";
-import { FormularioDeCodigo } from "./formulario";
+import { SegundoFator } from "./segundo-fator";
 
 export const metadata = { title: "Verificação em duas etapas | CheckRoom" };
-export const dynamic = "force-dynamic";
 
-export default async function VerificacaoPage() {
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.auth.mfa.listFactors();
-
-  if (error) redirect("/login");
-
-  const fator = data.totp.at(0);
-
-  // Sem fator confirmado não há o que desafiar: o caminho é cadastrar.
-  if (!fator) redirect("/verificacao/configurar");
-
+export default function VerificacaoPage() {
   return (
     <main className="flex min-h-screen items-center justify-center px-6 py-12">
       <div className="w-full max-w-sm space-y-8">
@@ -35,7 +22,7 @@ export default async function VerificacaoPage() {
         </div>
 
         <div className="bg-card rounded-lg border p-6">
-          <FormularioDeCodigo factorId={fator.id} />
+          <SegundoFator cadastrando={false} />
         </div>
       </div>
     </main>

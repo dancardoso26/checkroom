@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { startTransition, useActionState, useRef } from "react";
+import { startTransition, useActionState, useEffect, useRef } from "react";
 
 import { entrar, type LoginState } from "./acoes";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,12 @@ const ESTADO_INICIAL: LoginState = { status: "idle" };
 export function FormularioDeLogin({ proximo }: { proximo?: string }) {
   const formulario = useRef<HTMLFormElement>(null);
   const [state, formAction, entrando] = useActionState(entrar, ESTADO_INICIAL);
+
+  useEffect(() => {
+    if (state.status !== "success") return;
+
+    window.location.assign(state.destino);
+  }, [state]);
 
   // Envio manual em vez de <form action>: o action do React 19 limpa o
   // formulário ao responder, e o e-mail digitado se perderia a cada erro.

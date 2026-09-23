@@ -17,7 +17,16 @@ export default defineConfig({
 
       include: ["src/domain/**", "src/lib/**"],
 
-      exclude: ["src/lib/supabase/database.types.ts"],
+      // Adaptadores de entrada e saída ficam de fora desta medição: testá-los
+      // em unidade exigiria dublês, e dublê não prova que a consulta funciona.
+      // Quem os cobre são os testes de ponta a ponta, contra o banco real.
+      exclude: [
+        "src/lib/supabase/**",
+        "src/lib/repositories/**",
+        "src/lib/email/**",
+        "src/lib/auditoria.ts",
+        "src/lib/sessao.ts",
+      ],
       reporter: ["text", "html"],
 
       thresholds: {

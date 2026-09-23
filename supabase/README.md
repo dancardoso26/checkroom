@@ -30,7 +30,9 @@ dependem da extensão.
 | 13 | `migrations/20260922000000_profiles_and_roles.sql` | Cria `profiles`, o enum de papéis e a trigger que dá profile a toda conta |
 | 14 | `migrations/20260922000100_booking_authorship.sql` | Torna `created_by` obrigatória e acrescenta o autor a `create_booking` |
 | 15 | `migrations/20260922000200_audit_log.sql` | Cria `audit_logs` e a trigger que registra mudanças em `bookings` |
-| 16 | `seed.sql` | Popula o mundo acadêmico (opcional, só em desenvolvimento) |
+| 16 | `migrations/20260922000300_row_level_security_policies.sql` | Concede acesso ao papel `authenticated` e cria as políticas de RLS |
+| 17 | `migrations/20260922000400_anonimizar_conta.sql` | Cria a função que anonimiza o perfil e cancela as reservas futuras |
+| 18 | `seed.sql` | Popula o mundo acadêmico (opcional, só em desenvolvimento) |
 
 Depois do `seed.sql`, rode no terminal:
 

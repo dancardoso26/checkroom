@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { ADMIN, entrarComo } from "./helpers/autenticacao";
 import { limparReservasDeTeste, PREFIXO_TESTE } from "./helpers/banco";
 import {
   avancar,
@@ -24,7 +25,8 @@ function proximaSegunda(): string {
 
 const SEGUNDA = proximaSegunda();
 
-test.beforeEach(async () => {
+test.beforeEach(async ({ page }) => {
+  await entrarComo(page, ADMIN);
   await limparReservasDeTeste();
 });
 

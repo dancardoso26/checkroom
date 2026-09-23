@@ -1,7 +1,7 @@
 "use client";
 
 import { startTransition } from "react";
-import { ChevronDown, LogOut, ScrollText, User } from "lucide-react";
+import { ChevronDown, LogOut, ScrollText, User, UserCog } from "lucide-react";
 
 import { sair } from "@/app/login/acoes";
 import { Button } from "@/components/ui/button";
@@ -49,6 +49,13 @@ export function MenuDoUsuario({
         </DropdownMenuLabel>
 
         <DropdownMenuSeparator />
+
+        <DropdownMenuItem asChild>
+          <a href="/conta">
+            <UserCog aria-hidden className="size-4" />
+            Minha conta
+          </a>
+        </DropdownMenuItem>
 
         {mostrarAuditoria && (
           <DropdownMenuItem asChild>

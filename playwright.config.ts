@@ -1,4 +1,12 @@
 import { defineConfig, devices } from "@playwright/test";
+import { readFileSync } from "node:fs";
+
+// O Playwright não lê .env.local sozinho, e os testes precisam da senha das
+// contas de demonstração para autenticar.
+for (const linha of readFileSync(".env.local", "utf8").split(/\r?\n/)) {
+  const par = linha.match(/^([A-Z_]+)=(.*)$/);
+  if (par && !process.env[par[1]]) process.env[par[1]] = par[2].trim();
+}
 
 const PORTA = Number(process.env.CHECKROOM_PORT ?? 3100);
 const BASE_URL = `http://localhost:${PORTA}`;
@@ -10,6 +18,11 @@ export default defineConfig({
   // faria uma reserva criada por um aparecer como conflito para outro.
   workers: 1,
   fullyParallel: false,
+
+  // O dev server compila cada rota na primeira visita, e o segundo fator
+  // acrescenta duas telas ao caminho. Os padrões de 5s e 30s não bastam.
+  timeout: 90_000,
+  expect: { timeout: 15_000 },
 
   // Falhar se sobrar um test.only esquecido em um commit.
   forbidOnly: !!process.env.CI,

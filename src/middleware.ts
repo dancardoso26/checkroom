@@ -1,20 +1,24 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-const ROTAS_PUBLICAS = [
-  "/login",
-  "/recuperar-senha",
-  "/nova-senha",
+// Acessíveis com ou sem sessão. "/nova-senha" está aqui porque o link do
+// e-mail cria sessão antes da troca, e expulsá-lo quebraria a recuperação.
+const ROTAS_LIVRES = [
   "/termos",
   "/privacidade",
+  "/nova-senha",
+  "/auth/confirmar",
 ];
+
+// Só fazem sentido para quem ainda não entrou.
+const ROTAS_DE_ENTRADA = ["/login", "/recuperar-senha"];
 
 // Telas do próprio fluxo de segundo fator: exigir aal2 nelas deixaria o usuário
 // sem caminho para obter o aal2.
 const ROTAS_DE_SEGUNDO_FATOR = ["/verificacao", "/verificacao/configurar"];
 
-function ehPublica(caminho: string): boolean {
-  return ROTAS_PUBLICAS.some(
+function casa(rotas: string[], caminho: string): boolean {
+  return rotas.some(
     (rota) => caminho === rota || caminho.startsWith(`${rota}/`)
   );
 }
@@ -51,8 +55,10 @@ export async function middleware(request: NextRequest) {
 
   const caminho = request.nextUrl.pathname;
 
+  if (casa(ROTAS_LIVRES, caminho)) return response;
+
   if (!user) {
-    if (ehPublica(caminho)) return response;
+    if (casa(ROTAS_DE_ENTRADA, caminho)) return response;
 
     const destino = request.nextUrl.clone();
     destino.pathname = "/login";
@@ -60,31 +66,23 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(destino);
   }
 
-  if (ehPublica(caminho)) {
+  if (casa(ROTAS_DE_ENTRADA, caminho)) {
     const destino = request.nextUrl.clone();
     destino.pathname = "/reservas";
     destino.search = "";
     return NextResponse.redirect(destino);
   }
 
-  const { data: nivel } =
-    await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (casa(ROTAS_DE_SEGUNDO_FATOR, caminho)) return response;
 
-  // nextLevel maior que currentLevel significa que a conta tem segundo fator
-  // cadastrado e a sessão ainda não passou por ele.
-  const precisaVerificar = nivel?.nextLevel !== nivel?.currentLevel;
-  const precisaCadastrar = nivel?.nextLevel === "aal1";
+  // Só a claim do token decide aqui: ela é o que o servidor de autenticação
+  // afirma sobre esta sessão, e não depende de outra consulta dar certo.
+  const { data: claims } = await supabase.auth.getClaims();
 
-  if (ROTAS_DE_SEGUNDO_FATOR.includes(caminho)) return response;
-
-  if (precisaCadastrar) {
+  if (claims?.claims?.aal !== "aal2") {
     const destino = request.nextUrl.clone();
-    destino.pathname = "/verificacao/configurar";
-    return NextResponse.redirect(destino);
-  }
-
-  if (precisaVerificar) {
-    const destino = request.nextUrl.clone();
+    // Quem ainda não cadastrou o fator é mandado adiante pela própria tela de
+    // verificação, que sabe distinguir os dois casos.
     destino.pathname = "/verificacao";
     return NextResponse.redirect(destino);
   }
