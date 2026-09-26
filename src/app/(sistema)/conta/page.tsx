@@ -65,25 +65,21 @@ export default async function ContaPage() {
           </dl>
         </section>
 
-        <section className="border-destructive/30 bg-card space-y-4 rounded-lg border p-6">
-          <h2 className="font-medium">Cancelar minha conta</h2>
-          <Separator />
+        {/* O master não pode cancelar a conta, então a seção nem aparece.
+            O banco também recusa, caso a ação seja chamada direto. */}
+        {!sessao.ehMaster && (
+          <section className="border-destructive/30 bg-card space-y-4 rounded-lg border p-6">
+            <h2 className="font-medium">Cancelar minha conta</h2>
+            <Separator />
 
-          {/* O detalhe do que acontece fica na confirmação, onde a decisão é tomada. */}
-          <p className="text-muted-foreground text-sm">
-            Cancele sua conta e remova seus dados pessoais.
-          </p>
-
-          {/* O banco também recusa; aqui só se evita oferecer um botão que falha. */}
-          {sessao.ehMaster ? (
-            <p className="bg-muted rounded-md px-3 py-2 text-sm">
-              Esta é a conta master, dona do sistema, e não pode ser cancelada:
-              sem ela, ninguém mais administraria o CheckRoom.
+            {/* O detalhe do que acontece fica na confirmação, onde a decisão é tomada. */}
+            <p className="text-muted-foreground text-sm">
+              Cancele sua conta e remova seus dados pessoais.
             </p>
-          ) : (
+
             <ExcluirConta />
-          )}
-        </section>
+          </section>
+        )}
       </div>
     </>
   );
