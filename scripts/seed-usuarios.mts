@@ -3,6 +3,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
+import { VERSAO_DOS_TERMOS } from "../src/lib/documentos";
 
 for (const linha of readFileSync(".env.local", "utf8").split("\n")) {
   const par = linha.match(/^([A-Z_]+)=(.*)$/);
@@ -226,7 +227,7 @@ async function criarContas(
         .from("profiles")
         .update({
           terms_accepted_at: new Date().toISOString(),
-          terms_version: "1.0",
+          terms_version: VERSAO_DOS_TERMOS,
         })
         .eq("id", data.user.id);
 

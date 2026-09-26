@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { clienteAdmin } from "./global-setup";
 import {
   ADMIN,
   CONTA_COM_SEGUNDO_FATOR,
@@ -54,6 +55,11 @@ test("da verificação é possível voltar ao login", async ({ page }) => {
   await page.getByRole("button", { name: "Entrar" }).click();
   await expect(page).toHaveURL(/\/verificacao/);
 
+  // A tela é estática e só responde ao clique depois que o React assume;
+  // o QR code, pedido ao servidor na montagem, marca esse momento.
+  await expect(page.getByRole("img", { name: /QR code/ })).toBeVisible({
+    timeout: 20_000,
+  });
   await page.getByRole("button", { name: "Voltar ao login" }).click();
 
   await expect(page).toHaveURL(/\/login/);
@@ -349,4 +355,27 @@ test("o login leva aos termos e à política sem precisar entrar", async ({
   await expect(
     page.getByRole("link", { name: "Política de Privacidade" })
   ).toHaveAttribute("href", "/privacidade");
+});
+
+// Termos que mudaram de versão pedem um novo aceite, como os documentos
+// prometem, e a tela avisa que é uma atualização.
+test("uma versão nova dos termos pede o aceite de novo", async ({ page }) => {
+  await entrarComo(page, PROFESSOR);
+
+  const { supabase } = clienteAdmin();
+  const { data } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+  const conta = data.users.find((u) => u.email === PROFESSOR)!;
+  await supabase
+    .from("profiles")
+    .update({ terms_version: "0.9" })
+    .eq("id", conta.id);
+
+  await page.goto("/reservas");
+
+  await expect(page).toHaveURL(/\/aceitar-termos/);
+  await expect(page.getByText("Os documentos foram atualizados")).toBeVisible();
+
+  await page.getByRole("checkbox").check();
+  await page.getByRole("button", { name: "Continuar" }).click();
+  await expect(page).toHaveURL(/\/reservas/);
 });

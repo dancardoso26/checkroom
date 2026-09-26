@@ -1,249 +1,323 @@
+import Link from "next/link";
+
 import { VERSAO_DA_POLITICA, VIGENTE_DESDE } from "@/lib/documentos";
+
+import { Documento, type Secao } from "../documento";
+import { TabelaDoDocumento } from "../tabela-do-documento";
 
 export const metadata = { title: "Política de Privacidade | CheckRoom" };
 
-export default function PrivacidadePage() {
-  return (
-    <>
-      <h1 className="text-2xl font-semibold tracking-tight">
-        Política de Privacidade
-      </h1>
-      <p className="text-muted-foreground mt-1 mb-8 text-xs">
-        Versão {VERSAO_DA_POLITICA}, vigente desde {VIGENTE_DESDE}.
-      </p>
+const CANAL = "privacidade@checkroom.com.br";
 
+const linkDoCanal = (
+  <a
+    href={`mailto:${CANAL}`}
+    className="text-primary underline underline-offset-2"
+  >
+    {CANAL}
+  </a>
+);
+
+const SECOES: Secao[] = [
+  {
+    id: "responsavel",
+    titulo: "Quem é responsável pelos dados",
+    conteudo: (
+      <>
+        <p>
+          O CheckRoom é um protótipo acadêmico, desenvolvido por Daniel Cardoso
+          Leão como Projeto Final de Curso do Bacharelado em Sistemas de
+          Informação da Universidade de Mogi das Cruzes. Enquanto o sistema
+          existir como projeto acadêmico, o autor é o responsável pelo
+          tratamento dos dados descritos aqui.
+        </p>
+        <p>
+          Numa implantação real, a responsável seria a instituição de ensino que
+          adotasse o sistema, porque é ela quem decide para que os dados são
+          usados.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "dados",
+    titulo: "Quais dados são tratados, e por quê",
+    conteudo: (
+      <>
+        <TabelaDoDocumento
+          colunas={["Dado", "Para quê", "Base legal (LGPD, art. 7º)"]}
+          linhas={[
+            [
+              "Nome e e-mail",
+              "Identificar quem usa o sistema, enviar o convite, permitir a recuperação de senha e avisar sobre reservas feitas ou canceladas em seu nome.",
+              "Execução de contrato (inciso V)",
+            ],
+            [
+              "Senha",
+              "Autenticar o acesso. É guardada apenas como resumo criptográfico, nunca em texto legível.",
+              "Execução de contrato (inciso V)",
+            ],
+            [
+              "Segredo do segundo fator",
+              "Gerar e conferir os códigos do aplicativo autenticador em cada acesso.",
+              "Legítimo interesse em segurança (inciso IX)",
+            ],
+            [
+              "Perfil e vínculo docente",
+              "Definir o que cada pessoa pode fazer e conferir se uma aula é reservada por quem leciona a disciplina para aquela turma.",
+              "Execução de contrato (inciso V)",
+            ],
+            [
+              "Reservas",
+              "Espaço, data, horário, título, turma, disciplina e, no cancelamento, o motivo. Servem para organizar o uso dos espaços e evitar conflitos.",
+              "Execução de contrato (inciso V)",
+            ],
+            [
+              "Registros de acesso",
+              "Data e hora do último acesso, e o endereço IP e o navegador registrados pelo serviço de autenticação. Servem para proteger as contas e investigar acessos indevidos.",
+              "Legítimo interesse em segurança (inciso IX)",
+            ],
+            [
+              "Trilha de auditoria",
+              "Quem fez o quê e quando: entradas, saídas, tentativas de acesso recusadas (com o e-mail digitado), reservas e gestão de usuários. Serve para rastrear as operações.",
+              "Legítimo interesse em rastreabilidade (inciso IX)",
+            ],
+          ]}
+        />
+        <p>
+          <strong>O que o sistema não coleta.</strong> Não há dados pessoais
+          sensíveis (LGPD, art. 5º, II), nem CPF, data de nascimento, endereço,
+          telefone, fotografia ou documentos. Os alunos não são cadastrados
+          individualmente: cada turma guarda apenas a quantidade de alunos,
+          usada para conferir se o espaço comporta a turma.
+        </p>
+        <p>
+          <strong>Cookies.</strong> O sistema usa apenas os cookies que mantêm a
+          sessão aberta depois do login. Não há cookies de análise, de
+          publicidade ou de terceiros.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "compartilhamento",
+    titulo: "Com quem os dados são compartilhados",
+    conteudo: (
+      <>
+        <p>
+          O CheckRoom não vende nem cede dados pessoais. Três empresas processam
+          dados em nome do sistema, apenas para prestar o serviço contratado:
+        </p>
+        <TabelaDoDocumento
+          colunas={["Empresa", "O que faz", "O que recebe"]}
+          linhas={[
+            [
+              "Supabase",
+              "Banco de dados e autenticação, na região de São Paulo.",
+              "Todos os dados da seção 2.",
+            ],
+            [
+              "Resend",
+              "Envio de e-mails a partir do domínio checkroom.com.br, pela região de São Paulo.",
+              "O e-mail do destinatário e o conteúdo da mensagem: os dados da reserva, o convite ou o link de recuperação de senha.",
+            ],
+            [
+              "Vercel",
+              "Hospedagem da aplicação, quando ela for publicada.",
+              "Os dados que trafegam nas requisições.",
+            ],
+          ]}
+        />
+      </>
+    ),
+  },
+  {
+    id: "transferencia",
+    titulo: "Transferência internacional",
+    conteudo: (
       <p>
-        Esta política descreve como o CheckRoom trata dados pessoais e
-        corresponde ao que o sistema faz hoje, não ao que pretende fazer. Quando
-        uma funcionalidade nova alterar esse tratamento, esta política muda
-        junto e ganha nova versão.
+        O banco de dados e o envio de e-mail funcionam em servidores no Brasil.
+        As três empresas, porém, têm sede nos Estados Unidos, e a hospedagem da
+        aplicação poderá processar requisições fora do país, conforme a região
+        escolhida na publicação. Nesses casos, a transferência se apoia nas
+        cláusulas contratuais de proteção de dados oferecidas por essas
+        empresas.
       </p>
-
-      <h2>1. Quem é responsável pelo tratamento</h2>
-
-      <p>
-        O CheckRoom é um protótipo acadêmico, desenvolvido como Projeto Final de
-        Curso do Bacharelado em Sistemas de Informação da Universidade de Mogi
-        das Cruzes. Numa implantação real, a controladora dos dados seria a
-        instituição de ensino que adotasse o sistema, porque é ela quem decide
-        as finalidades do tratamento. Enquanto o sistema existe como projeto
-        acadêmico, o responsável é o autor do trabalho, que atende pelo canal
-        indicado na seção 8.
-      </p>
-
-      <h2>2. Que dados são tratados, e por quê</h2>
-
-      <table className="w-full border-collapse text-left">
-        <thead>
-          <tr className="border-b">
-            <th className="py-2 pr-4 font-medium">Dado</th>
-            <th className="py-2 pr-4 font-medium">Para quê</th>
-            <th className="py-2 font-medium">Base legal</th>
-          </tr>
-        </thead>
-        <tbody className="align-top">
-          <tr className="border-b">
-            <td className="py-2 pr-4">Nome e e-mail institucional</td>
-            <td className="py-2 pr-4">
-              Identificar quem usa o sistema, autenticar o acesso e avisar sobre
-              reservas em seu nome
-            </td>
-            <td className="py-2">Execução de contrato</td>
-          </tr>
-          <tr className="border-b">
-            <td className="py-2 pr-4">Senha</td>
-            <td className="py-2 pr-4">
-              Autenticar o acesso. É guardada como resumo criptográfico, nunca
-              em texto legível
-            </td>
-            <td className="py-2">Execução de contrato</td>
-          </tr>
-          <tr className="border-b">
-            <td className="py-2 pr-4">Segundo fator de autenticação</td>
-            <td className="py-2 pr-4">
-              Confirmar a identidade em cada acesso, reduzindo o risco de uso da
-              conta por terceiros
-            </td>
-            <td className="py-2">Legítimo interesse em segurança</td>
-          </tr>
-          <tr className="border-b">
-            <td className="py-2 pr-4">
-              Papel e vínculo docente (disciplinas e turmas)
-            </td>
-            <td className="py-2 pr-4">
-              Decidir o que cada pessoa pode fazer e validar se a reserva
-              corresponde a uma atividade que ela de fato leciona
-            </td>
-            <td className="py-2">Execução de contrato</td>
-          </tr>
-          <tr className="border-b">
-            <td className="py-2 pr-4">
-              Reservas (espaço, data, horário, finalidade, turma e disciplina)
-            </td>
-            <td className="py-2 pr-4">
-              Gerir a ocupação dos espaços e evitar conflitos de agendamento
-            </td>
-            <td className="py-2">Execução de contrato</td>
-          </tr>
-          <tr>
-            <td className="py-2 pr-4">
-              Registros de auditoria (quem fez o quê e quando)
-            </td>
-            <td className="py-2 pr-4">
-              Permitir rastrear alterações em reservas e acessos ao sistema
-            </td>
-            <td className="py-2">Legítimo interesse em rastreabilidade</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <p>
-        O sistema não trata dados pessoais sensíveis na acepção do artigo 5º da
-        LGPD. Não coleta CPF, data de nascimento, endereço residencial,
-        fotografia nem documentos. Não usa cookies de análise ou publicidade: os
-        únicos cookies existentes são os que mantêm a sessão aberta, e sem eles
-        não há como permanecer autenticado.
-      </p>
-
-      <h2>3. Com quem os dados são compartilhados</h2>
-
-      <p>
-        O CheckRoom não vende nem cede dados pessoais. Três fornecedores
-        processam dados por conta do sistema:
-      </p>
-
+    ),
+  },
+  {
+    id: "retencao",
+    titulo: "Por quanto tempo os dados ficam guardados",
+    conteudo: (
+      <TabelaDoDocumento
+        colunas={["Dado", "Prazo", "Depois do prazo"]}
+        linhas={[
+          [
+            "Conta e perfil",
+            "Enquanto a conta existir.",
+            "Anonimizados quando a conta é cancelada.",
+          ],
+          [
+            "Reservas",
+            "Até o fim do projeto acadêmico.",
+            "Excluídas. Se a conta for cancelada antes, ficam sem ligação com a pessoa.",
+          ],
+          [
+            "Trilha de auditoria",
+            "Até o fim do projeto acadêmico.",
+            "Excluída. Se a conta for cancelada antes, o e-mail da pessoa é apagado dos registros.",
+          ],
+          [
+            "Registros de acesso",
+            "Conforme a retenção do serviço de autenticação, limitada ao fim do projeto.",
+            "Excluídos.",
+          ],
+          [
+            "Dados de demonstração",
+            "Até o fim do projeto acadêmico.",
+            "Excluídos.",
+          ],
+        ]}
+      />
+    ),
+  },
+  {
+    id: "direitos",
+    titulo: "Seus direitos e como exercê-los",
+    conteudo: (
+      <>
+        <p>
+          A LGPD (art. 18) garante a você confirmar se seus dados são tratados,
+          acessá-los, corrigi-los, pedir a anonimização ou a eliminação, a
+          portabilidade, saber com quem são compartilhados e se opor ao
+          tratamento. No CheckRoom:
+        </p>
+        <TabelaDoDocumento
+          colunas={["Direito", "Como exercer"]}
+          linhas={[
+            [
+              "Acesso",
+              "Em Minha conta, com os seus dados e a data em que aceitou os termos.",
+            ],
+            [
+              "Correção",
+              "Pedindo à administração do sistema, porque nome e vínculo docente são dados institucionais.",
+            ],
+            [
+              "Eliminação",
+              "Em Minha conta, pelo botão Cancelar conta, sem precisar pedir a ninguém.",
+            ],
+            [
+              "Portabilidade, oposição e demais pedidos",
+              <>Pelo e-mail {linkDoCanal}, com resposta em até 15 dias.</>,
+            ],
+          ]}
+        />
+        <p>
+          <strong>O que o cancelamento apaga.</strong> O nome é substituído em
+          todo o sistema, o cadastro de docente ligado à conta é anonimizado, o
+          e-mail é apagado da trilha de auditoria, as reservas futuras são
+          canceladas e o acesso é encerrado. As reservas já realizadas e os
+          registros de auditoria continuam existindo, porque documentam o uso
+          dos espaços, mas nada neles permite mais identificar a pessoa.
+        </p>
+        <p>
+          <strong>Decisões automatizadas.</strong> O CheckRoom sugere o espaço
+          mais adequado para cada reserva, mas a escolha final é sempre de quem
+          reserva. O sistema não toma decisões automatizadas sobre pessoas, no
+          sentido do art. 20 da LGPD.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "seguranca",
+    titulo: "Como os dados são protegidos",
+    conteudo: (
       <ul>
+        <li>Senhas guardadas apenas como resumo criptográfico com sal.</li>
+        <li>Segundo fator obrigatório, por aplicativo autenticador.</li>
         <li>
-          <strong>Supabase</strong>, que hospeda o banco de dados e o serviço de
-          autenticação. Recebe todos os dados descritos na seção 2. A instância
-          usada está na região de São Paulo.
+          Comunicação sempre criptografada (HTTPS) e banco de dados
+          criptografado nos servidores.
         </li>
         <li>
-          <strong>Resend</strong>, que entrega as mensagens de e-mail, a partir
-          do domínio checkroom.com.br. Recebe apenas o endereço do destinatário
-          e o conteúdo da mensagem: as informações da reserva mencionada ou o
-          link de recuperação de senha. O envio é feito pela região de São
-          Paulo.
+          Permissões conferidas pela aplicação e, de novo, pelo próprio banco de
+          dados, que limita quais registros cada pessoa alcança.
         </li>
         <li>
-          <strong>Vercel</strong>, que hospedará a aplicação quando ela for
-          publicada. Processa os dados que trafegam nas requisições.
+          Chaves de acesso aos serviços externos guardadas só no servidor, nunca
+          enviadas ao navegador.
         </li>
       </ul>
-
-      <h2>4. Transferência internacional</h2>
-
+    ),
+  },
+  {
+    id: "incidentes",
+    titulo: "Incidentes de segurança",
+    conteudo: (
       <p>
-        O banco de dados e o envio de e-mail operam em infraestrutura localizada
-        no Brasil. A hospedagem da aplicação, quando ocorrer, poderá processar
-        requisições fora do país, conforme a região escolhida na publicação.
+        Se houver um incidente que possa causar risco ou dano relevante, o
+        procedimento é conter o problema, identificar os dados e as pessoas
+        afetadas, avaliar o risco, comunicar a Autoridade Nacional de Proteção
+        de Dados e as pessoas afetadas quando exigido (LGPD, art. 48), e
+        registrar as medidas tomadas.
       </p>
-
-      <h2>5. Por quanto tempo os dados ficam guardados</h2>
-
-      <table className="w-full border-collapse text-left">
-        <thead>
-          <tr className="border-b">
-            <th className="py-2 pr-4 font-medium">Categoria</th>
-            <th className="py-2 pr-4 font-medium">Prazo</th>
-            <th className="py-2 font-medium">Destino</th>
-          </tr>
-        </thead>
-        <tbody className="align-top">
-          <tr className="border-b">
-            <td className="py-2 pr-4">Conta e perfil</td>
-            <td className="py-2 pr-4">
-              Enquanto durar o vínculo com a instituição, ou até a pessoa pedir
-              a remoção
-            </td>
-            <td className="py-2">Anonimização</td>
-          </tr>
-          <tr className="border-b">
-            <td className="py-2 pr-4">Reservas</td>
-            <td className="py-2 pr-4">
-              Preservadas como registro institucional de uso dos espaços
-            </td>
-            <td className="py-2">Mantidas</td>
-          </tr>
-          <tr className="border-b">
-            <td className="py-2 pr-4">Registros de auditoria</td>
-            <td className="py-2 pr-4">
-              Preservados para garantir a rastreabilidade das operações
-            </td>
-            <td className="py-2">Mantidos, com autor anonimizado</td>
-          </tr>
-          <tr>
-            <td className="py-2 pr-4">Dados de demonstração</td>
-            <td className="py-2 pr-4">Até a conclusão do projeto acadêmico</td>
-            <td className="py-2">Excluídos</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <h2>6. Seus direitos</h2>
-
+    ),
+  },
+  {
+    id: "contato",
+    titulo: "Contato",
+    conteudo: (
+      <>
+        <p>
+          Pedidos sobre dados pessoais, dúvidas sobre esta política e relatos de
+          problemas de privacidade: {linkDoCanal}.
+        </p>
+        <p>
+          Por ser um projeto acadêmico sem fins lucrativos, o CheckRoom se
+          enquadra como agente de tratamento de pequeno porte e está dispensado
+          de indicar um encarregado de dados, conforme a Resolução CD/ANPD nº 2,
+          de 2022. Este endereço é o canal de comunicação que a mesma resolução
+          exige.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "alteracoes",
+    titulo: "Alterações nesta política",
+    conteudo: (
       <p>
-        A LGPD assegura a confirmação do tratamento, o acesso aos dados, a
-        correção, a anonimização ou eliminação quando cabível, a portabilidade,
-        a informação sobre compartilhamentos e a oposição ao tratamento.
+        Quando esta política mudar, a nova versão ganha um número e uma data,
+        indicados no topo desta página, e o sistema pede que você leia a nova
+        versão no primeiro acesso depois da mudança. Os{" "}
+        <Link
+          href="/termos"
+          className="text-primary underline underline-offset-2"
+        >
+          Termos de Uso
+        </Link>{" "}
+        seguem a mesma regra.
       </p>
+    ),
+  },
+];
 
-      <p>
-        No CheckRoom, o acesso e a correção dos próprios dados acontecem na tela
-        de conta. A remoção também: o botão de excluir conta anonimiza o perfil
-        e o cadastro de docente ligado a ele, apaga o endereço de e-mail dos
-        registros de auditoria, cancela as reservas futuras e encerra o acesso,
-        sem depender de pedido por e-mail. Depois disso, nenhum dado do sistema
-        permite identificar a pessoa.
-      </p>
-
-      <p>
-        Há um limite que precisa ficar claro. As reservas já realizadas e os
-        registros de auditoria não são apagados, porque documentam o uso de
-        espaços da instituição e a rastreabilidade das operações, com base no
-        legítimo interesse. O que some é a ligação com a pessoa: o nome no
-        perfil é substituído e o vínculo entre conta e docente é desfeito.
-      </p>
-
-      <h2>7. Segurança</h2>
-
-      <p>
-        As senhas são guardadas como resumo criptográfico com sal, nunca em
-        texto legível, e nunca aparecem em registros do sistema. O acesso exige
-        um segundo fator gerado por aplicativo autenticador. A autorização é
-        verificada em duas camadas independentes: na aplicação, antes de cada
-        operação, e no próprio banco de dados, por políticas que limitam quais
-        linhas cada pessoa alcança. Esconder um botão na tela não é considerado
-        controle de acesso neste projeto.
-      </p>
-
-      <p>
-        Chaves de acesso a serviços externos ficam em variáveis de ambiente do
-        servidor e não são enviadas ao navegador nem versionadas no repositório.
-      </p>
-
-      <h2>8. Incidentes e contato</h2>
-
-      <p>
-        Em caso de incidente de segurança com risco relevante, o procedimento é
-        conter o problema, identificar quais dados e pessoas foram afetados,
-        avaliar o risco, comunicar a Autoridade Nacional de Proteção de Dados e
-        os titulares quando exigido, e registrar as medidas tomadas.
-      </p>
-
-      <p>
-        Para exercer direitos ou relatar um problema de privacidade, escreva
-        para o endereço de contato informado pelo responsável pelo projeto na
-        entrega acadêmica.
-      </p>
-
-      <h2>9. Mudanças nesta política</h2>
-
-      <p>
-        Alterações relevantes geram nova versão, com data indicada no topo desta
-        página. Quando a mudança afetar o que é tratado ou para quê, o sistema
-        pede que você leia a nova versão no acesso seguinte.
-      </p>
-    </>
+export default function PrivacidadePage() {
+  return (
+    <Documento
+      titulo="Política de Privacidade"
+      subtitulo={`Versão ${VERSAO_DA_POLITICA}, vigente desde ${VIGENTE_DESDE}.`}
+      introducao={
+        <p>
+          Esta política explica quais dados pessoais o CheckRoom trata, para
+          quê, com quem os compartilha, por quanto tempo os guarda e como você
+          exerce os seus direitos. Ela descreve o que o sistema faz hoje: quando
+          uma funcionalidade nova mudar esse tratamento, a política muda junto.
+        </p>
+      }
+      secoes={SECOES}
+    />
   );
 }

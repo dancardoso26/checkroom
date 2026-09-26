@@ -3,6 +3,7 @@ import { ExternalLink } from "lucide-react";
 import { redirect } from "next/navigation";
 
 import { Logo } from "@/components/logo";
+import { aceiteEmDia } from "@/lib/documentos";
 import { sessaoAtual } from "@/lib/sessao";
 import { BotaoDeAceite } from "./botao";
 
@@ -20,7 +21,8 @@ export default async function AceitarTermosPage() {
   const sessao = await sessaoAtual();
 
   if (!sessao) redirect("/login");
-  if (sessao.aceitouTermosEm) redirect("/reservas");
+  if (aceiteEmDia(sessao.versaoAceita)) redirect("/reservas");
+  const atualizacao = sessao.aceitouTermosEm !== null;
 
   return (
     <main className="flex min-h-screen items-center justify-center px-6 py-12">
@@ -28,7 +30,9 @@ export default async function AceitarTermosPage() {
         <div className="flex flex-col items-center gap-3 text-center">
           <Logo altura={32} />
           <p className="text-muted-foreground text-sm">
-            Antes de continuar, leia os documentos abaixo.
+            {atualizacao
+              ? "Os documentos foram atualizados. Leia a nova versão antes de continuar."
+              : "Antes de continuar, leia os documentos abaixo."}
           </p>
         </div>
 

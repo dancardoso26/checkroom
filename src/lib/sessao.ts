@@ -5,11 +5,13 @@ import { cache } from "react";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Ator } from "@/domain/auth/permissoes";
+import { aceiteEmDia } from "@/lib/documentos";
 
 export type Sessao = Ator & {
   nome: string;
   email: string;
   aceitouTermosEm: string | null;
+  versaoAceita: string | null;
   ehMaster: boolean;
 };
 
@@ -29,7 +31,9 @@ export const sessaoAtual = cache(
 
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, role, full_name, professor_id, terms_accepted_at, user_master")
+      .select(
+        "id, role, full_name, professor_id, terms_accepted_at, terms_version, user_master"
+      )
       .eq("id", user.id)
       .maybeSingle();
 
@@ -42,6 +46,7 @@ export const sessaoAtual = cache(
       nome: data.full_name,
       email: user.email ?? "",
       aceitouTermosEm: data.terms_accepted_at,
+      versaoAceita: data.terms_version,
       ehMaster: data.user_master,
     };
   }
@@ -53,7 +58,7 @@ export async function exigirSessao(): Promise<Sessao> {
   const sessao = await sessaoAtual();
 
   if (!sessao) redirect("/login");
-  if (!sessao.aceitouTermosEm) redirect("/aceitar-termos");
+  if (!aceiteEmDia(sessao.versaoAceita)) redirect("/aceitar-termos");
 
   return sessao;
 }

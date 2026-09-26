@@ -1,152 +1,228 @@
+import Link from "next/link";
+
 import { VERSAO_DOS_TERMOS, VIGENTE_DESDE } from "@/lib/documentos";
+
+import { Documento, type Secao } from "../documento";
+import { TabelaDoDocumento } from "../tabela-do-documento";
 
 export const metadata = { title: "Termos de Uso | CheckRoom" };
 
-export default function TermosPage() {
-  return (
-    <>
-      <h1 className="text-2xl font-semibold tracking-tight">Termos de Uso</h1>
-      <p className="text-muted-foreground mt-1 mb-8 text-xs">
-        Versão {VERSAO_DOS_TERMOS}, vigente desde {VIGENTE_DESDE}.
-      </p>
-
+const SECOES: Secao[] = [
+  {
+    id: "o-que-e",
+    titulo: "O que é o CheckRoom",
+    conteudo: (
+      <>
+        <p>
+          O CheckRoom é um sistema de reserva de espaços acadêmicos: salas de
+          aula, laboratórios e auditórios. Antes de confirmar uma reserva, ele
+          verifica automaticamente se o horário está livre para o espaço, para o
+          professor e para a turma, se o espaço comporta a turma e tem os
+          equipamentos pedidos, e se o professor leciona a disciplina para
+          aquela turma.
+        </p>
+        <p>
+          É um protótipo acadêmico, desenvolvido como Projeto Final de Curso do
+          Bacharelado em Sistemas de Informação da Universidade de Mogi das
+          Cruzes. Não é um produto comercial, não tem garantia de
+          disponibilidade e pode ser alterado ou interrompido a qualquer
+          momento.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "quem-pode-usar",
+    titulo: "Quem pode usar",
+    conteudo: (
+      <>
+        <p>
+          O acesso é restrito a pessoas convidadas pela administração do
+          sistema. Não existe cadastro aberto: a conta é criada por convite
+          enviado ao e-mail da pessoa, e o perfil de acesso é definido por quem
+          convida, nunca por quem é convidado.
+        </p>
+        <p>
+          Ao receber o convite, a pessoa cria a própria senha, cadastra o
+          segundo fator de autenticação e aceita estes termos. Só então passa a
+          usar o sistema.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "sua-conta",
+    titulo: "Sua conta",
+    conteudo: (
+      <>
+        <p>
+          A conta é pessoal e intransferível. O acesso exige a senha e um código
+          gerado por um aplicativo autenticador no seu celular. Você é
+          responsável por manter os dois sob seu controle e por avisar a
+          administração se suspeitar que alguém obteve acesso.
+        </p>
+        <p>
+          Tudo o que é feito com a sua conta fica registrado em seu nome na
+          trilha de auditoria. Por isso, emprestar a senha ou o autenticador a
+          outra pessoa não é permitido.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "perfis",
+    titulo: "Perfis e permissões",
+    conteudo: (
+      <>
+        <p>O que cada perfil pode fazer nesta versão do sistema:</p>
+        <TabelaDoDocumento
+          colunas={["Perfil", "Pode"]}
+          linhas={[
+            [
+              "Professor",
+              "Consultar a agenda, reservar espaços em seu próprio nome e cancelar ou excluir as reservas que são suas ou que registrou.",
+            ],
+            [
+              "Administrador",
+              "Tudo o que o professor faz, em nome de qualquer docente, além de gerenciar usuários e consultar a trilha de auditoria.",
+            ],
+            [
+              "Aluno e Equipe de TI",
+              "Consultar a agenda. As funções próprias desses perfis, como inscrição em palestras e chamados de manutenção, fazem parte das próximas etapas do projeto.",
+            ],
+          ]}
+        />
+        <p>
+          Um dos administradores é o <strong>administrador master</strong>,
+          responsável pelo sistema. A conta dele não pode ser cancelada,
+          desativada nem ter o perfil alterado, para que o sistema nunca fique
+          sem quem o administre.
+        </p>
+        <p>
+          Essas permissões são aplicadas pelo servidor e pelo banco de dados, e
+          não apenas pela interface. Tentar contorná-las é uso indevido.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "uso-adequado",
+    titulo: "Uso adequado",
+    conteudo: (
+      <>
+        <p>Ao usar o CheckRoom, você se compromete a não:</p>
+        <ul>
+          <li>reservar espaços em nome de outra pessoa sem autorização;</li>
+          <li>
+            registrar reservas fictícias para bloquear espaços que não serão
+            usados;
+          </li>
+          <li>
+            tentar acessar dados, telas ou operações que seu perfil não permite;
+          </li>
+          <li>
+            interferir no funcionamento do sistema ou explorar falhas, em vez de
+            relatá-las à administração.
+          </li>
+        </ul>
+      </>
+    ),
+  },
+  {
+    id: "conteudo",
+    titulo: "O que você escreve no sistema",
+    conteudo: (
       <p>
-        Estes termos regulam o uso do CheckRoom. Eles tratam do que o serviço
-        faz e do que se espera de quem o usa. O tratamento de dados pessoais é
-        assunto da Política de Privacidade, que é documento separado e não é
-        substituído por este.
+        Os textos que você escreve, como o título de uma reserva ou o motivo de
+        um cancelamento, ficam visíveis para todas as pessoas com acesso à
+        agenda, e o motivo do cancelamento também é enviado por e-mail ao
+        professor da reserva. Não inclua neles informações pessoais
+        desnecessárias, de outras pessoas ou de natureza sensível.
       </p>
-
-      <h2>1. O que é o CheckRoom</h2>
-
+    ),
+  },
+  {
+    id: "disponibilidade",
+    titulo: "Disponibilidade e suporte",
+    conteudo: (
       <p>
-        O CheckRoom é um sistema de gestão de espaços e eventos acadêmicos.
-        Permite reservar salas, laboratórios e auditórios para atividades de
-        ensino, verificando automaticamente conflitos de horário, capacidade do
-        espaço, recursos disponíveis e vínculo do professor com a disciplina e a
-        turma.
+        O CheckRoom depende de serviços de terceiros para banco de dados,
+        autenticação, hospedagem e envio de e-mail. Falhas nesses serviços
+        afetam o sistema, e não há compromisso de tempo de resposta ou de
+        recuperação. Por ser um projeto acadêmico, o suporte se limita ao
+        período do curso.
       </p>
-
+    ),
+  },
+  {
+    id: "encerramento",
+    titulo: "Cancelamento da conta",
+    conteudo: (
+      <>
+        <p>
+          Você pode cancelar a sua conta a qualquer momento, em Minha conta. O
+          cancelamento encerra o acesso, cancela as suas reservas futuras e
+          remove os dados que identificam você, conforme descrito na{" "}
+          <Link
+            href="/privacidade"
+            className="text-primary underline underline-offset-2"
+          >
+            Política de Privacidade
+          </Link>
+          .
+        </p>
+        <p>
+          A administração também pode desativar ou cancelar contas de pessoas
+          que deixem de ter vínculo com a instituição ou que descumpram estes
+          termos.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "responsabilidade",
+    titulo: "Responsabilidade",
+    conteudo: (
       <p>
-        É um protótipo acadêmico, desenvolvido como Projeto Final de Curso. Não
-        é um produto comercial, não tem garantia de disponibilidade e pode ser
-        alterado ou interrompido a qualquer momento, inclusive durante a
-        avaliação do trabalho.
-      </p>
-
-      <h2>2. Quem pode usar</h2>
-
-      <p>
-        O acesso é destinado a professores e à administração de uma instituição
-        de ensino superior. As contas são criadas pela instituição, não por
-        autocadastro: não há como se inscrever sozinho, e ninguém escolhe o
-        próprio papel no sistema.
-      </p>
-
-      <h2>3. Sua conta</h2>
-
-      <p>
-        A conta é pessoal e intransferível. O acesso exige senha e um segundo
-        fator gerado por aplicativo autenticador. Você é responsável por manter
-        ambos sob seu controle e por avisar a instituição se suspeitar que
-        alguém obteve acesso.
-      </p>
-
-      <p>
-        Ações realizadas com sua conta são registradas como suas na trilha de
-        auditoria. Compartilhar credenciais compromete essa rastreabilidade e
-        não é permitido.
-      </p>
-
-      <h2>4. Papéis e permissões</h2>
-
-      <ul>
-        <li>
-          <strong>Professor</strong> reserva espaços em seu próprio nome, e pode
-          cancelar ou excluir as reservas que são suas ou que registrou.
-        </li>
-        <li>
-          <strong>Administração</strong> reserva em nome de qualquer docente,
-          gerencia qualquer reserva e consulta a trilha de auditoria.
-        </li>
-      </ul>
-
-      <p>
-        Essas regras são aplicadas pelo servidor e pelo banco de dados, não
-        apenas pela interface. Tentar contorná-las manipulando requisições é uso
-        indevido.
-      </p>
-
-      <h2>5. Uso adequado</h2>
-
-      <p>Ao usar o CheckRoom, você concorda em não:</p>
-
-      <ul>
-        <li>reservar espaços em nome de outra pessoa sem autorização para isso;</li>
-        <li>
-          registrar reservas fictícias para bloquear espaços que não serão
-          utilizados;
-        </li>
-        <li>
-          tentar acessar dados, telas ou operações que seu papel não permite;
-        </li>
-        <li>
-          interferir no funcionamento do sistema, sobrecarregá-lo ou explorar
-          falhas em vez de reportá-las.
-        </li>
-      </ul>
-
-      <h2>6. Conteúdo que você insere</h2>
-
-      <p>
-        Os textos que você escreve, como a finalidade de uma reserva ou o motivo
-        de um cancelamento, ficam visíveis a outras pessoas autenticadas no
-        sistema. Não inclua neles informações pessoais desnecessárias, de
-        terceiros ou de natureza sensível.
-      </p>
-
-      <h2>7. Disponibilidade e suporte</h2>
-
-      <p>
-        O sistema depende de serviços de terceiros para banco de dados,
-        hospedagem e envio de e-mail. Interrupções nesses serviços afetam o
-        CheckRoom, e não há compromisso de tempo de resposta ou de recuperação.
-        Sendo um projeto acadêmico, o suporte se limita ao período do curso.
-      </p>
-
-      <h2>8. Encerramento da conta</h2>
-
-      <p>
-        Você pode encerrar sua conta a qualquer momento pela tela de conta. Ao
-        fazer isso, seu perfil é anonimizado, suas reservas futuras são
-        canceladas e o acesso é encerrado.
-      </p>
-
-      <p>
-        As reservas já realizadas permanecem como registro institucional de uso
-        dos espaços, e os registros de auditoria permanecem para preservar a
-        rastreabilidade, ambos sem vínculo com sua identidade. A instituição
-        também pode encerrar contas de pessoas que deixem de ter vínculo com ela
-        ou que descumpram estes termos.
-      </p>
-
-      <h2>9. Responsabilidade</h2>
-
-      <p>
-        Estes termos não retiram direitos assegurados por lei nem transferem a
-        você a responsabilidade por falhas do sistema. Como protótipo acadêmico
-        oferecido sem contrapartida, o CheckRoom não responde por perdas
-        decorrentes de indisponibilidade ou de erros de agendamento, e a decisão
+        Estes termos não retiram direitos garantidos por lei. Como protótipo
+        acadêmico oferecido sem custo, o CheckRoom não responde por perdas
+        causadas por indisponibilidade ou por erros de agendamento. A decisão
         final sobre o uso de um espaço continua sendo da instituição.
       </p>
-
-      <h2>10. Alterações e foro</h2>
-
+    ),
+  },
+  {
+    id: "alteracoes",
+    titulo: "Alterações e legislação",
+    conteudo: (
       <p>
-        Alterações relevantes geram nova versão destes termos, com data indicada
-        no topo, e o aceite é pedido novamente no acesso seguinte. Aplica-se a
-        legislação brasileira.
+        Quando estes termos mudarem, a nova versão ganha um número e uma data,
+        indicados no topo desta página, e o sistema pede um novo aceite no
+        primeiro acesso depois da mudança. Aplica-se a legislação brasileira.
       </p>
-    </>
+    ),
+  },
+];
+
+export default function TermosPage() {
+  return (
+    <Documento
+      titulo="Termos de Uso"
+      subtitulo={`Versão ${VERSAO_DOS_TERMOS}, vigente desde ${VIGENTE_DESDE}.`}
+      introducao={
+        <p>
+          Estes termos explicam o que o CheckRoom faz e as regras para usá-lo.
+          Como o sistema trata os seus dados pessoais está descrito na{" "}
+          <Link
+            href="/privacidade"
+            className="text-primary underline underline-offset-2"
+          >
+            Política de Privacidade
+          </Link>
+          , que é um documento à parte.
+        </p>
+      }
+      secoes={SECOES}
+    />
   );
 }
