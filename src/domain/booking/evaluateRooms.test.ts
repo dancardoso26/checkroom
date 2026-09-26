@@ -8,13 +8,6 @@ import type {
   RoomSnapshot,
 } from "./types";
 
-/**
- * TESTES DA AVALIAÇÃO DE ESPAÇOS
- *
- * Pelo mesmo motivo dos testes de validateBooking: nada aqui toca banco, rede
- * ou relógio. A função é pura, e cada caso é um objeto literal.
- */
-
 const PROF_ANA = "prof-ana";
 const PROF_CARLOS = "prof-carlos";
 const CLASS_SI8 = "class-si8";
@@ -140,9 +133,6 @@ describe("evaluateRooms", () => {
   });
 
   it("não repete conflito de professor em cada espaço da lista", () => {
-    // Este é o ponto do filtro. A professora está ocupada no horário, o que
-    // vale para todos os espaços igualmente. Mostrar "a professora está
-    // ocupada" em cada cartão sugeriria que trocar de sala resolveria.
     const salas = [sala({ id: "lab-01" }), sala({ id: "lab-02" })];
 
     const resultado = evaluateRooms(

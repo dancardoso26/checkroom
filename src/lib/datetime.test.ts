@@ -4,6 +4,7 @@ import {
   formatDate,
   formatFullDate,
   formatPeriod,
+  formatDateTime,
   formatShortDateTime,
   formatTime,
   formatTimeRange,
@@ -11,22 +12,6 @@ import {
   localMinutesOfDay,
   toDateInputValue,
 } from "./datetime";
-
-/**
- * TESTES DE DATA E HORA
- *
- * Estas funções pareciam triviais e produziram dois defeitos reais durante o
- * desenvolvimento: uma reserva das 19h gravada como 16h, e uma verificação de
- * expediente que respondia "meia-noite do dia seguinte" no servidor.
- *
- * A causa dos dois é a mesma. O JavaScript resolve datas no fuso da máquina que
- * executa, e as máquinas são diferentes: o notebook está em Brasília, o servidor
- * da Vercel está em UTC. Um teste que não fixa o fuso passa em um lugar e falha
- * no outro.
- *
- * Por isso todas as entradas abaixo trazem o deslocamento explícito, e as
- * asserções verificam o resultado no fuso de São Paulo, que é o da instituição.
- */
 
 /** 14/09/2026, uma segunda-feira, às 19h em Brasília. */
 const SEGUNDA_19H = new Date("2026-09-14T19:00:00-03:00");
@@ -49,6 +34,7 @@ describe("formatação", () => {
 
   it("combina data curta e hora", () => {
     expect(formatShortDateTime(SEGUNDA_19H)).toBe("14/09, 19:00");
+    expect(formatDateTime(SEGUNDA_19H)).toBe("14/09/2026, 19:00");
   });
 
   it("descreve um período completo", () => {

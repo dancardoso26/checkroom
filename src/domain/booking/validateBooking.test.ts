@@ -9,31 +9,6 @@ import type {
   RoomSnapshot,
 } from "./types";
 
-/**
- * TESTES DA REGRA DE NEGÓCIO
- *
- * Nenhum destes testes toca o banco, a rede ou o relógio do sistema. Isso não é
- * um detalhe de implementação: é a razão de validateBooking ter sido escrita
- * como função pura.
- *
- * Um teste que depende do Supabase falharia por conexão instável, por dado
- * deixado por outro teste ou por internet fora do ar, e a suíte perderia a
- * credibilidade. Estes rodam em milissegundos e só falham quando a regra está
- * errada, que é a única falha que interessa.
- *
- * Os casos abaixo cobrem o roteiro de verificação registrado no fim do
- * supabase/seed.sql, para que a mesma situação possa ser conferida nas duas
- * camadas: aqui, pela regra, e no editor SQL, pelas constraints do banco.
- */
-
-// ---------------------------------------------------------------------------
-// Cenário de referência
-//
-// Os identificadores são legíveis em vez de uuid porque a regra não interpreta
-// o formato do id, apenas compara. "room-101" torna a leitura do teste direta;
-// um uuid tornaria cada asserção um exercício de conferir caracteres.
-// ---------------------------------------------------------------------------
-
 const ROOM_101 = "room-101";
 const ROOM_LAB = "room-lab";
 const PROF_ANA = "prof-ana";
@@ -44,23 +19,8 @@ const RES_PROJETOR = "res-projetor";
 const SUBJECT_ES = "subject-engenharia-software";
 const RES_COMPUTADORES = "res-computadores";
 
-/**
- * O instante presente, fixo.
- *
- * Fixar o "agora" é o que torna os testes estáveis ao longo do tempo. Com
- * new Date() dentro da regra, o teste de reserva no passado passaria hoje e
- * falharia em 2027, sem que uma linha de código tivesse mudado.
- */
 const NOW = new Date("2026-09-01T12:00:00-03:00");
 
-/**
- * Constrói um instante na segunda-feira 14/09/2026, no horário de Brasília.
- *
- * O deslocamento -03:00 é explícito porque, sem ele, a string seria
- * interpretada no fuso da máquina que roda o teste. A suíte passaria no
- * notebook e falharia em um servidor configurado em UTC, que é exatamente o
- * tipo de falha que faz perder horas.
- */
 function segunda(hora: string): Date {
   return new Date(`2026-09-14T${hora}:00-03:00`);
 }
@@ -104,9 +64,6 @@ function makeContext(overrides: Partial<BookingContext> = {}): BookingContext {
   return {
     room: makeRoom(),
     classGroup: makeClass(),
-    // Por padrão o vínculo existe: os casos que o testam o removem
-    // explicitamente, e assim nenhum outro teste falha por um motivo alheio ao
-    // que está verificando.
     teachingAssignment: {
       professorId: PROF_ANA,
       subjectId: SUBJECT_ES,
@@ -134,13 +91,6 @@ function makeExisting(
   };
 }
 
-/**
- * Extrai apenas os códigos do resultado.
- *
- * As asserções comparam códigos, e nunca as frases de messages.ts. Se
- * comparassem texto, reescrever uma mensagem quebraria testes de regra de
- * negócio, o que treinaria qualquer pessoa a ignorar falhas da suíte.
- */
 function codesOf(result: ReturnType<typeof validateBooking>): string[] {
   return result.valid
     ? []
@@ -237,9 +187,6 @@ describe("validateBooking", () => {
     });
 
     it("reporta cada categoria uma única vez, ainda que várias reservas conflitem", () => {
-      // Duas reservas diferentes ocupando o mesmo espaço em horários que se
-      // sobrepõem ao pedido. Repetir "o espaço está ocupado" duas vezes não
-      // acrescenta informação nenhuma para quem preenche o formulário.
       const primeira = makeExisting({
         id: "b1",
         professorId: PROF_CARLOS,
@@ -262,9 +209,6 @@ describe("validateBooking", () => {
     });
 
     it("aponta qual reserva causou o conflito", () => {
-      // A mensagem exibida ao usuário cita a finalidade e o horário da reserva
-      // existente. Sem carregar o objeto na violação, a tela só conseguiria
-      // dizer "ocupado", e o professor não saberia com quem negociar.
       const ocupada = makeExisting({
         id: "b-alvo",
         purpose: "Defesa de TCC",
@@ -290,9 +234,6 @@ describe("validateBooking", () => {
 
   describe("limites do intervalo", () => {
     it("aceita uma reserva que começa exatamente quando a anterior termina", () => {
-      // O caso que mais falha em comparações de horário escritas à mão. O
-      // intervalo é fechado no início e aberto no fim, [19:00, 20:40), então
-      // 20:40 pertence apenas à reserva seguinte.
       const anterior = makeExisting({
         startsAt: segunda("17:20"),
         endsAt: segunda("19:00"),
@@ -549,9 +490,6 @@ describe("validateBooking", () => {
     });
 
     it("recusa uma reserva que atravessa a virada do dia", () => {
-      // O caso que uma comparação apenas de horas deixaria passar: 21h está
-      // dentro do expediente, 8h também, cada um no seu dia. O que torna a
-      // reserva impossível é o prédio fechar no meio dela.
       const result = validateBooking(
         makeRequest({
           startsAt: segunda("21:00"),
@@ -564,9 +502,6 @@ describe("validateBooking", () => {
     });
 
     it("não reporta expediente quando o período está invertido", () => {
-      // Em uma reserva invertida, o "início" é na verdade o fim. Comparar essas
-      // pontas com o expediente produziria uma segunda mensagem que só
-      // confundiria: o problema é o período, e INVALID_PERIOD já o descreve.
       const result = validateBooking(
         makeRequest({ startsAt: segunda("20:00"), endsAt: segunda("19:00") }),
         makeContext()
@@ -659,9 +594,6 @@ describe("validateBooking", () => {
 
   describe("acúmulo de violações", () => {
     it("reporta todos os problemas de uma vez, e não apenas o primeiro", () => {
-      // Decisão de usabilidade: recusar por um motivo, e depois por outro
-      // quando o professor corrige o primeiro, transforma o formulário em
-      // adivinhação.
       const ocupada = makeExisting({
         professorId: PROF_CARLOS,
         classId: CLASS_ENG2,

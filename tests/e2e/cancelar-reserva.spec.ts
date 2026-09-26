@@ -1,4 +1,6 @@
 import { test, expect } from "@playwright/test";
+import { ADMIN, entrarComo } from "./helpers/autenticacao";
+import { abrirDetalhe, blocoDaReserva, semanaDoDia } from "./helpers/painel";
 import {
   apagarReserva,
   inserirReservaDireto,
@@ -9,21 +11,6 @@ import {
   limparReservasDeTeste,
   PREFIXO_TESTE,
 } from "./helpers/banco";
-
-/**
- * CANCELAMENTO DE RESERVA
- *
- * O que mais interessa aqui não é o botão funcionar, e sim o horário voltar a
- * ficar livre.
- *
- * A reserva cancelada continua na tabela, porque o registro de que ela existiu
- * sustenta os registros de auditoria. As constraints de exclusão do PostgreSQL
- * não sabem disso por conta própria: sem a cláusula "where (status = 'active')"
- * acrescentada na migration 20260908000400, a linha cancelada continuaria
- * bloqueando o horário, e cancelar não liberaria a sala.
- *
- * O último teste deste arquivo é o que prova que a cláusula está lá.
- */
 
 let salaLivre: string;
 let professorLivre: string;
@@ -55,9 +42,7 @@ test.beforeAll(async () => {
     (r) => new Date(r.starts_at) < new Date(fim) && new Date(r.ends_at) > quinta
   );
 
-  salaLivre = salas.find(
-    (s) => !ocupadas.some((r) => r.room_id === s.id)
-  )!.id;
+  salaLivre = salas.find((s) => !ocupadas.some((r) => r.room_id === s.id))!.id;
   professorLivre = professores.find(
     (p) => !ocupadas.some((r) => r.professor_id === p.id)
   )!.id;
@@ -70,7 +55,11 @@ test.afterAll(async () => {
   await limparReservasDeTeste();
 });
 
-test("cancela pela listagem e some da agenda", async ({ page }) => {
+test.beforeEach(async ({ page }) => {
+  await entrarComo(page, ADMIN);
+});
+
+test("cancela pelo detalhe e some da agenda", async ({ page }) => {
   const criada = await inserirReservaDireto({
     room_id: salaLivre,
     professor_id: professorLivre,
@@ -82,28 +71,28 @@ test("cancela pela listagem e some da agenda", async ({ page }) => {
 
   expect(criada.aceitou).toBe(true);
 
-  await page.goto("/reservas");
+  await page.goto(semanaDoDia(inicio));
 
-  // O cartão inteiro é o contexto: sem ele o clique pegaria o botão de outra
-  // reserva da lista.
-  //
-  // O seletor usa data-slot, o atributo que o shadcn põe em cada componente.
-  // Filtrar por "div" com o texto encontraria o parágrafo mais interno, que não
-  // contém o botão.
-  const cartao = page
-    .locator('[data-slot="card"]')
-    .filter({ hasText: `${PREFIXO_TESTE} a cancelar` });
+  const detalhe = await abrirDetalhe(page, `${PREFIXO_TESTE} a cancelar`);
 
-  await expect(cartao).toBeVisible();
+  await detalhe.getByRole("button", { name: "Cancelar reserva" }).click();
 
-  await cartao.getByRole("button", { name: /Ações da reserva/ }).click();
-  await page.getByRole("menuitem", { name: "Cancelar" }).click();
-  await page.getByLabel(/Motivo/).fill("Professor afastado");
+  // O detalhe cede lugar à confirmação, e o motivo é obrigatório.
+  await expect(detalhe).toBeHidden();
   await page.getByRole("button", { name: "Confirmar" }).click();
+  await expect(
+    page.getByText("Informe o motivo do cancelamento.")
+  ).toBeVisible();
 
-  // A asserção é sobre o cartão, e não sobre o texto: a confirmação aberta
-  // repete a descrição da reserva, e procurar pelo texto encontraria os dois.
-  await expect(cartao).toBeHidden({ timeout: 15_000 });
+  // Confirma com Enter no campo do motivo, sem precisar do botão.
+  await page.getByLabel("Motivo").fill("Professor afastado");
+  await page.getByLabel("Motivo").press("Enter");
+
+  // A asserção é sobre o bloco da grade, e não sobre o texto: a confirmação
+  // aberta repete a descrição da reserva, e o texto encontraria os dois.
+  await expect(blocoDaReserva(page, `${PREFIXO_TESTE} a cancelar`)).toBeHidden({
+    timeout: 15_000,
+  });
 });
 
 test("a reserva cancelada continua no banco, com data e motivo", async () => {
@@ -114,16 +103,16 @@ test("a reserva cancelada continua no banco, com data e motivo", async () => {
     (r) => r.purpose === `${PREFIXO_TESTE} a cancelar`
   );
 
-  expect(cancelada, "a reserva cancelada não deveria sumir da tabela").toBeDefined();
+  expect(
+    cancelada,
+    "a reserva cancelada não deveria sumir da tabela"
+  ).toBeDefined();
   expect(cancelada!.status).toBe("cancelled");
   expect(cancelada!.cancelled_at).not.toBeNull();
   expect(cancelada!.cancellation_reason).toBe("Professor afastado");
 });
 
 test("cancelar libera o horário para uma nova reserva", async () => {
-  // O teste que prova a cláusula "where (status = 'active')" nas constraints.
-  // Sem ela, a linha cancelada continuaria ocupando o horário e este insert
-  // seria recusado com 23P01.
   const resultado = await inserirReservaDireto({
     room_id: salaLivre,
     professor_id: professorLivre,

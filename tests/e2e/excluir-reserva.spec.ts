@@ -1,4 +1,6 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
+import { ADMIN, entrarComo } from "./helpers/autenticacao";
+import { abrirDetalhe, blocoDaReserva, semanaDoDia } from "./helpers/painel";
 import {
   apagarReserva,
   buscarReserva,
@@ -13,18 +15,6 @@ import {
   vincularRecursos,
   PREFIXO_TESTE,
 } from "./helpers/banco";
-
-/**
- * EXCLUSÃO DE RESERVA
- *
- * O que estes testes provam, e que os de cancelamento não provam, é que a linha
- * some do banco.
- *
- * A distinção importa porque as duas operações se parecem na tela: em ambas o
- * cartão desaparece da agenda. A diferença está no que sobra. Cancelar preserva
- * o registro, com data e motivo; excluir não deixa rastro, e é para a reserva
- * que não deveria ter existido.
- */
 
 let salaLivre: string;
 let professorLivre: string;
@@ -63,7 +53,9 @@ test.beforeAll(async () => {
   professorLivre = professores.find(
     (p) => !ocupadas.some((r) => r.professor_id === p.id)
   )!.id;
-  turmaLivre = turmas.find((t) => !ocupadas.some((r) => r.class_id === t.id))!.id;
+  turmaLivre = turmas.find(
+    (t) => !ocupadas.some((r) => r.class_id === t.id)
+  )!.id;
   recursos = todosRecursos.slice(0, 2).map((r) => r.id);
 });
 
@@ -85,25 +77,35 @@ async function criarReservaDeTeste(sufixo: string) {
   return criada.id!;
 }
 
-test("exclui pela listagem e a reserva some do banco", async ({ page }) => {
+// O detalhe e a confirmação têm um botão Excluir cada; o da confirmação é o
+// último a abrir.
+async function confirmarExclusao(page: Page) {
+  await page
+    .getByRole("button", { name: "Excluir", exact: true })
+    .last()
+    .click();
+}
+
+test.beforeEach(async ({ page }) => {
+  await entrarComo(page, ADMIN);
+});
+
+test("exclui pelo detalhe e a reserva some do banco", async ({ page }) => {
   const id = await criarReservaDeTeste("a excluir");
   await vincularRecursos(id, recursos);
 
   expect(await contarRecursosDaReserva(id)).toBe(recursos.length);
 
-  await page.goto("/reservas");
+  await page.goto(semanaDoDia(inicio));
 
-  const cartao = page
-    .locator('[data-slot="card"]')
-    .filter({ hasText: `${PREFIXO_TESTE} a excluir` });
+  const detalhe = await abrirDetalhe(page, `${PREFIXO_TESTE} a excluir`);
 
-  await expect(cartao).toBeVisible();
+  await detalhe.getByRole("button", { name: "Excluir" }).click();
+  await confirmarExclusao(page);
 
-  await cartao.getByRole("button", { name: /Ações da reserva/ }).click();
-  await page.getByRole("menuitem", { name: "Excluir" }).click();
-  await page.getByRole("button", { name: "Excluir", exact: true }).click();
-
-  await expect(cartao).toBeHidden({ timeout: 15_000 });
+  await expect(blocoDaReserva(page, `${PREFIXO_TESTE} a excluir`)).toBeHidden({
+    timeout: 15_000,
+  });
 
   // A asserção que dá sentido ao arquivo: cancelar deixaria a linha no banco.
   expect(
@@ -125,40 +127,39 @@ test("os recursos vinculados somem junto", async () => {
   expect(await contarRecursosDaReserva(id)).toBe(0);
 });
 
-test("exclui uma reserva já cancelada, pelo filtro da listagem", async ({
+test("exclui uma reserva já cancelada, pelo filtro de canceladas", async ({
   page,
 }) => {
   const id = await criarReservaDeTeste("desmarcar e remover");
 
-  await page.goto("/reservas");
+  const finalidade = `${PREFIXO_TESTE} desmarcar e remover`;
 
-  const cartao = page
-    .locator('[data-slot="card"]')
-    .filter({ hasText: `${PREFIXO_TESTE} desmarcar e remover` });
+  await page.goto(semanaDoDia(inicio));
 
-  await cartao.getByRole("button", { name: /Ações da reserva/ }).click();
-  await page.getByRole("menuitem", { name: "Cancelar" }).click();
+  const detalhe = await abrirDetalhe(page, finalidade);
+
+  await detalhe.getByRole("button", { name: "Cancelar reserva" }).click();
+  await page.getByLabel("Motivo").fill("Turma reagendada");
   await page.getByRole("button", { name: "Confirmar" }).click();
-  await expect(cartao).toBeHidden({ timeout: 15_000 });
+  await expect(blocoDaReserva(page, finalidade)).toBeHidden({
+    timeout: 15_000,
+  });
 
   // Sem o filtro, a cancelada ficaria fora de alcance para sempre: some da tela
   // mas continua no banco.
-  await page.goto("/reservas?canceladas=1");
+  await page.goto(semanaDoDia(inicio, true));
 
-  const cartaoCancelado = page
-    .locator('[data-slot="card"]')
-    .filter({ hasText: `${PREFIXO_TESTE} desmarcar e remover` });
+  const cancelada = await abrirDetalhe(page, finalidade);
 
-  await expect(cartaoCancelado).toBeVisible();
   await expect(
-    cartaoCancelado.getByText("Cancelada", { exact: true })
-  ).toBeVisible();
+    cancelada.getByRole("button", { name: "Cancelar reserva" })
+  ).toBeHidden();
+  await cancelada.getByRole("button", { name: "Excluir" }).click();
+  await confirmarExclusao(page);
 
-  await cartaoCancelado.getByRole("button", { name: /Ações da reserva/ }).click();
-  await page.getByRole("menuitem", { name: "Excluir" }).click();
-  await page.getByRole("button", { name: "Excluir", exact: true }).click();
-
-  await expect(cartaoCancelado).toBeHidden({ timeout: 15_000 });
+  await expect(blocoDaReserva(page, finalidade)).toBeHidden({
+    timeout: 15_000,
+  });
   expect(await buscarReserva(id)).toBeNull();
 });
 

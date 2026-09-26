@@ -1,25 +1,17 @@
 import "server-only";
-import { supabaseServer } from "@/lib/supabase/server";
+import {
+  createSupabaseServerClient,
+  supabaseAdmin,
+} from "@/lib/supabase/server";
 import type { ActivityType, ExistingBooking } from "@/domain/booking/types";
-
-/**
- * Repositório de reservas. Concentra os nomes das constraints, os códigos de
- * erro do PostgreSQL e a conversão entre as datas do banco e os Date do domínio.
- */
+import { FILTROS_PADRAO, type Filtros } from "@/lib/filtros";
+import type { Ordenacao, Sentido } from "@/lib/tabela";
 
 /** O PostgREST entrega timestamptz como string ISO com fuso. */
 function toDate(valor: string): Date {
   return new Date(valor);
 }
 
-/**
- * O retrato do conflito triplo em SQL: qualquer reserva que compartilhe espaço,
- * professor ou turma e toque a mesma faixa de tempo.
- *
- * O filtro de período é a mesma condição de overlaps, com os dois lados
- * estritos, e é o que mantém o custo constante conforme a agenda cresce. A regra
- * reconfere cada linha, então alterar esta consulta não corrompe a decisão.
- */
 export async function findConflictCandidates(params: {
   roomId: string;
   professorId: string;
@@ -29,7 +21,9 @@ export async function findConflictCandidates(params: {
   /** Ignora uma reserva específica. Servirá à edição, que entra depois. */
   excludeBookingId?: string;
 }): Promise<ExistingBooking[]> {
-  let query = supabaseServer
+  const supabase = await createSupabaseServerClient();
+
+  let query = supabase
     .from("bookings")
     .select("id, room_id, professor_id, class_id, purpose, starts_at, ends_at")
     // O "or" do PostgREST agrupa entre parênteses, então a expressão final é
@@ -64,15 +58,13 @@ export async function findConflictCandidates(params: {
   }));
 }
 
-/**
- * Todas as reservas do período, sem filtrar por espaço: a tela de escolha
- * pergunta "quais salas estão livres", e não "esta sala está livre".
- */
 export async function findBookingsInPeriod(params: {
   startsAt: Date;
   endsAt: Date;
 }): Promise<ExistingBooking[]> {
-  const { data, error } = await supabaseServer
+  const supabase = await createSupabaseServerClient();
+
+  const { data, error } = await supabase
     .from("bookings")
     .select("id, room_id, professor_id, class_id, purpose, starts_at, ends_at")
     .eq("status", "active")
@@ -94,11 +86,6 @@ export async function findBookingsInPeriod(params: {
   }));
 }
 
-/**
- * "conflict" não é erro: é a validação ter aprovado e o banco recusado, o que só
- * acontece quando outra reserva foi gravada no intervalo. Quem chama precisa
- * distinguir isso de uma falha real.
- */
 export type CreateBookingOutcome =
   | { status: "created"; bookingId: string }
   | {
@@ -107,20 +94,79 @@ export type CreateBookingOutcome =
     }
   | { status: "error"; message: string };
 
-/**
- * Os nomes das constraints são interface: renomear uma na migration
- * 20260904000200 obriga a atualizar este mapa.
- */
 const CONSTRAINT_TO_VIOLATION = {
   bookings_no_room_overlap: "ROOM_CONFLICT",
   bookings_no_professor_overlap: "PROFESSOR_CONFLICT",
   bookings_no_class_overlap: "CLASS_CONFLICT",
 } as const;
 
-/**
- * Chama create_booking em vez de dois inserts seguidos, porque a gravação toca
- * bookings e booking_resources e precisa ser atômica.
- */
+// Só o necessário para decidir quem pode mexer na reserva. A verificação vale
+// pela mensagem: a garantia vem das políticas do banco.
+export async function findBookingOwnership(
+  bookingId: string
+): Promise<{ createdBy: string; professorId: string } | null> {
+  const supabase = await createSupabaseServerClient();
+
+  const { data, error } = await supabase
+    .from("bookings")
+    .select("created_by, professor_id")
+    .eq("id", bookingId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Falha ao carregar a reserva: ${error.message}`);
+  }
+
+  if (!data) return null;
+
+  return { createdBy: data.created_by, professorId: data.professor_id };
+}
+
+export type DadosParaNotificacao = {
+  professorNome: string;
+  professorEmail: string;
+  finalidade: string;
+  espaco: string;
+  turma: string;
+  startsAt: Date;
+  endsAt: Date;
+  motivo: string | null;
+};
+
+// Uma consulta só para montar o e-mail, feita depois da gravação: antes dela
+// nem todos os dados existem, e o envio não deve atrasar a resposta da tela.
+export async function findBookingNotificationData(
+  bookingId: string
+): Promise<DadosParaNotificacao | null> {
+  // Chave secreta: o e-mail do docente não é legível pela sessão do usuário.
+  // Quem chama já conferiu que a pessoa pode mexer nesta reserva.
+  const supabase = supabaseAdmin;
+
+  const { data, error } = await supabase
+    .from("bookings")
+    .select(
+      `purpose, starts_at, ends_at, cancellation_reason,
+       rooms(name, building),
+       professors(name, email),
+       classes(name)`
+    )
+    .eq("id", bookingId)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  return {
+    professorNome: data.professors.name,
+    professorEmail: data.professors.email,
+    finalidade: data.purpose,
+    espaco: `${data.rooms.building} · ${data.rooms.name}`,
+    turma: data.classes.name,
+    startsAt: new Date(data.starts_at),
+    endsAt: new Date(data.ends_at),
+    motivo: data.cancellation_reason,
+  };
+}
+
 export async function createBooking(input: {
   roomId: string;
   professorId: string;
@@ -131,20 +177,21 @@ export async function createBooking(input: {
   startsAt: Date;
   endsAt: Date;
   resourceIds: string[];
+  createdBy: string;
 }): Promise<CreateBookingOutcome> {
-  const { data, error } = await supabaseServer.rpc("create_booking", {
+  const supabase = await createSupabaseServerClient();
+
+  const { data, error } = await supabase.rpc("create_booking", {
     p_room_id: input.roomId,
     p_professor_id: input.professorId,
     p_class_id: input.classId,
     p_activity_type: input.activityType,
-    // undefined omite o parâmetro na chamada, e o banco aplica o default null.
-    // Enviar null explícito seria equivalente no PostgreSQL, mas o tipo gerado
-    // descreve o parâmetro como opcional, e respeitá-lo evita um cast.
     p_subject_id: input.subjectId ?? undefined,
     p_purpose: input.purpose.trim(),
     p_starts_at: input.startsAt.toISOString(),
     p_ends_at: input.endsAt.toISOString(),
     p_resource_ids: input.resourceIds,
+    p_created_by: input.createdBy,
   });
 
   if (!error) {
@@ -188,12 +235,6 @@ export async function createBooking(input: {
     };
   }
 
-  // Erro não previsto: o detalhe fica no log e o usuário recebe texto genérico,
-  // porque mensagens do banco citam nomes de tabela e de constraint.
-  //
-  // Os "throw" deste arquivo continuam carregando o detalhe de propósito: exceção
-  // não tratada em Server Action é substituída pelo Next por uma mensagem neutra.
-  // O caso perigoso é este, um retorno normal, que chega à tela como foi escrito.
   console.error("Falha inesperada ao gravar reserva:", error);
 
   return {
@@ -203,102 +244,175 @@ export async function createBooking(input: {
   };
 }
 
-/** Uma reserva como aparece na listagem. */
+/** Uma reserva como aparece no calendário, na lista e na tabela. */
 export type BookingListItem = {
   id: string;
   purpose: string;
+  activityType: ActivityType;
   startsAt: Date;
   endsAt: Date;
+  roomId: string;
   roomName: string;
   building: string;
   professorName: string;
   className: string;
+  subjectName: string | null;
   resourceNames: string[];
   cancelled: boolean;
   cancellationReason: string | null;
 };
 
-/**
- * As reservas que ainda não terminaram.
- *
- * O corte é por ends_at: uma aula que começou há dez minutos ainda está
- * acontecendo e precisa aparecer na grade.
- *
- * As canceladas ficam de fora por padrão, porque a agenda mostra o que vai
- * acontecer. Elas entram sob demanda para que o histórico de cancelamentos seja
- * visível na tela, e não apenas no banco, e para que possam ser excluídas.
- */
-export async function listUpcomingBookings(
-  { incluirCanceladas = false } = {},
-  now: Date = new Date()
-): Promise<BookingListItem[]> {
-  let query = supabaseServer
-    .from("bookings")
-    .select(
-      `id, purpose, starts_at, ends_at, status, cancellation_reason,
+const SELECT_DA_LISTAGEM =
+  `id, purpose, activity_type, starts_at, ends_at, status, cancellation_reason,
+       room_id,
        rooms(name, building),
        professors(name),
        classes(name),
-       booking_resources(resources(name))`
-    )
-    .gte("ends_at", now.toISOString())
+       subjects(name),
+       booking_resources(resources(name))` as const;
+
+type LinhaDaListagem = {
+  id: string;
+  purpose: string;
+  activity_type: ActivityType;
+  starts_at: string;
+  ends_at: string;
+  status: string;
+  cancellation_reason: string | null;
+  room_id: string;
+  rooms: { name: string; building: string };
+  professors: { name: string };
+  classes: { name: string };
+  subjects: { name: string } | null;
+  booking_resources: { resources: { name: string } }[];
+};
+
+function paraItemDaListagem(linha: LinhaDaListagem): BookingListItem {
+  return {
+    id: linha.id,
+    purpose: linha.purpose,
+    activityType: linha.activity_type,
+    startsAt: toDate(linha.starts_at),
+    endsAt: toDate(linha.ends_at),
+    roomId: linha.room_id,
+    roomName: linha.rooms.name,
+    building: linha.rooms.building,
+    professorName: linha.professors.name,
+    className: linha.classes.name,
+    subjectName: linha.subjects?.name ?? null,
+    // Dois níveis: booking_resources é a ligação e o nome está em resources.
+    resourceNames: linha.booking_resources.map(
+      (vinculo) => vinculo.resources.name
+    ),
+    cancelled: linha.status === "cancelled",
+    cancellationReason: linha.cancellation_reason,
+  };
+}
+
+// Genérico para servir às duas consultas, que diferem no count e na ordem.
+function aplicarFiltros<Q extends { eq(coluna: string, valor: string): Q }>(
+  query: Q,
+  filtros: Filtros
+): Q {
+  let filtrada = query;
+
+  if (filtros.status === "agendadas")
+    filtrada = filtrada.eq("status", "active");
+  if (filtros.status === "canceladas")
+    filtrada = filtrada.eq("status", "cancelled");
+  if (filtros.professor)
+    filtrada = filtrada.eq("professor_id", filtros.professor);
+
+  return filtrada;
+}
+
+// Sobreposição com o período, e não "começa dentro dele": uma aula das 21h às
+// 23h também pertence ao dia seguinte se a janela começar à meia-noite.
+export async function listBookingsInRange({
+  inicio,
+  fim,
+  filtros = FILTROS_PADRAO,
+}: {
+  inicio: Date;
+  fim: Date;
+  filtros?: Filtros;
+}): Promise<BookingListItem[]> {
+  const supabase = await createSupabaseServerClient();
+
+  const query = supabase
+    .from("bookings")
+    .select(SELECT_DA_LISTAGEM)
+    .lt("starts_at", fim.toISOString())
+    .gt("ends_at", inicio.toISOString())
     .order("starts_at");
 
-  if (!incluirCanceladas) {
-    query = query.eq("status", "active");
-  }
-
-  const { data, error } = await query;
+  const { data, error } = await aplicarFiltros(query, filtros);
 
   if (error) {
     throw new Error(`Falha ao listar as reservas: ${error.message}`);
   }
 
-  return data.map((linha) => ({
-    id: linha.id,
-    purpose: linha.purpose,
-    startsAt: toDate(linha.starts_at),
-    endsAt: toDate(linha.ends_at),
-    roomName: linha.rooms.name,
-    building: linha.rooms.building,
-    professorName: linha.professors.name,
-    className: linha.classes.name,
-    // Dois níveis: booking_resources é a ligação e o nome está em resources. O
-    // PostgREST atravessa as duas em uma consulta só.
-    resourceNames: linha.booking_resources.map(
-      (vinculo) => vinculo.resources.name
-    ),
-    // A tela precisa do booleano, não do enum: ela decide se mostra o badge, e
-    // não qual dos estados possíveis exibir.
-    cancelled: linha.status === "cancelled",
-    cancellationReason: linha.cancellation_reason,
-  }));
+  return data.map(paraItemDaListagem);
 }
 
-/**
- * O que aconteceu ao tentar cancelar.
- *
- * Os quatro casos vêm da função do banco, e distingui-los permite à tela dizer
- * o motivo em vez de um "não foi possível" genérico.
- */
-export type CancelBookingOutcome =
-  | "cancelled"
-  | "not_found"
-  | "already_cancelled"
-  | "already_finished";
+// As três do meio são colunas de tabelas relacionadas. O PostgREST ordena a
+// reserva por elas quando a relação é de um para um, que é o caso das três.
+const COLUNA_DA_ORDENACAO: Record<Ordenacao, string> = {
+  data: "starts_at",
+  atividade: "purpose",
+  espaco: "rooms(name)",
+  professor: "professors(name)",
+  turma: "classes(name)",
+  situacao: "status",
+};
 
-/**
- * Cancela uma reserva, preservando o registro.
- *
- * Chama a função do banco em vez de um update direto porque ela garante que as
- * três colunas mudem juntas, trava a linha contra cancelamentos simultâneos e
- * recusa cancelar o que já terminou.
- */
+export async function listBookingsPage({
+  de,
+  ate,
+  ordenar,
+  sentido,
+  filtros = FILTROS_PADRAO,
+}: {
+  de: number;
+  ate: number;
+  ordenar: Ordenacao;
+  sentido: Sentido;
+  filtros?: Filtros;
+}): Promise<{ reservas: BookingListItem[]; total: number }> {
+  const supabase = await createSupabaseServerClient();
+
+  let query = supabase
+    .from("bookings")
+    .select(SELECT_DA_LISTAGEM, { count: "exact" })
+    .order(COLUNA_DA_ORDENACAO[ordenar], { ascending: sentido === "asc" });
+
+  // Desempate pela data: sem ele, reservas com o mesmo professor mudariam de
+  // posição entre uma página e outra, e uma poderia aparecer duas vezes.
+  if (ordenar !== "data")
+    query = query.order("starts_at", { ascending: false });
+
+  const { data, error, count } = await aplicarFiltros(query, filtros).range(
+    de,
+    ate
+  );
+
+  if (error) {
+    throw new Error(`Falha ao listar as reservas: ${error.message}`);
+  }
+
+  return { reservas: data.map(paraItemDaListagem), total: count ?? 0 };
+}
+
+export type CancelBookingOutcome =
+  "cancelled" | "not_found" | "already_cancelled" | "already_finished";
+
 export async function cancelBooking(
   bookingId: string,
   reason: string | null
 ): Promise<CancelBookingOutcome> {
-  const { data, error } = await supabaseServer.rpc("cancel_booking", {
+  const supabase = await createSupabaseServerClient();
+
+  const { data, error } = await supabase.rpc("cancel_booking", {
     p_booking_id: bookingId,
     p_reason: reason ?? undefined,
   });
@@ -313,24 +427,12 @@ export async function cancelBooking(
 
 export type DeleteBookingOutcome = "deleted" | "not_found";
 
-/**
- * Apaga a reserva do banco.
- *
- * Diferente de cancelar, que preserva o registro: excluir é para a reserva que
- * não deveria ter existido, como um engano de digitação ou um dado de teste.
- *
- * Não há função no banco aqui, ao contrário do cancelamento, porque não há
- * regra a aplicar nem colunas a manter coerentes. O ".select()" no fim é o que
- * distingue "apagou" de "não existia": o PostgREST devolve as linhas removidas,
- * e uma lista vazia significa que nada foi encontrado.
- *
- * Os recursos vinculados somem junto, pelo "on delete cascade" declarado em
- * booking_resources na migration 20260904000100.
- */
 export async function deleteBooking(
   bookingId: string
 ): Promise<DeleteBookingOutcome> {
-  const { data, error } = await supabaseServer
+  const supabase = await createSupabaseServerClient();
+
+  const { data, error } = await supabase
     .from("bookings")
     .delete()
     .eq("id", bookingId)

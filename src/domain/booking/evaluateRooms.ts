@@ -6,25 +6,10 @@ import type {
   RoomSnapshot,
 } from "./types";
 
-/**
- * Responde "quais espaços servem, e por que os outros não", em vez de recusar
- * uma escolha já feita.
- *
- * Não reimplementa verificação nenhuma: chama validateBooking uma vez por
- * espaço e agrupa. Isso só é barato porque a regra é pura, e é o que garante que
- * esta lista nunca discorde da recusa final. Com a regra acoplada ao banco,
- * seria uma consulta por sala ou uma segunda implementação em SQL.
- */
-
 export type RoomEvaluation = {
   room: RoomSnapshot;
   /** Verdadeiro quando este espaço atende ao pedido. */
   compatible: boolean;
-  /**
-   * Só os motivos ligados ao espaço. Conflito de professor e de turma valem para
-   * todos igualmente, e repeti-los em cada cartão sugeriria que trocar de sala
-   * resolveria, quando o que resolve é trocar de horário.
-   */
   violations: BookingViolation[];
 };
 
@@ -55,9 +40,6 @@ export function evaluateRooms(
 
     return {
       room,
-      // A compatibilidade olha o veredito completo, e não a lista filtrada.
-      // Um espaço não vira compatível só porque o motivo da recusa foi
-      // escondido da lista.
       compatible: resultado.valid,
       violations,
     };
@@ -66,11 +48,6 @@ export function evaluateRooms(
   return ordenar(avaliacoes);
 }
 
-/**
- * Compatíveis primeiro e, entre eles, o de menor sobra de lugares. Ocupar o
- * auditório com 38 alunos o torna indisponível para o evento de 100 que viria
- * depois, e reduzir esse desperdício é o motivo do sistema existir.
- */
 function ordenar(avaliacoes: RoomEvaluation[]): RoomEvaluation[] {
   return [...avaliacoes].sort((a, b) => {
     if (a.compatible !== b.compatible) {
@@ -88,11 +65,6 @@ function ordenar(avaliacoes: RoomEvaluation[]): RoomEvaluation[] {
   });
 }
 
-/**
- * Os conflitos que valem para a lista inteira, exibidos uma vez só acima dos
- * cartões. Verifica contra um espaço fictício que nunca conflita, para que só
- * sobrem as violações de professor e turma.
- */
 export function findScheduleConflicts(
   request: Omit<BookingRequest, "roomId">,
   context: Omit<BookingContext, "room">

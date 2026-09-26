@@ -1,25 +1,17 @@
 import "server-only";
-import { supabaseServer } from "@/lib/supabase/server";
-
-/**
- * REPOSITÓRIO DE PROFESSORES
- *
- * Existe apenas para alimentar o seletor do formulário nesta etapa. Em 28/09,
- * quando a autenticação entrar, o professor deixa de ser escolhido em uma lista
- * e passa a ser o próprio usuário da sessão: o campo some da tela e este
- * arquivo passa a servir a listagens administrativas.
- */
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type ProfessorOption = {
   id: string;
   name: string;
-  email: string;
 };
 
 export async function listProfessors(): Promise<ProfessorOption[]> {
-  const { data, error } = await supabaseServer
+  const supabase = await createSupabaseServerClient();
+
+  const { data, error } = await supabase
     .from("professors")
-    .select("id, name, email")
+    .select("id, name")
     .order("name");
 
   if (error) {

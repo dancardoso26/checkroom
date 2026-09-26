@@ -1,50 +1,50 @@
 import "server-only";
+import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./database.types";
 
-/**
- * Cliente de acesso ao banco, para uso exclusivo no servidor.
- *
- * O import "server-only" faz o build falhar se este arquivo for importado em um
- * componente de cliente, o que enviaria a chave secreta ao navegador.
- *
- * A chave secreta ignora o RLS. É seguro aqui porque toda leitura e escrita
- * acontece dentro de Server Actions, mas é uma solução datada: as políticas de
- * RLS dependem de auth.uid(), que não existe sem login. Na entrega de 28/09 o
- * cliente passa a ser criado a partir da sessão do usuário, e a camada de
- * repositórios existe para conter essa troca em poucos arquivos.
- *
- * As chaves seguem a nomenclatura nova do Supabase: sb_secret_ substituiu a
- * antiga service_role, e sb_publishable_ substituiu a anon.
- */
+// Um if solto não bastaria: declarações de função são içadas, e o TypeScript
+// não propaga o estreitamento do tipo para dentro delas.
+function exigirVariavel(nome: string): string {
+  const valor = process.env[nome];
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const secretKey = process.env.SUPABASE_SECRET_KEY;
+  if (!valor) {
+    throw new Error(`${nome} não definida. Confira o arquivo .env.local.`);
+  }
 
-// Falhar na subida da aplicação é melhor do que descobrir a variável ausente no
-// meio de uma operação do usuário.
-if (!url) {
-  throw new Error(
-    "NEXT_PUBLIC_SUPABASE_URL não definida. Confira o arquivo .env.local."
-  );
+  return valor;
 }
 
-if (!secretKey) {
-  throw new Error(
-    "SUPABASE_SECRET_KEY não definida. Confira o arquivo .env.local."
-  );
+const url = exigirVariavel("NEXT_PUBLIC_SUPABASE_URL");
+const publishableKey = exigirVariavel("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY");
+const secretKey = exigirVariavel("SUPABASE_SECRET_KEY");
+
+// Um cliente por requisição, e não um por módulo: compartilhado, ele levaria a
+// sessão de um usuário para a requisição de outro.
+export async function createSupabaseServerClient() {
+  const cookieStore = await cookies();
+
+  return createServerClient<Database>(url, publishableKey, {
+    cookies: {
+      getAll: () => cookieStore.getAll(),
+      setAll: (cookiesToSet) => {
+        try {
+          for (const { name, value, options } of cookiesToSet) {
+            cookieStore.set(name, value, options);
+          }
+        } catch {
+          // Server Component não grava cookie. Quem renova a sessão é o
+          // middleware, então ignorar aqui é seguro.
+        }
+      },
+    },
+  });
 }
 
-/**
- * O parâmetro <Database> vem de database.types.ts, gerado a partir do esquema
- * real. Sem ele, todas as consultas devolveriam "any" e o compilador aceitaria
- * qualquer coisa em silêncio.
- */
-export const supabaseServer = createClient<Database>(url, secretKey, {
-  auth: {
-    // Cada requisição no servidor é independente: não há sessão para persistir
-    // nem token para renovar.
-    persistSession: false,
-    autoRefreshToken: false,
-  },
+// Ignora o RLS. Só roda no servidor (server-only) e só depois de o código
+// conferir quem pede: gestão de usuários, e-mails para notificação e eventos
+// de autenticação, que acontecem antes de existir sessão.
+export const supabaseAdmin = createClient<Database>(url, secretKey, {
+  auth: { persistSession: false, autoRefreshToken: false },
 });

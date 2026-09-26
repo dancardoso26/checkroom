@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_logs: {
+        Row: {
+          action: string
+          actor_id: string | null
+          after_state: Json | null
+          before_state: Json | null
+          entity: string
+          entity_id: string | null
+          id: number
+          occurred_at: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          after_state?: Json | null
+          before_state?: Json | null
+          entity: string
+          entity_id?: string | null
+          id?: never
+          occurred_at?: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          after_state?: Json | null
+          before_state?: Json | null
+          entity?: string
+          entity_id?: string | null
+          id?: never
+          occurred_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       booking_resources: {
         Row: {
           booking_id: string
@@ -51,7 +92,7 @@ export type Database = {
           cancelled_at: string | null
           class_id: string
           created_at: string
-          created_by: string | null
+          created_by: string
           ends_at: string
           id: string
           professor_id: string
@@ -67,7 +108,7 @@ export type Database = {
           cancelled_at?: string | null
           class_id: string
           created_at?: string
-          created_by?: string | null
+          created_by: string
           ends_at: string
           id?: string
           professor_id: string
@@ -83,7 +124,7 @@ export type Database = {
           cancelled_at?: string | null
           class_id?: string
           created_at?: string
-          created_by?: string | null
+          created_by?: string
           ends_at?: string
           id?: string
           professor_id?: string
@@ -99,6 +140,13 @@ export type Database = {
             columns: ["class_id"]
             isOneToOne: false
             referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -197,6 +245,50 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      profiles: {
+        Row: {
+          anonymized_at: string | null
+          created_at: string
+          user_master: boolean
+          full_name: string
+          id: string
+          professor_id: string | null
+          role: Database["public"]["Enums"]["user_role"]
+          terms_accepted_at: string | null
+          terms_version: string | null
+        }
+        Insert: {
+          anonymized_at?: string | null
+          created_at?: string
+          user_master?: boolean
+          full_name: string
+          id: string
+          professor_id?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          terms_accepted_at?: string | null
+          terms_version?: string | null
+        }
+        Update: {
+          anonymized_at?: string | null
+          created_at?: string
+          user_master?: boolean
+          full_name?: string
+          id?: string
+          professor_id?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          terms_accepted_at?: string | null
+          terms_version?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_professor_id_fkey"
+            columns: ["professor_id"]
+            isOneToOne: true
+            referencedRelation: "professors"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       resources: {
         Row: {
@@ -356,6 +448,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      anonimizar_conta: { Args: never; Returns: undefined }
+      remover_usuario: { Args: { p_alvo: string }; Returns: undefined }
+      alterar_papel: {
+        Args: {
+          p_alvo: string
+          p_papel: Database["public"]["Enums"]["user_role"]
+        }
+        Returns: undefined
+      }
       cancel_booking: {
         Args: { p_booking_id: string; p_reason?: string }
         Returns: string
@@ -364,6 +465,7 @@ export type Database = {
         Args: {
           p_activity_type?: Database["public"]["Enums"]["activity_type"]
           p_class_id: string
+          p_created_by: string
           p_ends_at: string
           p_professor_id: string
           p_purpose: string
@@ -374,11 +476,14 @@ export type Database = {
         }
         Returns: string
       }
+      eh_admin: { Args: never; Returns: boolean }
+      professor_atual: { Args: never; Returns: string }
     }
     Enums: {
       activity_type: "class" | "lecture" | "exam" | "defense" | "event"
       booking_status: "active" | "cancelled"
       room_type: "classroom" | "laboratory" | "auditorium"
+      user_role: "student" | "professor" | "it_support" | "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -509,6 +614,7 @@ export const Constants = {
       activity_type: ["class", "lecture", "exam", "defense", "event"],
       booking_status: ["active", "cancelled"],
       room_type: ["classroom", "laboratory", "auditorium"],
+      user_role: ["student", "professor", "it_support", "admin"],
     },
   },
 } as const

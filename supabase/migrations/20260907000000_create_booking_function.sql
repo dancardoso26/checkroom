@@ -1,20 +1,3 @@
--- ---------------------------------------------------------------------------
--- GRAVAÇÃO ATÔMICA DE UMA RESERVA
---
--- Criar uma reserva escreve em bookings e em booking_resources, e as duas
--- precisam acontecer juntas ou nenhuma acontecer.
---
--- Isso não se resolve no TypeScript: a biblioteca do Supabase conversa pela API
--- REST, e cada chamada é uma transação separada. Dois inserts seguidos deixariam
--- uma reserva gravada sem os recursos que exige caso o segundo falhasse. Apagar
--- a primeira como compensação é pior, porque essa exclusão também pode falhar.
---
--- Uma função em plpgsql roda inteira dentro de uma única transação. Se qualquer
--- comando falhar, incluindo uma das constraints de exclusão, o PostgreSQL desfaz
--- tudo. É a mesma razão que justifica as constraints: a integridade fica no
--- banco, e não na confiança de que o código fará a sequência certa.
--- ---------------------------------------------------------------------------
-
 create or replace function public.create_booking(
   p_room_id uuid,
   p_professor_id uuid,
@@ -53,8 +36,3 @@ begin
   return v_booking_id;
 end;
 $$;
-
--- A função NÃO é security definer, e não deve virar. Em 28/09, quando o RLS
--- ganhar políticas, marcá-la assim seria um jeito rápido de passar por cima
--- delas, e também uma porta aberta: qualquer usuário autenticado poderia criar
--- reserva em nome de terceiros.

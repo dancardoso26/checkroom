@@ -18,15 +18,15 @@
 
 :root {
   /* superfícies e texto */
-  --background: 208 68% 96%;      /* #EFF6FC - fundo geral */
-  --foreground: 207 30% 12%;      /* #152028 - quase-preto azulado, no lugar do preto puro */
+  --background: 208 68% 96%; /* #EFF6FC - fundo geral */
+  --foreground: 207 30% 12%; /* #152028 - quase-preto azulado, no lugar do preto puro */
   --card: 0 0% 100%;
   --card-foreground: 207 30% 12%;
   --popover: 0 0% 100%;
   --popover-foreground: 207 30% 12%;
 
   /* azul principal da marca */
-  --primary: 202 46% 31%;         /* #2A5872 */
+  --primary: 202 46% 31%; /* #2A5872 */
   --primary-foreground: 0 0% 100%;
 
   /* apoio */
@@ -60,6 +60,17 @@
   --destructive-subtle: 4 70% 94%;
 
   --radius: 0.5rem;
+
+  /* barra lateral: branca como os cartões, com o item ativo no azul claro da
+     marca, o mesmo tom usado nas seleções do formulário */
+  --sidebar: 0 0% 100%;
+  --sidebar-foreground: 207 30% 12%;
+  --sidebar-primary: 202 46% 31%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 202 46% 92%;
+  --sidebar-accent-foreground: 202 46% 20%;
+  --sidebar-border: 207 25% 88%;
+  --sidebar-ring: 202 46% 31%;
 }
 
 /* ---------------------------------------------------------------------------
@@ -108,6 +119,14 @@
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
+  --color-sidebar-ring: hsl(var(--sidebar-ring));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
+  --color-sidebar-primary: hsl(var(--sidebar-primary));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar: hsl(var(--sidebar));
 }
 
 /* ---------------------------------------------------------------------------

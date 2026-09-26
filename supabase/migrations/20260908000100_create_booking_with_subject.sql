@@ -1,20 +1,3 @@
--- ---------------------------------------------------------------------------
--- A DISCIPLINA NA GRAVAÇÃO
---
--- Acrescenta p_subject_id a create_booking. O resto é igual à versão da
--- migration 20260907000000, e o raciocínio sobre atomicidade está lá.
---
--- O parâmetro vai por último e tem "default null" por um motivo prático: sem o
--- default, o Supabase gera o tipo TypeScript como string obrigatória, e o
--- compilador recusaria a atividade sem disciplina, que é justamente o caso que a
--- coluna nullable existe para permitir. Um parâmetro com default precisa vir
--- depois dos sem default, daí a posição.
---
--- Os drops removem as assinaturas anteriores. "create or replace" não substitui
--- uma função com lista de parâmetros diferente: ele cria uma sobrecarga, e duas
--- versões coexistindo fariam o PostgREST escolher por conta própria.
--- ---------------------------------------------------------------------------
-
 drop function if exists public.create_booking(
   uuid, uuid, uuid, text, timestamptz, timestamptz, uuid[]
 );
