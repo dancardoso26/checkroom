@@ -50,7 +50,9 @@ test.describe("constraints de sobreposição", () => {
     };
 
     salaLivre = salas.find((s) => !ocupadas.salas.has(s.id))!.id;
-    professorLivre = professores.find((p) => !ocupadas.professores.has(p.id))!.id;
+    professorLivre = professores.find(
+      (p) => !ocupadas.professores.has(p.id)
+    )!.id;
     turmaLivre = turmas.find((t) => !ocupadas.turmas.has(t.id))!.id;
   });
 

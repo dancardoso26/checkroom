@@ -14,9 +14,9 @@ export default function PrivacidadePage() {
 
       <p>
         Esta política descreve como o CheckRoom trata dados pessoais e
-        corresponde ao que o sistema faz hoje, não ao que pretende fazer.
-        Quando uma funcionalidade nova alterar esse tratamento, esta política
-        muda junto e ganha nova versão.
+        corresponde ao que o sistema faz hoje, não ao que pretende fazer. Quando
+        uma funcionalidade nova alterar esse tratamento, esta política muda
+        junto e ganha nova versão.
       </p>
 
       <h2>1. Quem é responsável pelo tratamento</h2>
@@ -119,9 +119,11 @@ export default function PrivacidadePage() {
           usada está na região de São Paulo.
         </li>
         <li>
-          <strong>Resend</strong>, que entrega as mensagens de e-mail. Recebe
-          apenas o endereço do destinatário e as informações da reserva
-          mencionada na mensagem.
+          <strong>Resend</strong>, que entrega as mensagens de e-mail, a partir
+          do domínio checkroom.com.br. Recebe apenas o endereço do destinatário
+          e o conteúdo da mensagem: as informações da reserva mencionada ou o
+          link de recuperação de senha. O envio é feito pela região de São
+          Paulo.
         </li>
         <li>
           <strong>Vercel</strong>, que hospedará a aplicação quando ela for
@@ -187,10 +189,12 @@ export default function PrivacidadePage() {
       </p>
 
       <p>
-        No CheckRoom, o acesso e a correção dos próprios dados acontecem na
-        tela de conta. A remoção também: o botão de excluir conta anonimiza o
-        perfil, cancela as reservas futuras e encerra o acesso, sem depender de
-        pedido por e-mail.
+        No CheckRoom, o acesso e a correção dos próprios dados acontecem na tela
+        de conta. A remoção também: o botão de excluir conta anonimiza o perfil
+        e o cadastro de docente ligado a ele, apaga o endereço de e-mail dos
+        registros de auditoria, cancela as reservas futuras e encerra o acesso,
+        sem depender de pedido por e-mail. Depois disso, nenhum dado do sistema
+        permite identificar a pessoa.
       </p>
 
       <p>
@@ -215,8 +219,7 @@ export default function PrivacidadePage() {
 
       <p>
         Chaves de acesso a serviços externos ficam em variáveis de ambiente do
-        servidor e não são enviadas ao navegador nem versionadas no
-        repositório.
+        servidor e não são enviadas ao navegador nem versionadas no repositório.
       </p>
 
       <h2>8. Incidentes e contato</h2>

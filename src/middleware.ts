@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
+import { dispensaSegundoFator } from "@/lib/segundo-fator";
+
 // Acessíveis com ou sem sessão. "/nova-senha" está aqui porque o link do
 // e-mail cria sessão antes da troca, e expulsá-lo quebraria a recuperação.
 const ROTAS_LIVRES = [
@@ -71,6 +73,19 @@ export async function middleware(request: NextRequest) {
     destino.pathname = "/reservas";
     destino.search = "";
     return NextResponse.redirect(destino);
+  }
+
+  // Quem é dispensado do segundo fator não tem o que fazer nas telas dele: um
+  // link ou um botão voltar antigo o deixaria preso numa verificação sem sentido.
+  if (dispensaSegundoFator(user.email)) {
+    if (casa(ROTAS_DE_SEGUNDO_FATOR, caminho)) {
+      const destino = request.nextUrl.clone();
+      destino.pathname = "/reservas";
+      destino.search = "";
+      return NextResponse.redirect(destino);
+    }
+
+    return response;
   }
 
   if (casa(ROTAS_DE_SEGUNDO_FATOR, caminho)) return response;

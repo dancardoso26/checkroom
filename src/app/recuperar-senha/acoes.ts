@@ -1,11 +1,11 @@
 "use server";
 
-import { headers } from "next/headers";
 import { z } from "zod";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { supabaseAdmin } from "@/lib/supabase/server";
 import { registrarEventoDeAutenticacao } from "@/lib/auditoria";
+import { enderecoDoSite } from "@/lib/endereco-do-site";
+import { podeTrocarSenha } from "@/lib/troca-de-senha";
 
 const schema = z.object({ email: z.email("Informe um e-mail válido.") });
 
@@ -24,8 +24,7 @@ export async function pedirRecuperacao(
     return { status: "error", message: "Informe um e-mail válido." };
   }
 
-  const cabecalhos = await headers();
-  const origem = cabecalhos.get("origin") ?? "http://localhost:3000";
+  const origem = enderecoDoSite();
 
   const supabase = await createSupabaseServerClient();
 
@@ -86,18 +85,35 @@ export async function definirNovaSenha(
     };
   }
 
-  const { error } = await supabase.auth.updateUser({ password: parsed.data.senha });
+  // Só troca a senha quem chegou pelo link do e-mail, ou quem já passou pelo
+  // segundo fator. Sem isso, quem soubesse só a senha de alguém a trocaria e
+  // trancaria o dono do lado de fora, sem nunca ter o autenticador dele.
+  const { data: token } = await supabase.auth.getClaims();
+  if (!podeTrocarSenha(token?.claims)) {
+    return {
+      status: "error",
+      message: "Para trocar a senha, use o link enviado por e-mail.",
+    };
+  }
+
+  const { error } = await supabase.auth.updateUser({
+    password: parsed.data.senha,
+  });
 
   if (error) {
-    return { status: "error", message: "Não foi possível trocar a senha agora." };
+    return {
+      status: "error",
+      message: "Não foi possível trocar a senha agora.",
+    };
   }
 
   await registrarEventoDeAutenticacao("password_changed", user.id);
 
   // Encerra a sessão de recuperação: a nova senha deve ser usada para entrar,
   // e o segundo fator volta a ser exigido.
-  await supabaseAdmin.auth.admin.signOut(user.id);
-  await supabase.auth.signOut();
+  // global encerra todas as sessões da conta, inclusive em outros aparelhos:
+  // quem trocou a senha por suspeita de invasão tira o invasor junto.
+  await supabase.auth.signOut({ scope: "global" });
 
   return { status: "success" };
 }

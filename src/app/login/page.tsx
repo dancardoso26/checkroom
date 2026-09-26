@@ -1,43 +1,41 @@
-import Link from "next/link";
-
-import { Logo } from "@/components/logo";
+import { TelaDeEntrada } from "@/components/tela-de-entrada";
 import { FormularioDeLogin } from "./formulario";
 
 export const metadata = { title: "Entrar | CheckRoom" };
 
+// Motivos de voltar ao login vindos de fora da tela, como o link de um e-mail.
+const AVISOS: Record<string, string> = {
+  link_invalido:
+    "O link de recuperação está incompleto. Peça um novo em Esqueci minha senha.",
+  link_expirado:
+    "O link de recuperação expirou ou já foi usado. Peça um novo em Esqueci minha senha.",
+  "conta=removida": "Sua conta foi removida.",
+};
+
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ proximo?: string }>;
+  searchParams: Promise<{ proximo?: string; erro?: string; conta?: string }>;
 }) {
-  const { proximo } = await searchParams;
+  const { proximo, erro, conta } = await searchParams;
+  const aviso =
+    (erro && AVISOS[erro]) ||
+    (conta === "removida" && AVISOS["conta=removida"]);
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-6 py-12">
-      <div className="w-full max-w-sm space-y-8">
-        <div className="flex flex-col items-center gap-3 text-center">
-          <Logo altura={32} />
-          <p className="text-muted-foreground text-sm">
-            Entre para reservar espaços e acompanhar a agenda acadêmica.
-          </p>
-        </div>
-
-        <div className="bg-card rounded-lg border p-6">
-          <FormularioDeLogin proximo={proximo} />
-        </div>
-
-        <p className="text-muted-foreground text-center text-xs">
-          Ao entrar você concorda com os{" "}
-          <Link href="/termos" className="hover:text-foreground underline">
-            termos de uso
-          </Link>{" "}
-          e com a{" "}
-          <Link href="/privacidade" className="hover:text-foreground underline">
-            política de privacidade
-          </Link>
-          .
+    <TelaDeEntrada titulo="Entre na sua conta">
+      {aviso && (
+        <p
+          role="alert"
+          className="border-warning/40 bg-warning-subtle text-warning rounded-md border px-3 py-2 text-sm"
+        >
+          {aviso}
         </p>
+      )}
+
+      <div className="bg-card rounded-lg border p-6">
+        <FormularioDeLogin proximo={proximo} />
       </div>
-    </main>
+    </TelaDeEntrada>
   );
 }

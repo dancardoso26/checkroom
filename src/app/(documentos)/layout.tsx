@@ -9,8 +9,10 @@ export default function DocumentosLayout({
   children: React.ReactNode;
 }) {
   return (
-    <>
-      <header className="bg-card border-b">
+    // Fundo branco na página inteira: o azul-claro do resto do sistema cansa a
+    // leitura de um texto longo.
+    <div className="bg-card min-h-screen">
+      <header className="border-b">
         <div className="mx-auto flex max-w-3xl items-center px-6 py-4">
           <Link href="/" aria-label="Página inicial do CheckRoom">
             <Logo altura={28} />
@@ -29,10 +31,10 @@ export default function DocumentosLayout({
 
         {/* prose não existe sem o plugin de tipografia, então o espaçamento sai
             de seletores explícitos aplicados aos filhos diretos. */}
-        <article className="[&_h2]:mt-8 [&_h2]:mb-3 [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:mt-6 [&_h3]:mb-2 [&_h3]:font-medium [&_li]:mb-1.5 [&_p]:mb-4 [&_p]:leading-relaxed [&_table]:mb-4 [&_ul]:mb-4 [&_ul]:list-disc [&_ul]:pl-5 text-sm">
+        <article className="[&_h2]:mt-8 [&_h2]:mb-3 [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:mt-6 [&_h3]:mb-2 [&_h3]:font-medium [&_li]:mb-1.5 [&_p]:mb-4 [&_table]:mb-4 [&_ul]:mb-4 [&_ul]:list-disc [&_ul]:pl-5 text-sm leading-[1.75]">
           {children}
         </article>
       </main>
-    </>
+    </div>
   );
 }

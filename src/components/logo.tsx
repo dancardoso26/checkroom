@@ -11,11 +11,7 @@ type LogoProps = {
   className?: string;
 };
 
-export function Logo({
-  variante = "azul",
-  altura = 32,
-  className,
-}: LogoProps) {
+export function Logo({ variante = "azul", altura = 32, className }: LogoProps) {
   const src =
     variante === "branca"
       ? "/logo-checkroom-branca.svg"

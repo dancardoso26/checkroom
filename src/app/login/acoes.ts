@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { destinoAposLogin } from "@/lib/destino-apos-login";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { registrarEventoDeAutenticacao } from "@/lib/auditoria";
 
@@ -50,13 +51,11 @@ export async function entrar(
 
   await registrarEventoDeAutenticacao("login", data.user.id);
 
-  const destino = parsed.data.proximo;
-
   // Sem redirect aqui: o Next resolve o destino sem passar pelo middleware, e
   // a exigência de segundo fator seria pulada. Quem navega é a tela.
   return {
     status: "success",
-    destino: destino?.startsWith("/") ? destino : "/reservas",
+    destino: destinoAposLogin(parsed.data.proximo),
   };
 }
 

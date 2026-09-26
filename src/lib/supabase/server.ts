@@ -42,8 +42,9 @@ export async function createSupabaseServerClient() {
   });
 }
 
-// Ignora o RLS, e por isso só serve ao que não tem usuário: criar contas no
-// seed e registrar eventos de autenticação, que ocorrem antes da sessão.
+// Ignora o RLS. Só roda no servidor (server-only) e só depois de o código
+// conferir quem pede: gestão de usuários, e-mails para notificação e eventos
+// de autenticação, que acontecem antes de existir sessão.
 export const supabaseAdmin = createClient<Database>(url, secretKey, {
   auth: { persistSession: false, autoRefreshToken: false },
 });

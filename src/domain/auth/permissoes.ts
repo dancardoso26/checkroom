@@ -1,5 +1,12 @@
 export type Papel = "student" | "professor" | "it_support" | "admin";
 
+export const ROTULO_DO_PAPEL: Record<Papel, string> = {
+  student: "Aluno",
+  professor: "Professor",
+  it_support: "Equipe de TI",
+  admin: "Administrador",
+};
+
 export type Ator = {
   profileId: string;
   papel: Papel;
@@ -41,3 +48,23 @@ export function podeVerAuditoria(ator: Ator): boolean {
 export function podeCriarReserva(ator: Ator): boolean {
   return ator.papel === "admin" || ator.professorId !== null;
 }
+
+export function podeGerenciarUsuarios(ator: Ator): boolean {
+  return ator.papel === "admin";
+}
+
+export type AlvoDeGestao = { id: string; papel: Papel; ehMaster: boolean };
+
+// O master, dono do sistema, nunca é alterado: sem ele o projeto perde quem o
+// administra. A própria conta também não, para ninguém se trancar do lado de
+// fora pela tela. O banco repete a trava do master.
+export function podeAlterarUsuario(ator: Ator, alvo: AlvoDeGestao): boolean {
+  return ator.papel === "admin" && !alvo.ehMaster && alvo.id !== ator.profileId;
+}
+
+export const PAPEIS_ATRIBUIVEIS: Papel[] = [
+  "professor",
+  "student",
+  "it_support",
+  "admin",
+];

@@ -1,17 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { startTransition, useActionState, useEffect, useRef } from "react";
+import { startTransition, useActionState, useEffect } from "react";
 
 import { entrar, type LoginState } from "./acoes";
 import { Button } from "@/components/ui/button";
+import { CampoDeSenha } from "@/components/campo-de-senha";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 const ESTADO_INICIAL: LoginState = { status: "idle" };
 
 export function FormularioDeLogin({ proximo }: { proximo?: string }) {
-  const formulario = useRef<HTMLFormElement>(null);
   const [state, formAction, entrando] = useActionState(entrar, ESTADO_INICIAL);
 
   useEffect(() => {
@@ -29,7 +29,7 @@ export function FormularioDeLogin({ proximo }: { proximo?: string }) {
   }
 
   return (
-    <form ref={formulario} onSubmit={enviar} className="space-y-4">
+    <form onSubmit={enviar} className="space-y-4">
       <input type="hidden" name="proximo" value={proximo ?? ""} />
 
       <div className="space-y-2">
@@ -53,10 +53,9 @@ export function FormularioDeLogin({ proximo }: { proximo?: string }) {
             Esqueci minha senha
           </Link>
         </div>
-        <Input
+        <CampoDeSenha
           id="senha"
           name="senha"
-          type="password"
           autoComplete="current-password"
           required
         />
@@ -69,10 +68,9 @@ export function FormularioDeLogin({ proximo }: { proximo?: string }) {
       )}
 
       <Button
-        type="button"
+        type="submit"
         className="w-full"
         disabled={entrando}
-        onClick={() => formulario.current?.requestSubmit()}
       >
         {entrando ? "Entrando..." : "Entrar"}
       </Button>

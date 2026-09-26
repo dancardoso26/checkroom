@@ -13,6 +13,8 @@ const BASE_URL = `http://localhost:${PORTA}`;
 
 export default defineConfig({
   testDir: "./tests/e2e",
+  globalSetup: "./tests/e2e/global-setup.ts",
+  globalTeardown: "./tests/e2e/global-teardown.ts",
 
   // Um worker só. Os testes compartilham o mesmo banco, e rodá-los em paralelo
   // faria uma reserva criada por um aparecer como conflito para outro.

@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { ADMIN, entrarComo } from "./helpers/autenticacao";
+import { abrirDetalhe, blocoDaReserva, semanaDoDia } from "./helpers/painel";
 import {
   apagarReserva,
   inserirReservaDireto,
@@ -41,9 +42,7 @@ test.beforeAll(async () => {
     (r) => new Date(r.starts_at) < new Date(fim) && new Date(r.ends_at) > quinta
   );
 
-  salaLivre = salas.find(
-    (s) => !ocupadas.some((r) => r.room_id === s.id)
-  )!.id;
+  salaLivre = salas.find((s) => !ocupadas.some((r) => r.room_id === s.id))!.id;
   professorLivre = professores.find(
     (p) => !ocupadas.some((r) => r.professor_id === p.id)
   )!.id;
@@ -60,7 +59,7 @@ test.beforeEach(async ({ page }) => {
   await entrarComo(page, ADMIN);
 });
 
-test("cancela pela listagem e some da agenda", async ({ page }) => {
+test("cancela pelo detalhe e some da agenda", async ({ page }) => {
   const criada = await inserirReservaDireto({
     room_id: salaLivre,
     professor_id: professorLivre,
@@ -72,22 +71,28 @@ test("cancela pela listagem e some da agenda", async ({ page }) => {
 
   expect(criada.aceitou).toBe(true);
 
-  await page.goto("/reservas");
+  await page.goto(semanaDoDia(inicio));
 
-  const cartao = page
-    .locator('[data-slot="card"]')
-    .filter({ hasText: `${PREFIXO_TESTE} a cancelar` });
+  const detalhe = await abrirDetalhe(page, `${PREFIXO_TESTE} a cancelar`);
 
-  await expect(cartao).toBeVisible();
+  await detalhe.getByRole("button", { name: "Cancelar reserva" }).click();
 
-  await cartao.getByRole("button", { name: /Ações da reserva/ }).click();
-  await page.getByRole("menuitem", { name: "Cancelar" }).click();
-  await page.getByLabel(/Motivo/).fill("Professor afastado");
+  // O detalhe cede lugar à confirmação, e o motivo é obrigatório.
+  await expect(detalhe).toBeHidden();
   await page.getByRole("button", { name: "Confirmar" }).click();
+  await expect(
+    page.getByText("Informe o motivo do cancelamento.")
+  ).toBeVisible();
 
-  // A asserção é sobre o cartão, e não sobre o texto: a confirmação aberta
-  // repete a descrição da reserva, e procurar pelo texto encontraria os dois.
-  await expect(cartao).toBeHidden({ timeout: 15_000 });
+  // Confirma com Enter no campo do motivo, sem precisar do botão.
+  await page.getByLabel("Motivo").fill("Professor afastado");
+  await page.getByLabel("Motivo").press("Enter");
+
+  // A asserção é sobre o bloco da grade, e não sobre o texto: a confirmação
+  // aberta repete a descrição da reserva, e o texto encontraria os dois.
+  await expect(blocoDaReserva(page, `${PREFIXO_TESTE} a cancelar`)).toBeHidden({
+    timeout: 15_000,
+  });
 });
 
 test("a reserva cancelada continua no banco, com data e motivo", async () => {
@@ -98,7 +103,10 @@ test("a reserva cancelada continua no banco, com data e motivo", async () => {
     (r) => r.purpose === `${PREFIXO_TESTE} a cancelar`
   );
 
-  expect(cancelada, "a reserva cancelada não deveria sumir da tabela").toBeDefined();
+  expect(
+    cancelada,
+    "a reserva cancelada não deveria sumir da tabela"
+  ).toBeDefined();
   expect(cancelada!.status).toBe("cancelled");
   expect(cancelada!.cancelled_at).not.toBeNull();
   expect(cancelada!.cancellation_reason).toBe("Professor afastado");

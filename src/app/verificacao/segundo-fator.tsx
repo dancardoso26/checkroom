@@ -94,7 +94,9 @@ export function SegundoFator({ cadastrando }: { cadastrando: boolean }) {
     });
 
     if (error) {
-      setErro("Código incorreto ou expirado. O código muda a cada 30 segundos.");
+      setErro(
+        "Código incorreto ou expirado. O código muda a cada 30 segundos."
+      );
       setCodigo("");
       setOcupado(false);
       return;
@@ -131,7 +133,9 @@ export function SegundoFator({ cadastrando }: { cadastrando: boolean }) {
             <summary className="text-muted-foreground hover:text-foreground cursor-pointer text-xs">
               Não consigo escanear
             </summary>
-            <code className="mt-2 block break-all text-xs">{cadastro.secret}</code>
+            <code className="mt-2 block break-all text-xs">
+              {cadastro.secret}
+            </code>
           </details>
         </div>
       )}

@@ -52,6 +52,11 @@ export function formatShortDateTime(instante: Date): string {
   return dataCurtaComHora.format(instante);
 }
 
+/** Ex.: "14/09/2026, 19:00" */
+export function formatDateTime(instante: Date): string {
+  return `${formatDate(instante)}, ${formatTime(instante)}`;
+}
+
 /** Ex.: "14/09, 19:00 às 20:40" */
 export function formatPeriod(inicio: Date, fim: Date): string {
   return `${formatShortDateTime(inicio)} às ${formatTime(fim)}`;

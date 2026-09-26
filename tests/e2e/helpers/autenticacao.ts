@@ -13,9 +13,15 @@ function lerSenhaDoAmbiente(): string {
   return "";
 }
 
-export const PROFESSOR = "carlos.lima@exemplo.edu.br";
-export const OUTRO_PROFESSOR = "marina.prado@exemplo.edu.br";
-export const ADMIN = "coordenacao@exemplo.edu.br";
+// Contas de desenvolvimento, dispensadas do segundo fator fora de produção.
+// Os testes nunca usam as de demonstração: foi assim que o fator cadastrado
+// pelo Daniel no autenticador dele acabou apagado.
+export const PROFESSOR = "dev.professor@exemplo.edu.br";
+export const ADMIN = "dev.admin@exemplo.edu.br";
+
+// A única que exige TOTP, usada pelos testes do próprio segundo fator. O fator
+// dela é apagado no global-setup, antes de cada suíte.
+export const CONTA_COM_SEGUNDO_FATOR = "teste.mfa@exemplo.edu.br";
 
 export const SENHA = lerSenhaDoAmbiente();
 
@@ -31,7 +37,9 @@ async function informarCodigo(page: Page, segredo: string) {
 
 export async function entrarComo(page: Page, email: string) {
   if (!SENHA) {
-    throw new Error("Defina SEED_USER_PASSWORD em .env.local para rodar os testes.");
+    throw new Error(
+      "Defina SEED_USER_PASSWORD em .env.local para rodar os testes."
+    );
   }
 
   await page.goto("/login");
@@ -49,7 +57,9 @@ export async function entrarComo(page: Page, email: string) {
     // Espera a tela montar antes de decidir: o cadastro do fator é pedido ao
     // servidor depois da montagem, e a ausência imediata do segredo não
     // significa que este é um desafio.
-    await page.locator("#codigo").waitFor({ state: "visible", timeout: 60_000 });
+    await page
+      .locator("#codigo")
+      .waitFor({ state: "visible", timeout: 60_000 });
 
     const ehCadastro = await revelar
       .waitFor({ state: "visible", timeout: 20_000 })
@@ -94,10 +104,4 @@ export async function entrarComo(page: Page, email: string) {
   }
 
   await expect(page).toHaveURL(/\/reservas/);
-}
-
-export async function sairDoSistema(page: Page) {
-  await page.getByRole("button", { name: /Carlos|Marina|Coordenação|Ana/ }).click();
-  await page.getByRole("menuitem", { name: "Sair" }).click();
-  await page.waitForURL(/\/login/);
 }

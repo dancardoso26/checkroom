@@ -1,6 +1,11 @@
 import "server-only";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  createSupabaseServerClient,
+  supabaseAdmin,
+} from "@/lib/supabase/server";
 import type { ActivityType, ExistingBooking } from "@/domain/booking/types";
+import { FILTROS_PADRAO, type Filtros } from "@/lib/filtros";
+import type { Ordenacao, Sentido } from "@/lib/tabela";
 
 /** O PostgREST entrega timestamptz como string ISO com fuso. */
 function toDate(valor: string): Date {
@@ -133,7 +138,9 @@ export type DadosParaNotificacao = {
 export async function findBookingNotificationData(
   bookingId: string
 ): Promise<DadosParaNotificacao | null> {
-  const supabase = await createSupabaseServerClient();
+  // Chave secreta: o e-mail do docente não é legível pela sessão do usuário.
+  // Quem chama já conferiu que a pessoa pode mexer nesta reserva.
+  const supabase = supabaseAdmin;
 
   const { data, error } = await supabase
     .from("bookings")
@@ -237,75 +244,167 @@ export async function createBooking(input: {
   };
 }
 
-/** Uma reserva como aparece na listagem. */
+/** Uma reserva como aparece no calendário, na lista e na tabela. */
 export type BookingListItem = {
   id: string;
   purpose: string;
+  activityType: ActivityType;
   startsAt: Date;
   endsAt: Date;
+  roomId: string;
   roomName: string;
   building: string;
   professorName: string;
   className: string;
+  subjectName: string | null;
   resourceNames: string[];
   cancelled: boolean;
   cancellationReason: string | null;
 };
 
-export async function listUpcomingBookings(
-  { incluirCanceladas = false } = {},
-  now: Date = new Date()
-): Promise<BookingListItem[]> {
-  const supabase = await createSupabaseServerClient();
-
-  let query = supabase
-    .from("bookings")
-    .select(
-      `id, purpose, starts_at, ends_at, status, cancellation_reason,
+const SELECT_DA_LISTAGEM =
+  `id, purpose, activity_type, starts_at, ends_at, status, cancellation_reason,
+       room_id,
        rooms(name, building),
        professors(name),
        classes(name),
-       booking_resources(resources(name))`
-    )
-    .gte("ends_at", now.toISOString())
+       subjects(name),
+       booking_resources(resources(name))` as const;
+
+type LinhaDaListagem = {
+  id: string;
+  purpose: string;
+  activity_type: ActivityType;
+  starts_at: string;
+  ends_at: string;
+  status: string;
+  cancellation_reason: string | null;
+  room_id: string;
+  rooms: { name: string; building: string };
+  professors: { name: string };
+  classes: { name: string };
+  subjects: { name: string } | null;
+  booking_resources: { resources: { name: string } }[];
+};
+
+function paraItemDaListagem(linha: LinhaDaListagem): BookingListItem {
+  return {
+    id: linha.id,
+    purpose: linha.purpose,
+    activityType: linha.activity_type,
+    startsAt: toDate(linha.starts_at),
+    endsAt: toDate(linha.ends_at),
+    roomId: linha.room_id,
+    roomName: linha.rooms.name,
+    building: linha.rooms.building,
+    professorName: linha.professors.name,
+    className: linha.classes.name,
+    subjectName: linha.subjects?.name ?? null,
+    // Dois níveis: booking_resources é a ligação e o nome está em resources.
+    resourceNames: linha.booking_resources.map(
+      (vinculo) => vinculo.resources.name
+    ),
+    cancelled: linha.status === "cancelled",
+    cancellationReason: linha.cancellation_reason,
+  };
+}
+
+// Genérico para servir às duas consultas, que diferem no count e na ordem.
+function aplicarFiltros<Q extends { eq(coluna: string, valor: string): Q }>(
+  query: Q,
+  filtros: Filtros
+): Q {
+  let filtrada = query;
+
+  if (filtros.status === "agendadas")
+    filtrada = filtrada.eq("status", "active");
+  if (filtros.status === "canceladas")
+    filtrada = filtrada.eq("status", "cancelled");
+  if (filtros.professor)
+    filtrada = filtrada.eq("professor_id", filtros.professor);
+
+  return filtrada;
+}
+
+// Sobreposição com o período, e não "começa dentro dele": uma aula das 21h às
+// 23h também pertence ao dia seguinte se a janela começar à meia-noite.
+export async function listBookingsInRange({
+  inicio,
+  fim,
+  filtros = FILTROS_PADRAO,
+}: {
+  inicio: Date;
+  fim: Date;
+  filtros?: Filtros;
+}): Promise<BookingListItem[]> {
+  const supabase = await createSupabaseServerClient();
+
+  const query = supabase
+    .from("bookings")
+    .select(SELECT_DA_LISTAGEM)
+    .lt("starts_at", fim.toISOString())
+    .gt("ends_at", inicio.toISOString())
     .order("starts_at");
 
-  if (!incluirCanceladas) {
-    query = query.eq("status", "active");
-  }
-
-  const { data, error } = await query;
+  const { data, error } = await aplicarFiltros(query, filtros);
 
   if (error) {
     throw new Error(`Falha ao listar as reservas: ${error.message}`);
   }
 
-  return data.map((linha) => ({
-    id: linha.id,
-    purpose: linha.purpose,
-    startsAt: toDate(linha.starts_at),
-    endsAt: toDate(linha.ends_at),
-    roomName: linha.rooms.name,
-    building: linha.rooms.building,
-    professorName: linha.professors.name,
-    className: linha.classes.name,
-    // Dois níveis: booking_resources é a ligação e o nome está em resources. O
-    // PostgREST atravessa as duas em uma consulta só.
-    resourceNames: linha.booking_resources.map(
-      (vinculo) => vinculo.resources.name
-    ),
-    // A tela precisa do booleano, não do enum: ela decide se mostra o badge, e
-    // não qual dos estados possíveis exibir.
-    cancelled: linha.status === "cancelled",
-    cancellationReason: linha.cancellation_reason,
-  }));
+  return data.map(paraItemDaListagem);
+}
+
+// As três do meio são colunas de tabelas relacionadas. O PostgREST ordena a
+// reserva por elas quando a relação é de um para um, que é o caso das três.
+const COLUNA_DA_ORDENACAO: Record<Ordenacao, string> = {
+  data: "starts_at",
+  atividade: "purpose",
+  espaco: "rooms(name)",
+  professor: "professors(name)",
+  turma: "classes(name)",
+  situacao: "status",
+};
+
+export async function listBookingsPage({
+  de,
+  ate,
+  ordenar,
+  sentido,
+  filtros = FILTROS_PADRAO,
+}: {
+  de: number;
+  ate: number;
+  ordenar: Ordenacao;
+  sentido: Sentido;
+  filtros?: Filtros;
+}): Promise<{ reservas: BookingListItem[]; total: number }> {
+  const supabase = await createSupabaseServerClient();
+
+  let query = supabase
+    .from("bookings")
+    .select(SELECT_DA_LISTAGEM, { count: "exact" })
+    .order(COLUNA_DA_ORDENACAO[ordenar], { ascending: sentido === "asc" });
+
+  // Desempate pela data: sem ele, reservas com o mesmo professor mudariam de
+  // posição entre uma página e outra, e uma poderia aparecer duas vezes.
+  if (ordenar !== "data")
+    query = query.order("starts_at", { ascending: false });
+
+  const { data, error, count } = await aplicarFiltros(query, filtros).range(
+    de,
+    ate
+  );
+
+  if (error) {
+    throw new Error(`Falha ao listar as reservas: ${error.message}`);
+  }
+
+  return { reservas: data.map(paraItemDaListagem), total: count ?? 0 };
 }
 
 export type CancelBookingOutcome =
-  | "cancelled"
-  | "not_found"
-  | "already_cancelled"
-  | "already_finished";
+  "cancelled" | "not_found" | "already_cancelled" | "already_finished";
 
 export async function cancelBooking(
   bookingId: string,

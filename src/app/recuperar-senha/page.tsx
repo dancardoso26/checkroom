@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { startTransition, useActionState, useRef } from "react";
+import { startTransition, useActionState } from "react";
 import { MailCheck } from "lucide-react";
 
 import { pedirRecuperacao, type RecuperacaoState } from "./acoes";
@@ -13,7 +13,6 @@ import { Label } from "@/components/ui/label";
 const ESTADO_INICIAL: RecuperacaoState = { status: "idle" };
 
 export default function RecuperarSenhaPage() {
-  const formulario = useRef<HTMLFormElement>(null);
   const [state, formAction, enviando] = useActionState(
     pedirRecuperacao,
     ESTADO_INICIAL
@@ -46,7 +45,7 @@ export default function RecuperarSenhaPage() {
               </p>
             </div>
           ) : (
-            <form ref={formulario} onSubmit={enviar} className="space-y-4">
+            <form onSubmit={enviar} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">E-mail institucional</Label>
                 <Input
@@ -65,10 +64,9 @@ export default function RecuperarSenhaPage() {
               )}
 
               <Button
-                type="button"
+                type="submit"
                 className="w-full"
                 disabled={enviando}
-                onClick={() => formulario.current?.requestSubmit()}
               >
                 {enviando ? "Enviando..." : "Enviar link"}
               </Button>

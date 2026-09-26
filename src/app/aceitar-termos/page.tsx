@@ -1,10 +1,15 @@
 import Link from "next/link";
+import { ExternalLink } from "lucide-react";
 import { redirect } from "next/navigation";
 
 import { Logo } from "@/components/logo";
 import { sessaoAtual } from "@/lib/sessao";
-import { VERSAO_DOS_TERMOS, VERSAO_DA_POLITICA } from "@/lib/documentos";
 import { BotaoDeAceite } from "./botao";
+
+const DOCUMENTOS = [
+  { href: "/termos", rotulo: "Termos de Uso" },
+  { href: "/privacidade", rotulo: "Política de Privacidade" },
+];
 
 export const metadata = { title: "Termos de uso | CheckRoom" };
 export const dynamic = "force-dynamic";
@@ -28,42 +33,28 @@ export default async function AceitarTermosPage() {
         </div>
 
         <div className="bg-card space-y-5 rounded-lg border p-6">
-          <div className="space-y-3 text-sm">
-            <p>
-              Os{" "}
-              <Link
-                href="/termos"
-                target="_blank"
-                className="text-primary underline underline-offset-2"
-              >
-                termos de uso
-              </Link>{" "}
-              descrevem o que o sistema faz e o que se espera de quem o usa.
-              Aceitá-los é condição para acessar o CheckRoom.
-            </p>
-
-            <p className="text-muted-foreground">
-              A{" "}
-              <Link
-                href="/privacidade"
-                target="_blank"
-                className="hover:text-foreground underline underline-offset-2"
-              >
-                política de privacidade
-              </Link>{" "}
-              explica quais dados são tratados e com que fundamento legal. Ela
-              é informativa: o tratamento descrito ali sustenta-se na execução
-              do serviço e no legítimo interesse, não no seu consentimento, e
-              por isso não há o que consentir.
-            </p>
-          </div>
+          {/* Abrem em outra aba: quem lê não perde esta tela nem precisa
+              voltar pelo navegador. */}
+          <ul className="space-y-2">
+            {DOCUMENTOS.map(({ href, rotulo }) => (
+              <li key={href}>
+                <Link
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:border-primary/40 hover:bg-primary-subtle flex items-center justify-between rounded-md border px-3 py-2.5 text-sm font-medium transition-colors"
+                >
+                  {rotulo}
+                  <ExternalLink
+                    aria-hidden
+                    className="text-muted-foreground size-4"
+                  />
+                </Link>
+              </li>
+            ))}
+          </ul>
 
           <BotaoDeAceite />
-
-          <p className="text-muted-foreground text-center text-xs">
-            Termos versão {VERSAO_DOS_TERMOS}, política versão{" "}
-            {VERSAO_DA_POLITICA}.
-          </p>
         </div>
       </div>
     </main>

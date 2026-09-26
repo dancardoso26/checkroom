@@ -11,7 +11,10 @@ export type EventoDeAutenticacao =
   | "password_changed"
   | "mfa_enrolled"
   | "terms_accepted"
-  | "account_anonymized";
+  | "account_anonymized"
+  | "user_deactivated"
+  | "user_reactivated"
+  | "user_invited";
 
 // Login não altera tabela de negócio, então nenhuma trigger o alcança. Usa a
 // chave secreta porque a falha de login acontece antes de existir sessão.

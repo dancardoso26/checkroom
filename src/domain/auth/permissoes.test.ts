@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  podeAlterarUsuario,
   podeCriarReserva,
+  podeGerenciarUsuarios,
   podeGerenciarReserva,
   podeReservarPara,
   podeVerAuditoria,
@@ -124,5 +126,40 @@ describe("podeCriarReserva", () => {
     const semVinculo: Ator = { ...ana, professorId: null };
 
     expect(podeCriarReserva(semVinculo)).toBe(false);
+  });
+});
+
+describe("gestão de usuários", () => {
+  it("abre apenas para a administração", () => {
+    expect(podeGerenciarUsuarios(admin)).toBe(true);
+    expect(podeGerenciarUsuarios(ana)).toBe(false);
+  });
+
+  const alvo = (ator: Ator, ehMaster = false) => ({
+    id: ator.profileId,
+    papel: ator.papel,
+    ehMaster,
+  });
+  const outroAdmin: Ator = {
+    ...admin,
+    profileId: "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
+  };
+
+  it("deixa a administração alterar as demais contas, inclusive outro admin", () => {
+    expect(podeAlterarUsuario(admin, alvo(ana))).toBe(true);
+    expect(podeAlterarUsuario(admin, alvo(aluno))).toBe(true);
+    expect(podeAlterarUsuario(admin, alvo(outroAdmin))).toBe(true);
+  });
+
+  it("nunca altera o master", () => {
+    expect(podeAlterarUsuario(admin, alvo(outroAdmin, true))).toBe(false);
+  });
+
+  it("não altera a própria conta", () => {
+    expect(podeAlterarUsuario(admin, alvo(admin))).toBe(false);
+  });
+
+  it("recusa a quem não administra", () => {
+    expect(podeAlterarUsuario(ana, alvo(carlos))).toBe(false);
   });
 });

@@ -4,7 +4,6 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export type ProfessorOption = {
   id: string;
   name: string;
-  email: string;
 };
 
 export async function listProfessors(): Promise<ProfessorOption[]> {
@@ -12,7 +11,7 @@ export async function listProfessors(): Promise<ProfessorOption[]> {
 
   const { data, error } = await supabase
     .from("professors")
-    .select("id, name, email")
+    .select("id, name")
     .order("name");
 
   if (error) {

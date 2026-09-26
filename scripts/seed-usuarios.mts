@@ -33,9 +33,20 @@ type Conta = {
   role: "professor" | "admin";
   /** O nome identifica o docente, e não o e-mail: o da demonstração muda. */
   professorNome?: string;
+  /** Contas de desenvolvimento já nascem com os termos aceitos. */
+  termosAceitos?: boolean;
 };
 
+const COORDENACAO = "coordenacao@exemplo.edu.br";
+
+// Master provisório: passa para a conta definitiva antes da banca (TASKS.md).
+const MASTER = "dev.admin@exemplo.edu.br";
+
+// Dois grupos que não se misturam (o do segundo fator é criado pela suíte, em
+// tests/e2e/global-setup.ts). As de demonstração exigem segundo fator e
+// nunca são usadas pelos testes, que já apagaram o fator cadastrado nelas.
 const CONTAS: Conta[] = [
+  // Demonstração: as do vídeo.
   {
     email: emailDemo,
     fullName: "Ana Beatriz Moura",
@@ -43,21 +54,27 @@ const CONTAS: Conta[] = [
     professorNome: "Ana Beatriz Moura",
   },
   {
-    email: "carlos.lima@exemplo.edu.br",
-    fullName: "Carlos Eduardo Lima",
-    role: "professor",
-    professorNome: "Carlos Eduardo Lima",
-  },
-  {
     email: "marina.prado@exemplo.edu.br",
     fullName: "Marina Alves Prado",
     role: "professor",
     professorNome: "Marina Alves Prado",
   },
+  { email: COORDENACAO, fullName: "Coordenação Acadêmica", role: "admin" },
+
+  // Desenvolvimento: dispensadas do segundo fator pela variável
+  // MFA_DISPENSADO_PARA, e só fora de produção. Usadas pelo Daniel e pelos testes.
   {
-    email: "coordenacao@exemplo.edu.br",
-    fullName: "Coordenação Acadêmica",
+    email: "dev.admin@exemplo.edu.br",
+    fullName: "Conta de desenvolvimento",
     role: "admin",
+    termosAceitos: true,
+  },
+  {
+    email: "dev.professor@exemplo.edu.br",
+    fullName: "Professor de desenvolvimento",
+    role: "professor",
+    professorNome: "Carlos Eduardo Lima",
+    termosAceitos: true,
   },
 ];
 
@@ -81,6 +98,7 @@ const RESERVAS = [
     building: "Bloco A",
     room: "101",
     professor: "Ana Beatriz Moura",
+    registradaPor: emailDemo,
     className: "SI 8º semestre A",
     subject: "Engenharia de Software",
     activityType: "class",
@@ -93,6 +111,9 @@ const RESERVAS = [
     building: "Bloco B",
     room: "Lab 01",
     professor: "Carlos Eduardo Lima",
+    // Registrada pela secretaria em nome do docente, que é o caso que a
+    // administração existe para cobrir.
+    registradaPor: "dev.admin@exemplo.edu.br",
     className: "ENG 2º semestre A",
     subject: "Resistência dos Materiais",
     activityType: "class",
@@ -105,6 +126,7 @@ const RESERVAS = [
     building: "Bloco C",
     room: "Auditório",
     professor: "Marina Alves Prado",
+    registradaPor: "marina.prado@exemplo.edu.br",
     className: "ENF 6º semestre A",
     subject: null,
     activityType: "lecture",
@@ -125,7 +147,9 @@ async function removerContasAntigas() {
 
   if (falhaAoLimpar) throw falhaAoLimpar;
 
-  const { data, error } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+  const { data, error } = await supabase.auth.admin.listUsers({
+    perPage: 1000,
+  });
   if (error) throw error;
 
   for (const usuario of data.users) {
@@ -144,17 +168,24 @@ async function mapearProfessores(): Promise<Map<string, string>> {
   if (error) throw error;
 
   if (data.length === 0) {
-    throw new Error("Nenhum professor no banco. Rode o supabase/seed.sql antes.");
+    throw new Error(
+      "Nenhum professor no banco. Rode o supabase/seed.sql antes."
+    );
   }
 
   return new Map(data.map((professor) => [professor.name, professor.id]));
 }
 
-function exigirProfessor(professores: Map<string, string>, nome: string): string {
+function exigirProfessor(
+  professores: Map<string, string>,
+  nome: string
+): string {
   const id = professores.get(nome);
 
   if (!id) {
-    throw new Error(`Professor ${nome} não encontrado. Rode o supabase/seed.sql antes.`);
+    throw new Error(
+      `Professor ${nome} não encontrado. Rode o supabase/seed.sql antes.`
+    );
   }
 
   return id;
@@ -163,51 +194,91 @@ function exigirProfessor(professores: Map<string, string>, nome: string): string
 async function criarContas(
   professores: Map<string, string>
 ): Promise<Map<string, string>> {
-  const porNomeDoProfessor = new Map<string, string>();
+  const porEmail = new Map<string, string>();
 
   for (const conta of CONTAS) {
     const professorId = conta.professorNome
       ? exigirProfessor(professores, conta.professorNome)
       : null;
 
-    // A trigger on_auth_user_created lê estes campos para montar o profile.
     const { data, error } = await supabase.auth.admin.createUser({
       email: conta.email,
       password: senha,
       email_confirm: true,
-      user_metadata: {
-        full_name: conta.fullName,
-        role: conta.role,
-        professor_id: professorId,
-      },
+      user_metadata: { full_name: conta.fullName },
     });
 
     if (error) throw error;
 
-    if (conta.professorNome) {
-      porNomeDoProfessor.set(conta.professorNome, data.user.id);
+    // A conta nasce como aluno: a trigger não confia em metadados. Papel e
+    // vínculo são gravados aqui, pelo service role.
+    const { error: falhaDoPapel } = await supabase
+      .from("profiles")
+      .update({ role: conta.role, professor_id: professorId })
+      .eq("id", data.user.id);
+
+    if (falhaDoPapel) throw falhaDoPapel;
+
+    porEmail.set(conta.email, data.user.id);
+
+    if (conta.termosAceitos) {
+      const { error: falha } = await supabase
+        .from("profiles")
+        .update({
+          terms_accepted_at: new Date().toISOString(),
+          terms_version: "1.0",
+        })
+        .eq("id", data.user.id);
+
+      if (falha) throw falha;
     }
 
     console.log(`conta criada: ${conta.email} (${conta.role})`);
   }
 
-  return porNomeDoProfessor;
+  return porEmail;
 }
 
 // O endereço real fica só no .env.local: o SQL versionado usa domínio de
-// exemplo, e sem isso a notificação do Resend não teria onde chegar.
-async function apontarProfessorDeDemonstracao() {
-  const { error } = await supabase
-    .from("professors")
-    .update({ email: emailDemo })
-    .eq("name", "Ana Beatriz Moura");
+// exemplo, que o envio de e-mail recusa. Carlos e Marina recebem aliases do
+// mesmo endereço (+carlos, +marina), que caem na mesma caixa de entrada.
+function comAlias(email: string, alias: string): string {
+  const [usuario, dominio] = email.split("@");
+  return `${usuario}+${alias}@${dominio}`;
+}
 
+async function apontarProfessoresDeDemonstracao() {
+  const enderecos: [string, string][] = [
+    ["Ana Beatriz Moura", emailDemo!],
+    ["Carlos Eduardo Lima", comAlias(emailDemo!, "carlos")],
+    ["Marina Alves Prado", comAlias(emailDemo!, "marina")],
+  ];
+
+  for (const [nome, email] of enderecos) {
+    const { error } = await supabase
+      .from("professors")
+      .update({ email })
+      .eq("name", nome);
+    if (error) throw error;
+  }
+}
+
+// O dono do sistema, que não pode ser removido. Pelo service role: a trigger
+// recusa essa mudança vinda de qualquer sessão de usuário.
+async function marcarMaster(perfilPorEmail: Map<string, string>) {
+  const id = perfilPorEmail.get(MASTER);
+  if (!id) throw new Error(`Sem conta para ${MASTER}`);
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ user_master: true })
+    .eq("id", id);
   if (error) throw error;
 }
 
 async function criarReservas(
   professores: Map<string, string>,
-  perfilPorProfessor: Map<string, string>
+  perfilPorEmail: Map<string, string>
 ) {
   for (const reserva of RESERVAS) {
     const [sala, turma, disciplina, recursos] = await Promise.all([
@@ -217,17 +288,28 @@ async function criarReservas(
         .eq("building", reserva.building)
         .eq("name", reserva.room)
         .single(),
-      supabase.from("classes").select("id").eq("name", reserva.className).single(),
+      supabase
+        .from("classes")
+        .select("id")
+        .eq("name", reserva.className)
+        .single(),
       reserva.subject
-        ? supabase.from("subjects").select("id").eq("name", reserva.subject).single()
+        ? supabase
+            .from("subjects")
+            .select("id")
+            .eq("name", reserva.subject)
+            .single()
         : Promise.resolve({ data: null, error: null }),
-      supabase.from("resources").select("id, name").in("name", reserva.resources),
+      supabase
+        .from("resources")
+        .select("id, name")
+        .in("name", reserva.resources),
     ]);
 
     const professorId = exigirProfessor(professores, reserva.professor);
-    const createdBy = perfilPorProfessor.get(reserva.professor);
+    const createdBy = perfilPorEmail.get(reserva.registradaPor);
 
-    if (!createdBy) throw new Error(`Sem conta para ${reserva.professor}`);
+    if (!createdBy) throw new Error(`Sem conta para ${reserva.registradaPor}`);
 
     const { error } = await supabase.rpc("create_booking", {
       p_room_id: sala.data!.id,
@@ -249,8 +331,11 @@ async function criarReservas(
 
 await removerContasAntigas();
 const professores = await mapearProfessores();
-const perfilPorProfessor = await criarContas(professores);
-await criarReservas(professores, perfilPorProfessor);
-await apontarProfessorDeDemonstracao();
+const perfilPorEmail = await criarContas(professores);
+await criarReservas(professores, perfilPorEmail);
+await marcarMaster(perfilPorEmail);
+await apontarProfessoresDeDemonstracao();
 
-console.log("\nPronto. Entre com qualquer e-mail acima e a senha de SEED_USER_PASSWORD.");
+console.log(
+  "\nPronto. Entre com qualquer e-mail acima e a senha de SEED_USER_PASSWORD."
+);

@@ -1,6 +1,7 @@
 import { ShieldCheck } from "lucide-react";
 
 import { Logo } from "@/components/logo";
+import { VoltarAoLogin } from "./voltar-ao-login";
 import { SegundoFator } from "./segundo-fator";
 
 export const metadata = { title: "Verificação em duas etapas | CheckRoom" };
@@ -24,6 +25,8 @@ export default function VerificacaoPage() {
         <div className="bg-card rounded-lg border p-6">
           <SegundoFator cadastrando={false} />
         </div>
+
+        <VoltarAoLogin />
       </div>
     </main>
   );

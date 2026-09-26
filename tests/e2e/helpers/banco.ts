@@ -56,7 +56,12 @@ export async function listarReservas(): Promise<LinhaReserva[]> {
 
 export async function listarEspacos() {
   const { corpo } = await pedir("rooms?select=id,name,building,capacity");
-  return corpo as { id: string; name: string; building: string; capacity: number }[];
+  return corpo as {
+    id: string;
+    name: string;
+    building: string;
+    capacity: number;
+  }[];
 }
 
 export async function listarProfessores() {
@@ -79,7 +84,9 @@ async function algumPerfil(): Promise<string> {
   const { corpo } = await pedir("profiles?select=id&limit=1");
 
   if (corpo.length === 0) {
-    throw new Error('Nenhum perfil no banco. Rode "npm run seed:usuarios" antes.');
+    throw new Error(
+      'Nenhum perfil no banco. Rode "npm run seed:usuarios" antes.'
+    );
   }
 
   perfilDeTeste = corpo[0].id as string;

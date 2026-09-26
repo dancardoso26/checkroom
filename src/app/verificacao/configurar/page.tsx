@@ -1,4 +1,5 @@
 import { Logo } from "@/components/logo";
+import { VoltarAoLogin } from "../voltar-ao-login";
 import { SegundoFator } from "../segundo-fator";
 
 export const metadata = { title: "Configurar verificação | CheckRoom" };
@@ -18,6 +19,8 @@ export default function ConfigurarVerificacaoPage() {
         <div className="bg-card rounded-lg border p-6">
           <SegundoFator cadastrando />
         </div>
+
+        <VoltarAoLogin />
       </div>
     </main>
   );

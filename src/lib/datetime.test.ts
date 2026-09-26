@@ -4,6 +4,7 @@ import {
   formatDate,
   formatFullDate,
   formatPeriod,
+  formatDateTime,
   formatShortDateTime,
   formatTime,
   formatTimeRange,
@@ -33,6 +34,7 @@ describe("formatação", () => {
 
   it("combina data curta e hora", () => {
     expect(formatShortDateTime(SEGUNDA_19H)).toBe("14/09, 19:00");
+    expect(formatDateTime(SEGUNDA_19H)).toBe("14/09/2026, 19:00");
   });
 
   it("descreve um período completo", () => {

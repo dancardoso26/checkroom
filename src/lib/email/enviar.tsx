@@ -2,10 +2,12 @@ import "server-only";
 
 import { Resend } from "resend";
 
+import { podeReceber } from "./destinatario";
+import { lerRemetente } from "./remetente";
 import { EmailDeReserva, type DadosDaReserva } from "./template";
 
-const chave = process.env.RESEND_API_KEY;
-const remetente = process.env.RESEND_FROM ?? "CheckRoom <onboarding@resend.dev>";
+const chave = process.env.RESEND_API_KEY?.trim();
+const remetente = lerRemetente(process.env.RESEND_FROM);
 
 // Sem chave configurada o sistema segue funcionando e apenas não avisa: e-mail
 // é consequência da reserva, não condição para ela.
@@ -18,6 +20,11 @@ export async function avisarSobreReserva(
 ): Promise<void> {
   if (!resend) {
     console.warn("RESEND_API_KEY não definida: notificação não enviada.");
+    return;
+  }
+
+  if (!podeReceber(destinatario)) {
+    console.info(`Notificação não enviada: ${destinatario} é endereço fictício.`);
     return;
   }
 

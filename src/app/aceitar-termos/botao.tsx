@@ -4,7 +4,6 @@ import {
   startTransition,
   useActionState,
   useEffect,
-  useRef,
   useState,
 } from "react";
 
@@ -16,7 +15,6 @@ import { Label } from "@/components/ui/label";
 const ESTADO_INICIAL: AceiteState = { status: "idle" };
 
 export function BotaoDeAceite() {
-  const formulario = useRef<HTMLFormElement>(null);
   const [marcado, setMarcado] = useState(false);
   const [state, formAction, enviando] = useActionState(
     aceitarTermos,
@@ -37,7 +35,7 @@ export function BotaoDeAceite() {
   }
 
   return (
-    <form ref={formulario} onSubmit={enviar} className="space-y-4">
+    <form onSubmit={enviar} className="space-y-4">
       <div className="flex items-start gap-2.5">
         <Checkbox
           id="aceite"
@@ -59,10 +57,9 @@ export function BotaoDeAceite() {
       )}
 
       <Button
-        type="button"
+        type="submit"
         className="w-full"
         disabled={!marcado || enviando}
-        onClick={() => formulario.current?.requestSubmit()}
       >
         {enviando ? "Registrando..." : "Continuar"}
       </Button>

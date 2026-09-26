@@ -250,6 +250,7 @@ export type Database = {
         Row: {
           anonymized_at: string | null
           created_at: string
+          user_master: boolean
           full_name: string
           id: string
           professor_id: string | null
@@ -260,6 +261,7 @@ export type Database = {
         Insert: {
           anonymized_at?: string | null
           created_at?: string
+          user_master?: boolean
           full_name: string
           id: string
           professor_id?: string | null
@@ -270,6 +272,7 @@ export type Database = {
         Update: {
           anonymized_at?: string | null
           created_at?: string
+          user_master?: boolean
           full_name?: string
           id?: string
           professor_id?: string | null
@@ -446,6 +449,14 @@ export type Database = {
     }
     Functions: {
       anonimizar_conta: { Args: never; Returns: undefined }
+      remover_usuario: { Args: { p_alvo: string }; Returns: undefined }
+      alterar_papel: {
+        Args: {
+          p_alvo: string
+          p_papel: Database["public"]["Enums"]["user_role"]
+        }
+        Returns: undefined
+      }
       cancel_booking: {
         Args: { p_booking_id: string; p_reason?: string }
         Returns: string
