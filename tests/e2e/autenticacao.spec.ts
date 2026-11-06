@@ -118,7 +118,7 @@ test("o login entra no log de auditoria", async ({ page }) => {
 
   const primeiraLinha = page.locator("tbody tr").first();
 
-  await expect(primeiraLinha).toContainText("Rafael Teixeira");
+  await expect(primeiraLinha).toContainText("Administrador");
   await expect(primeiraLinha).toContainText(ADMIN);
   await expect(primeiraLinha).toContainText("Entrou no sistema");
 });
@@ -126,7 +126,7 @@ test("o login entra no log de auditoria", async ({ page }) => {
 test("sair encerra a sessão", async ({ page }) => {
   await entrarComo(page, ADMIN);
 
-  await page.getByRole("button", { name: /Rafael Teixeira/ }).click();
+  await page.getByRole("button", { name: /Conta de Administrador/ }).click();
   await page.getByRole("menuitem", { name: "Sair" }).click();
 
   await expect(page).toHaveURL(/\/login/);

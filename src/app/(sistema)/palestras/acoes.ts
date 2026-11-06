@@ -105,7 +105,18 @@ export async function cadastrarPalestra(
   });
   if (!semErros(erros)) return falha(null, erros);
 
-  const resultado = await cadastrarNoBanco(dados);
+  const professorEscolhido = entrada.palestranteProfessorId
+    ? await findProfessorContact(entrada.palestranteProfessorId)
+    : null;
+  const professor =
+    professorEscolhido && mesmoNome(professorEscolhido.name, dados.palestrante)
+      ? professorEscolhido
+      : null;
+
+  const resultado = await cadastrarNoBanco(
+    dados,
+    professor ? entrada.palestranteProfessorId : null,
+  );
 
   if (!resultado.ok) {
     switch (resultado.falha) {
@@ -147,14 +158,7 @@ export async function cadastrarPalestra(
 
     await avisarSobreNovaPalestra(await emailsDosAlunos(dados.cursoIds), aviso);
 
-    if (entrada.palestranteProfessorId) {
-      const professor = await findProfessorContact(
-        entrada.palestranteProfessorId,
-      );
-      if (professor && mesmoNome(professor.name, dados.palestrante)) {
-        await avisarPalestrante(professor.email, aviso);
-      }
-    }
+    if (professor) await avisarPalestrante(professor.email, aviso);
   }
 
   revalidatePath("/palestras");

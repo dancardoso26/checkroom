@@ -188,13 +188,14 @@ async function carregarPeriodo(
 
   const comPalestras =
     incluiAgendadas(filtros) &&
-    filtros.professores.length === 0 &&
     filtros.turmas.length === 0 &&
     (filtros.tipos.length === 0 || filtros.tipos.includes("lecture"));
 
   const [reservas, palestras] = await Promise.all([
     listBookingsInRange({ inicio, fim, filtros, escopo }),
-    comPalestras ? palestrasNaAgenda(inicio, fim, escopo) : Promise.resolve([]),
+    comPalestras
+      ? palestrasNaAgenda(inicio, fim, escopo, filtros.professores)
+      : Promise.resolve([]),
   ]);
 
   const palestrasDosEspacos = palestras.filter(
@@ -221,9 +222,7 @@ async function carregarProximos(
       filtros: { ...FILTROS_PADRAO, professores },
       escopo,
     }),
-    professores.length === 0
-      ? palestrasNaAgenda(agora, fim, escopo)
-      : Promise.resolve([]),
+    palestrasNaAgenda(agora, fim, escopo, professores),
   ]);
 
   return [...reservas, ...palestras]
