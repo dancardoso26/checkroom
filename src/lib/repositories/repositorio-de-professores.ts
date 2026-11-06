@@ -1,5 +1,5 @@
 import "server-only";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, supabaseAdmin } from "@/lib/supabase/server";
 
 export const PROFESSOR_REMOVIDO = "Professor removido";
 
@@ -16,9 +16,7 @@ export type ContatoDoProfessor = {
 export async function findProfessorContact(
   id: string
 ): Promise<ContatoDoProfessor | null> {
-  const supabase = await createSupabaseServerClient();
-
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("professors")
     .select("name, email")
     .eq("id", id)
