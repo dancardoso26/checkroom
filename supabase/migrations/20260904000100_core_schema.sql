@@ -1,5 +1,3 @@
--- Os cursos existem como tabela própria, e não como texto em classes, para que
--- corrigir uma grafia não exija varrer a base.
 create table public.courses (
   id uuid primary key default gen_random_uuid(),
   name text not null,
@@ -19,14 +17,11 @@ create table public.professors (
 create unique index professors_email_lower_idx
   on public.professors (lower(email));
 
--- student_count fica na turma, e não na reserva, porque é atributo dela: se tem
--- 40 alunos, tem 40 em qualquer reserva. É o valor comparado com a capacidade.
 create table public.classes (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   course_id uuid not null references public.courses (id) on delete restrict,
 
-  -- O check impede que um zero acidental faça a turma caber em qualquer espaço.
   student_count integer not null check (student_count > 0),
   created_at timestamptz not null default now(),
 
@@ -49,7 +44,6 @@ create table public.rooms (
   room_type public.room_type not null,
   created_at timestamptz not null default now(),
 
-  -- "101" existe no bloco A e no bloco B, e são espaços diferentes.
   constraint rooms_name_unique unique (building, name)
 );
 
@@ -68,8 +62,6 @@ create table public.room_resources (
   primary key (room_id, resource_id)
 );
 
--- A chave primária já atende "recursos deste espaço". Este índice atende a
--- pergunta inversa, "espaços com este recurso".
 create index room_resources_resource_id_idx
   on public.room_resources (resource_id);
 

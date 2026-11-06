@@ -1,6 +1,5 @@
 import { expect, type Page } from "@playwright/test";
 
-/** O dia de um instante no horário de Brasília, no formato da URL da agenda. */
 export function diaLocal(instante: string | Date): string {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Sao_Paulo",
@@ -10,8 +9,6 @@ export function diaLocal(instante: string | Date): string {
   }).format(new Date(instante));
 }
 
-// O calendário mostra só o período navegado, então os testes abrem direto na
-// semana da reserva em vez de contar com a semana atual.
 export function semanaDoDia(
   instante: string | Date,
   canceladas = false
@@ -26,17 +23,20 @@ export function semanaDoDia(
   return `/reservas?${params.toString()}`;
 }
 
-/** O bloco da reserva na grade, achado pela finalidade. */
 export function blocoDaReserva(page: Page, finalidade: string) {
   return page.locator("[data-reserva]").filter({ hasText: finalidade });
 }
 
-/** Abre o detalhe da reserva e devolve o diálogo, com as ações dela. */
 export async function abrirDetalhe(page: Page, finalidade: string) {
-  await blocoDaReserva(page, finalidade).click();
-
   const detalhe = page.getByRole("dialog", { name: finalidade });
-  await expect(detalhe).toBeVisible();
+
+  await expect(async () => {
+    if (!(await detalhe.isVisible())) {
+      await blocoDaReserva(page, finalidade).click({ timeout: 2_000 });
+    }
+    await expect(detalhe).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 15_000 });
+
   return detalhe;
 }
 
@@ -54,7 +54,7 @@ export async function abrirPainel(
 }
 
 export type TipoDeAtividade =
-  "Aula" | "Palestra" | "Prova" | "Defesa" | "Evento";
+  "Aula" | "Palestra" | "Prova" | "Evento";
 
 export async function preencherAtividade(
   page: Page,
@@ -62,7 +62,6 @@ export async function preencherAtividade(
     finalidade: string;
     professor: string;
     turma: string;
-    /** Aula é o padrão do formulário; os demais tipos dispensam disciplina. */
     tipo?: TipoDeAtividade;
     disciplina?: string;
   }
@@ -93,13 +92,11 @@ export function botaoConfirmar(page: Page) {
   return page.getByRole("button", { name: "Reservar", exact: true });
 }
 
-/** Passa da etapa de detalhes para a de espaços, que exige a agenda livre. */
 export async function irParaEspacos(page: Page) {
   await expect(botaoVerEspacos(page)).toBeEnabled({ timeout: 20_000 });
   await botaoVerEspacos(page).click();
 }
 
-/** Marca itens na lista suspensa de necessidades. */
 export async function marcarItens(page: Page, itens: string[]) {
   await page.click("#resourcesField");
   for (const item of itens) {
@@ -108,7 +105,6 @@ export async function marcarItens(page: Page, itens: string[]) {
   await page.keyboard.press("Escape");
 }
 
-/** Os cartões de espaço que podem ser escolhidos. */
 export function espacosDisponiveis(page: Page) {
   return page.locator('[role="radio"][aria-disabled="false"]');
 }

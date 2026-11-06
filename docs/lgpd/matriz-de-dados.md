@@ -11,7 +11,7 @@ de Privacidade publicada em `/privacidade`.
 | Senha | Autenticar o acesso | Execução de contrato (art. 7º, V) | Ninguém: armazenada como resumo criptográfico | Supabase | Enquanto a conta existir | Exclusão |
 | Segundo fator | Confirmar identidade a cada acesso | Legítimo interesse em segurança (art. 7º, IX) | Ninguém: o segredo não é exibido após o cadastro | Supabase | Enquanto a conta existir | Exclusão |
 | Papel no sistema | Decidir o que cada pessoa pode fazer | Execução de contrato (art. 7º, V) | Titular e administração | Supabase | Enquanto durar o vínculo | Mantido, desvinculado |
-| Vínculo docente | Validar se a reserva corresponde a atividade que a pessoa leciona | Execução de contrato (art. 7º, V) | Todos os autenticados | Supabase | Período letivo | Mantido |
+| Vínculo de professor | Validar se a reserva corresponde a atividade que a pessoa leciona | Execução de contrato (art. 7º, V) | Todos os autenticados | Supabase | Período letivo | Mantido |
 | Reservas | Gerir ocupação dos espaços e evitar conflitos | Execução de contrato (art. 7º, V) | Todos os autenticados leem; alteram apenas responsável, autor e administração | Supabase, Resend | Indefinida, como registro institucional | Mantidas |
 | Registros de auditoria | Rastrear alterações e acessos | Legítimo interesse em rastreabilidade (art. 7º, IX) | Apenas administração | Supabase | Indefinida | Mantidos, autor anonimizado |
 | Cookies de sessão | Manter a pessoa autenticada entre requisições | Execução de contrato (art. 7º, V) | O próprio navegador | Nenhum | Duração da sessão | Expiram |
@@ -63,7 +63,7 @@ livremente.
 foi auditado. Manter a trilha é o que sustenta a afirmação de rastreabilidade.
 
 Nos dois casos o que desaparece é a ligação com a pessoa: o nome no perfil é
-substituído por "Usuário removido" e o vínculo entre conta e docente é
+substituído por "Usuário removido" e o vínculo entre conta e professor é
 desfeito. A chave estrangeira `bookings.created_by` usa `on delete restrict`
 justamente para que o banco recuse apagar um perfil que responde por reservas,
 obrigando o caminho da anonimização.

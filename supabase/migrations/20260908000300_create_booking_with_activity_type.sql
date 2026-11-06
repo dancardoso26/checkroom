@@ -1,6 +1,3 @@
--- Acrescenta o tipo de atividade a create_booking. Mesma estrutura das versões
--- anteriores; os drops removem as assinaturas antigas para não criar sobrecarga.
-
 drop function if exists public.create_booking(
   uuid, uuid, uuid, text, timestamptz, timestamptz, uuid[]
 );

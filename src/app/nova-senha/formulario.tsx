@@ -1,27 +1,37 @@
 "use client";
 
 import Link from "next/link";
-import { startTransition, useActionState } from "react";
-import { CheckCircle2 } from "lucide-react";
+import { startTransition, useActionState, useState } from "react";
+import { Check, CheckCircle2, Circle, X } from "lucide-react";
 
 import {
   definirNovaSenha,
   type NovaSenhaState,
 } from "../recuperar-senha/acoes";
+import {
+  TAMANHO_MAXIMO_DA_SENHA,
+  avaliarSenha,
+} from "@/domain/auth/senha";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { CampoDeSenha } from "@/components/campo-de-senha";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 const ESTADO_INICIAL: NovaSenhaState = { status: "idle" };
 
-// Serve a dois caminhos: recuperar a senha e criar a primeira, pelo convite.
-// Muda só o texto; o que acontece no servidor é o mesmo.
 export function FormularioDeNovaSenha({ convite }: { convite: boolean }) {
   const [state, formAction, salvando] = useActionState(
     definirNovaSenha,
     ESTADO_INICIAL
   );
+  const [senha, setSenha] = useState("");
+  const [confirmacao, setConfirmacao] = useState("");
+
+  const regras = avaliarSenha(senha);
+  const senhaValida = regras.every((regra) => regra.cumprida);
+  const confirmacaoPreenchida = confirmacao.length > 0;
+  const senhasIguais = confirmacaoPreenchida && senha === confirmacao;
 
   function enviar(evento: React.FormEvent<HTMLFormElement>) {
     evento.preventDefault();
@@ -69,14 +79,44 @@ export function FormularioDeNovaSenha({ convite }: { convite: boolean }) {
                 <CampoDeSenha
                   id="senha"
                   name="senha"
-
+                  value={senha}
+                  onChange={(evento) => setSenha(evento.target.value)}
                   autoComplete="new-password"
-                  minLength={8}
+                  maxLength={TAMANHO_MAXIMO_DA_SENHA}
+                  aria-describedby="regras-da-senha"
+                  aria-invalid={senha.length > 0 && !senhaValida}
                   required
                 />
-                <p className="text-muted-foreground text-xs">
-                  Ao menos oito caracteres.
-                </p>
+                <div id="regras-da-senha">
+                  <p className="text-muted-foreground text-xs">
+                    A senha precisa ter:
+                  </p>
+                  <ul className="mt-1.5 space-y-1" aria-live="polite">
+                    {regras.map((regra) => (
+                      <li
+                        key={regra.id}
+                        className={cn(
+                          "flex items-center gap-2 text-xs transition-colors",
+                          regra.cumprida
+                            ? "text-primary"
+                            : "text-muted-foreground"
+                        )}
+                      >
+                        {regra.cumprida ? (
+                          <Check aria-hidden className="size-3.5 shrink-0" />
+                        ) : (
+                          <Circle aria-hidden className="size-3.5 shrink-0" />
+                        )}
+                        <span>
+                          {regra.descricao}
+                          <span className="sr-only">
+                            {regra.cumprida ? ", cumprida" : ", pendente"}
+                          </span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -86,10 +126,35 @@ export function FormularioDeNovaSenha({ convite }: { convite: boolean }) {
                 <CampoDeSenha
                   id="confirmacao"
                   name="confirmacao"
-
+                  value={confirmacao}
+                  onChange={(evento) => setConfirmacao(evento.target.value)}
                   autoComplete="new-password"
+                  maxLength={TAMANHO_MAXIMO_DA_SENHA}
+                  aria-describedby="situacao-da-confirmacao"
+                  aria-invalid={confirmacaoPreenchida && !senhasIguais}
                   required
                 />
+                <p
+                  id="situacao-da-confirmacao"
+                  aria-live="polite"
+                  className={cn(
+                    "flex min-h-4 items-center gap-2 text-xs",
+                    senhasIguais ? "text-primary" : "text-destructive"
+                  )}
+                >
+                  {confirmacaoPreenchida &&
+                    (senhasIguais ? (
+                      <>
+                        <Check aria-hidden className="size-3.5 shrink-0" />
+                        As senhas coincidem
+                      </>
+                    ) : (
+                      <>
+                        <X aria-hidden className="size-3.5 shrink-0" />
+                        As senhas não coincidem
+                      </>
+                    ))}
+                </p>
               </div>
 
               {state.status === "error" && (
@@ -101,7 +166,7 @@ export function FormularioDeNovaSenha({ convite }: { convite: boolean }) {
               <Button
                 type="submit"
                 className="w-full"
-                disabled={salvando}
+                disabled={salvando || !senhaValida || !senhasIguais}
               >
                 {salvando
                   ? "Salvando..."

@@ -2,20 +2,22 @@
 
 Levantamento feito antes de escrever a Política de Privacidade e os Termos de
 Uso, conforme a Seção 1 das orientações da disciplina. Descreve o que o sistema
-faz hoje, na entrega de 28/09/2026, não o que pretende fazer.
+faz hoje, não o que pretende fazer.
 
-Versão 1.0.
+Versão 1.1, revista com a chegada dos alunos como titulares (palestras) e dos
+chamados de suporte.
 
 ## Dados tratados
 
 ### Nome e e-mail institucional
 
-- **De quem**: professores e pessoal da administração.
+- **De quem**: professores, pessoal da administração, equipe de TI e alunos.
 - **Onde é coletado**: não há coleta pelo titular. As contas são criadas pela
   instituição por meio de um script administrativo, a partir do cadastro
   funcional que ela já possui.
 - **Finalidade**: identificar quem usa o sistema, autenticar o acesso e enviar
-  o aviso de reserva registrada em nome do professor.
+  os avisos: reserva registrada em nome do professor, chamado resolvido ao
+  solicitante e palestra nova aos alunos dos cursos de destino.
 - **Obrigatório?** Sim. Sem identificação não há como decidir permissões nem
   atribuir a autoria de uma reserva.
 - **Onde fica**: `auth.users` e `professors`, no Supabase, região São Paulo.
@@ -45,7 +47,7 @@ Versão 1.0.
 - **Obrigatório?** Sim, para todos os papéis.
 - **Retenção**: enquanto a conta existir.
 
-### Papel e vínculo docente
+### Papel e vínculo de professor
 
 - **O que é**: o papel no sistema, e as disciplinas e turmas que o professor
   leciona em determinado período letivo.
@@ -56,6 +58,42 @@ Versão 1.0.
 - **Quem altera**: apenas a administração. Uma trigger no banco impede que o
   titular altere o próprio papel ou vínculo.
 - **Retenção**: enquanto durar o vínculo.
+
+### Curso do aluno
+
+- **O que é**: o curso ao qual a conta de aluno pertence.
+- **Onde é coletado**: definido pela administração no convite ou na edição do
+  usuário.
+- **Finalidade**: mostrar ao aluno as palestras do seu curso, liberar a
+  inscrição nelas e decidir quem recebe o aviso de palestra nova.
+- **Onde fica**: `profiles.course_id`.
+- **Quem altera**: apenas a administração; a mesma trigger que protege o papel
+  impede o aluno de trocar o próprio curso.
+- **Retenção**: enquanto a conta existir.
+
+### Inscrições em palestras
+
+- **O que é**: a palestra e o momento da inscrição.
+- **Onde é coletado**: botão de inscrição na tela de palestras.
+- **Finalidade**: controlar as vagas de cada palestra.
+- **Quem alcança**: o próprio aluno e a administração. Os demais veem apenas a
+  quantidade de inscritos, por uma função que não devolve quem são.
+- **Retenção**: preservadas como registro da palestra. Ao remover a conta, as
+  inscrições em palestras futuras são apagadas e liberam a vaga.
+
+### Chamados de suporte
+
+- **O que é**: espaço, descrição do problema, prioridade, quem abriu, quem
+  atendeu, datas de cada etapa e a nota de solução.
+- **Onde é coletado**: formulário de abertura (professor e administração) e
+  formulário de resolução (equipe de TI).
+- **Finalidade**: registrar e resolver problemas nos espaços.
+- **Quem alcança**: quem abriu vê os próprios; a equipe de TI e a
+  administração veem todos.
+- **Retenção**: preservados como histórico de manutenção. Ao remover a conta,
+  os chamados ainda abertos são cancelados e o nome some, como nas reservas.
+- **Observação**: a descrição é texto livre; os termos de uso orientam a não
+  incluir dados pessoais nela.
 
 ### Reservas
 
@@ -106,7 +144,8 @@ Supabase (PostgreSQL + Auth) ── São Paulo
    │  trigger grava a trilha de auditoria
    │
    └─► Resend ── São Paulo
-         nome e e-mail do destinatário, dados da reserva
+         nome e e-mail do destinatário, dados da reserva, do chamado
+         ou da palestra (uma mensagem por destinatário)
 ```
 
 A aplicação nunca entrega ao navegador a chave secreta do banco nem a chave da
@@ -116,10 +155,10 @@ API de e-mail: ambas existem apenas como variáveis de ambiente do servidor.
 
 Não há CPF, data de nascimento, endereço residencial, telefone, fotografia,
 documento digitalizado, dado de saúde, dado financeiro nem biometria. Não há
-dados de crianças e adolescentes, porque os titulares são professores e pessoal
-administrativo. Não há uso de inteligência artificial sobre dados pessoais.
+dados de crianças e adolescentes: os titulares são professores, pessoal
+administrativo e alunos de ensino superior. Não há uso de inteligência artificial sobre dados pessoais.
 
-Alunos ainda não são titulares neste sistema: `classes.student_count` guarda
-apenas a quantidade de alunos da turma, um número, sem nenhum dado individual.
-Quando o módulo de palestras exigir inscrição nominal, este inventário precisa
-ser revisto antes da implementação.
+Dos alunos, o sistema guarda apenas nome, e-mail institucional e curso, o
+mínimo para a inscrição em palestras e o aviso de palestra nova. O tamanho de
+cada turma continua sendo um número em `classes.student_count`, sem nenhum dado
+individual: turma e aluno com conta não são ligados.

@@ -70,12 +70,10 @@ export async function listarProfessores() {
 }
 
 export async function listarTurmas() {
-  const { corpo } = await pedir("classes?select=id,name,student_count");
-  return corpo as { id: string; name: string; student_count: number }[];
+  const { corpo } = await pedir("classes?select=id,name");
+  return corpo as { id: string; name: string }[];
 }
 
-// created_by é obrigatória desde a entrega de 28/09. Qualquer perfil serve
-// aqui: o que estes testes verificam é a constraint, não a autoria.
 let perfilDeTeste: string | null = null;
 
 async function algumPerfil(): Promise<string> {
@@ -118,7 +116,6 @@ export async function apagarReserva(id: string) {
   await pedir(`bookings?id=eq.${id}`, { method: "DELETE" });
 }
 
-/** A reserva existe no banco? Usado para provar que excluir apaga de verdade. */
 export async function buscarReserva(id: string): Promise<LinhaReserva | null> {
   const { corpo } = await pedir(
     `bookings?id=eq.${id}&select=id,room_id,professor_id,class_id,purpose,starts_at,ends_at,status,cancelled_at,cancellation_reason`
@@ -133,7 +130,6 @@ export async function contarRecursosDaReserva(id: string): Promise<number> {
   return corpo.length;
 }
 
-/** Vincula recursos a uma reserva, para o teste do cascade ter o que verificar. */
 export async function vincularRecursos(
   bookingId: string,
   resourceIds: string[]
@@ -152,9 +148,42 @@ export async function listarRecursos() {
 }
 
 export const PREFIXO_TESTE = "[e2e]";
+export const PREDIO_DE_TESTE = 99;
 
 export async function limparReservasDeTeste() {
   await pedir(`bookings?purpose=like.${encodeURIComponent(PREFIXO_TESTE)}*`, {
     method: "DELETE",
   });
+}
+
+const COMECA_COM_PREFIXO = `like.${encodeURIComponent(PREFIXO_TESTE)}*`;
+
+export async function limparCadastrosDeTeste() {
+  await pedir(`calendar_blocks?reason=${COMECA_COM_PREFIXO}`, { method: "DELETE" });
+  await pedir(`academic_terms?code=eq.2099.1`, { method: "DELETE" });
+  await pedir(`lectures?title=${COMECA_COM_PREFIXO}`, { method: "DELETE" });
+  await pedir(`tickets?description=${COMECA_COM_PREFIXO}`, { method: "DELETE" });
+  await pedir(`rooms?building_number=eq.${PREDIO_DE_TESTE}`, { method: "DELETE" });
+  await pedir(`resources?name=${COMECA_COM_PREFIXO}`, { method: "DELETE" });
+  await pedir(`teaching_assignments?term=eq.2099.1`, { method: "DELETE" });
+  await pedir(`classes?name=${COMECA_COM_PREFIXO}`, { method: "DELETE" });
+  await pedir(`subjects?name=${COMECA_COM_PREFIXO}`, { method: "DELETE" });
+  await pedir(`courses?name=${COMECA_COM_PREFIXO}`, { method: "DELETE" });
+}
+
+export async function contar(caminho: string): Promise<number> {
+  const resposta = await fetch(`${BASE}/${caminho}`, {
+    headers: { ...headers, Prefer: "count=exact" },
+    method: "HEAD",
+  });
+  return Number(resposta.headers.get("content-range")?.split("/")[1] ?? 0);
+}
+
+export function dataDaqui(dias: number): string {
+  const alvo = new Date();
+  alvo.setDate(alvo.getDate() + dias);
+
+  const mes = String(alvo.getMonth() + 1).padStart(2, "0");
+  const dia = String(alvo.getDate()).padStart(2, "0");
+  return `${alvo.getFullYear()}-${mes}-${dia}`;
 }

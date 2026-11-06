@@ -5,7 +5,11 @@ import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { registrarEventoDeAutenticacao } from "@/lib/auditoria";
 import { enderecoDoSite } from "@/lib/endereco-do-site";
-import { podeTrocarSenha } from "@/lib/troca-de-senha";
+import { podeTrocarSenha } from "@/domain/auth/troca-de-senha";
+import {
+  TAMANHO_MAXIMO_DA_SENHA,
+  regrasNaoCumpridas,
+} from "@/domain/auth/senha";
 
 const schema = z.object({ email: z.email("Informe um e-mail válido.") });
 
@@ -36,14 +40,26 @@ export async function pedirRecuperacao(
     email: parsed.data.email,
   });
 
-  // A resposta é a mesma para e-mail existente ou não: distinguir os dois
-  // diria a um estranho quais endereços têm conta no sistema.
   return { status: "enviado" };
 }
 
 const schemaDeSenha = z
   .object({
-    senha: z.string().min(8, "A senha precisa de ao menos oito caracteres."),
+    senha: z
+      .string()
+      .max(
+        TAMANHO_MAXIMO_DA_SENHA,
+        `A senha pode ter no máximo ${TAMANHO_MAXIMO_DA_SENHA} caracteres.`
+      )
+      .superRefine((senha, contexto) => {
+        const faltando = regrasNaoCumpridas(senha);
+        if (faltando.length > 0) {
+          contexto.addIssue({
+            code: "custom",
+            message: `A senha precisa ter ${faltando.join(", ")}.`,
+          });
+        }
+      }),
     confirmacao: z.string(),
   })
   .refine((dados) => dados.senha === dados.confirmacao, {
@@ -85,9 +101,6 @@ export async function definirNovaSenha(
     };
   }
 
-  // Só troca a senha quem chegou pelo link do e-mail, ou quem já passou pelo
-  // segundo fator. Sem isso, quem soubesse só a senha de alguém a trocaria e
-  // trancaria o dono do lado de fora, sem nunca ter o autenticador dele.
   const { data: token } = await supabase.auth.getClaims();
   if (!podeTrocarSenha(token?.claims)) {
     return {
@@ -109,10 +122,6 @@ export async function definirNovaSenha(
 
   await registrarEventoDeAutenticacao("password_changed", user.id);
 
-  // Encerra a sessão de recuperação: a nova senha deve ser usada para entrar,
-  // e o segundo fator volta a ser exigido.
-  // global encerra todas as sessões da conta, inclusive em outros aparelhos:
-  // quem trocou a senha por suspeita de invasão tira o invasor junto.
   await supabase.auth.signOut({ scope: "global" });
 
   return { status: "success" };

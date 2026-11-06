@@ -4,27 +4,45 @@ import {
   intervaloDoPeriodo,
   lerEscala,
   lerVisao,
+  somarDias,
   tituloDoPeriodo,
-} from "@/lib/calendario";
-import { localDayKey } from "@/lib/datetime";
+} from "@/domain/agenda/navegacao-da-agenda";
+import { combineDateTime, localDayKey } from "@/lib/datetime";
 import {
   listBookingsInRange,
   listBookingsPage,
-} from "@/lib/repositories/bookingRepository";
-import { listClasses } from "@/lib/repositories/classRepository";
-import { listProfessors } from "@/lib/repositories/professorRepository";
-import { listResources } from "@/lib/repositories/resourceRepository";
-import { listRooms } from "@/lib/repositories/roomRepository";
+  reservaCorrespondeABusca,
+  type EscopoDoAluno,
+} from "@/lib/repositories/repositorio-de-reservas";
+import { listProfessors } from "@/lib/repositories/repositorio-de-professores";
+import { listarParesDeDocencia } from "@/lib/repositories/repositorio-de-disciplinas";
+import { listClasses } from "@/lib/repositories/repositorio-de-turmas";
+import { listRooms } from "@/lib/repositories/repositorio-de-espacos";
+import { palestrasNaAgenda } from "@/lib/repositories/repositorio-de-palestras";
 import {
-  listSubjects,
-  listTeachingAssignments,
-} from "@/lib/repositories/subjectRepository";
-import { PERIODO_LETIVO_VIGENTE } from "@/domain/booking/businessHours";
+  podeCadastrarPalestra,
+  podeCriarReserva,
+  podeGerenciarReserva,
+  podeVerPalestras,
+} from "@/domain/auth/permissoes";
+import type { BookingListItem } from "@/lib/repositories/repositorio-de-reservas";
 import { exigirSessao } from "@/lib/sessao";
-import { lerFiltros, type Filtros } from "@/lib/filtros";
-import { lerTabela, paginar } from "@/lib/tabela";
+import {
+  aplicarMinhas,
+  FILTROS_PADRAO,
+  incluiAgendadas,
+  lerFiltros,
+  type Filtros,
+} from "@/domain/agenda/filtros-da-agenda";
+import { lerTabela, paginar } from "@/domain/tabela/tabela";
 
-import { Agenda, type Painel, type PaginaDaTabela } from "./agenda/agenda";
+import { carregarCatalogos } from "./catalogos";
+import {
+  Agenda,
+  type NovaReserva,
+  type Painel,
+  type PaginaDaTabela,
+} from "./agenda/agenda";
 import type { EstadoDaAgenda } from "./agenda/url";
 
 export const dynamic = "force-dynamic";
@@ -35,6 +53,8 @@ type Parametros = {
   data?: string;
   status?: string;
   professor?: string;
+  turma?: string;
+  espaco?: string;
   nova?: string;
   dia?: string;
   inicio?: string;
@@ -44,6 +64,9 @@ type Parametros = {
   ordenar?: string;
   sentido?: string;
   porPagina?: string;
+  q?: string;
+  tipo?: string;
+  atividade?: string;
 };
 
 export default async function ReservasPage({
@@ -54,31 +77,74 @@ export default async function ReservasPage({
   const sessao = await exigirSessao();
   const parametros = await searchParams;
 
+  const podeReservar = podeCriarReserva(sessao);
+  const comPermissao = (lista: BookingListItem[]) =>
+    lista.map((reserva) => ({
+      ...reserva,
+      gerenciavel: !reserva.ehPalestra && podeGerenciarReserva(sessao, reserva),
+    }));
+
   const agora = new Date();
   const hoje = localDayKey(agora);
+
+  const todasAsTurmas = await listClasses();
+
+  const escopo: EscopoDoAluno | null =
+    sessao.papel === "student"
+      ? {
+          cursoId: sessao.cursoId,
+          turmaIds: sessao.turmaId ? [sessao.turmaId] : [],
+        }
+      : null;
 
   const estado: EstadoDaAgenda = {
     visao: lerVisao(parametros.visao),
     escala: lerEscala(parametros.escala),
     data: ehChaveValida(parametros.data) ? parametros.data : hoje,
-    filtros: lerFiltros(parametros),
+    filtros: lerFiltros(parametros, sessao.papel === "professor"),
+    busca: (parametros.q ?? "").trim().slice(0, 100),
     tabela: lerTabela(parametros),
   };
 
-  // Cada visão consulta só o que mostra: o calendário, o período navegado; a
-  // tabela, uma página do histórico inteiro.
-  const [reservas, tabela, painel, professores] = await Promise.all([
+  const filtrosEfetivos = aplicarMinhas(estado.filtros, sessao.professorId);
+
+  const [
+    reservas,
+    tabela,
+    catalogos,
+    professores,
+    proximos,
+    espacos,
+    docencia,
+  ] = await Promise.all([
     estado.visao === "calendario"
-      ? carregarPeriodo(estado.escala, estado.data, estado.filtros)
+      ? carregarPeriodo(
+          estado.escala,
+          estado.data,
+          filtrosEfetivos,
+          estado.busca,
+          escopo,
+        )
       : Promise.resolve([]),
     estado.visao === "tabela"
-      ? carregarTabela(estado.tabela, estado.filtros)
+      ? carregarTabela(estado.tabela, filtrosEfetivos, estado.busca, escopo)
       : Promise.resolve(null),
-    parametros.nova === "1"
-      ? carregarPainel(parametros, sessao, hoje)
+    podeReservar
+      ? carregarCatalogos(hoje, { comCursos: podeCadastrarPalestra(sessao) })
       : Promise.resolve(null),
     listProfessors(),
+    estado.visao === "calendario"
+      ? carregarProximos(agora, hoje, filtrosEfetivos.professores, escopo)
+      : Promise.resolve([]),
+    listRooms(),
+    listarParesDeDocencia(),
   ]);
+
+  const painel: Painel | null = catalogos && {
+    catalogos: { ...catalogos, professors: professores },
+    professorFixo: sessao.papel === "admin" ? null : sessao.professorId,
+    permitePalestra: podeCadastrarPalestra(sessao),
+  };
 
   return (
     <Agenda
@@ -87,27 +153,89 @@ export default async function ReservasPage({
       dias={diasDoPeriodo(estado.escala, estado.data)}
       hoje={hoje}
       agora={agora}
-      reservas={reservas}
-      tabela={tabela}
+      reservas={comPermissao(reservas)}
+      proximos={comPermissao(proximos)}
+      tabela={tabela && { ...tabela, reservas: comPermissao(tabela.reservas) }}
       destaque={parametros.destaque}
       painel={painel}
+      novaInicial={
+        parametros.nova === "1" && podeReservar
+          ? lerNovaReserva(parametros, hoje)
+          : null
+      }
+      podeReservar={podeReservar}
+      vePalestras={podeVerPalestras(sessao)}
+      tituloDaPagina={sessao.papel === "student" ? "Minha agenda" : "Reservas"}
       professores={professores.map(({ id, name }) => ({ id, nome: name }))}
+      turmas={(escopo
+        ? todasAsTurmas.filter((turma) => escopo.turmaIds.includes(turma.id))
+        : todasAsTurmas
+      ).map(({ id, name }) => ({ id, nome: name }))}
+      espacos={espacos.map(({ id, name }) => ({ id, nome: name }))}
+      docencia={docencia}
     />
   );
 }
 
-function carregarPeriodo(
+async function carregarPeriodo(
   escala: EstadoDaAgenda["escala"],
   data: string,
-  filtros: Filtros
+  filtros: Filtros,
+  busca: string,
+  escopo: EscopoDoAluno | null,
 ) {
   const { inicio, fim } = intervaloDoPeriodo(escala, data);
-  return listBookingsInRange({ inicio, fim, filtros });
+
+  const comPalestras =
+    incluiAgendadas(filtros) &&
+    filtros.professores.length === 0 &&
+    filtros.turmas.length === 0 &&
+    (filtros.tipos.length === 0 || filtros.tipos.includes("lecture"));
+
+  const [reservas, palestras] = await Promise.all([
+    listBookingsInRange({ inicio, fim, filtros, escopo }),
+    comPalestras ? palestrasNaAgenda(inicio, fim, escopo) : Promise.resolve([]),
+  ]);
+
+  const palestrasDosEspacos = palestras.filter(
+    (p) => filtros.espacos.length === 0 || filtros.espacos.includes(p.roomId),
+  );
+
+  return [...reservas, ...palestrasDosEspacos]
+    .filter((reserva) => reservaCorrespondeABusca(reserva, busca))
+    .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
+}
+
+async function carregarProximos(
+  agora: Date,
+  hoje: string,
+  professores: string[],
+  escopo: EscopoDoAluno | null,
+) {
+  const fim = combineDateTime(somarDias(hoje, 31), "00:00");
+
+  const [reservas, palestras] = await Promise.all([
+    listBookingsInRange({
+      inicio: agora,
+      fim,
+      filtros: { ...FILTROS_PADRAO, professores },
+      escopo,
+    }),
+    professores.length === 0
+      ? palestrasNaAgenda(agora, fim, escopo)
+      : Promise.resolve([]),
+  ]);
+
+  return [...reservas, ...palestras]
+    .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
+    .slice(0, 40);
 }
 
 async function carregarTabela(
   { pagina, ordenar, sentido, porPagina }: EstadoDaAgenda["tabela"],
-  filtros: Filtros
+  filtros: Filtros,
+  busca: string,
+  escopo: EscopoDoAluno | null,
 ): Promise<PaginaDaTabela> {
   const pedida = paginar(Infinity, pagina, porPagina);
   const { reservas, total } = await listBookingsPage({
@@ -116,11 +244,12 @@ async function carregarTabela(
     ordenar,
     sentido,
     filtros,
+    busca,
+    escopo,
   });
 
   const paginacao = paginar(total, pagina, porPagina);
 
-  // Página além da última, por um link antigo: busca de novo a última que existe.
   if (paginacao.pagina !== pagina && total > 0) {
     const ultima = await listBookingsPage({
       de: paginacao.de,
@@ -128,6 +257,8 @@ async function carregarTabela(
       ordenar,
       sentido,
       filtros,
+      busca,
+      escopo,
     });
     return { reservas: ultima.reservas, total: ultima.total, paginacao };
   }
@@ -135,23 +266,7 @@ async function carregarTabela(
   return { reservas, total, paginacao };
 }
 
-// Os catálogos só são buscados com o painel aberto: navegar entre semanas não
-// precisa de salas, turmas e disciplinas, e seriam seis consultas a cada clique.
-async function carregarPainel(
-  parametros: Parametros,
-  sessao: Awaited<ReturnType<typeof exigirSessao>>,
-  hoje: string
-): Promise<Painel> {
-  const [rooms, professors, classes, resources, subjects, assignments] =
-    await Promise.all([
-      listRooms(),
-      listProfessors(),
-      listClasses(),
-      listResources(),
-      listSubjects(),
-      listTeachingAssignments(PERIODO_LETIVO_VIGENTE),
-    ]);
-
+function lerNovaReserva(parametros: Parametros, hoje: string): NovaReserva {
   const dia =
     ehChaveValida(parametros.dia) && parametros.dia >= hoje
       ? parametros.dia
@@ -159,7 +274,6 @@ async function carregarPainel(
   const inicio = /^\d{2}:\d{2}$/.test(parametros.inicio ?? "")
     ? parametros.inicio
     : undefined;
-  // O término só vale junto de um início anterior a ele, vindo do arraste.
   const fim =
     inicio &&
     /^\d{2}:\d{2}$/.test(parametros.fim ?? "") &&
@@ -167,11 +281,7 @@ async function carregarPainel(
       ? parametros.fim
       : undefined;
 
-  return {
-    catalogos: { rooms, professors, classes, resources, subjects, assignments },
-    professorFixo: sessao.papel === "admin" ? null : sessao.professorId,
-    dia,
-    inicio,
-    fim,
-  };
+  const tipo = parametros.tipo === "palestra" ? "lecture" : undefined;
+
+  return { dia, inicio, fim, tipo };
 }

@@ -8,7 +8,7 @@ prometido.
 |---|---|---|---|---|
 | Conta e perfil | Autenticação e identificação | Enquanto durar o vínculo com a instituição, ou até pedido do titular | Anonimização | O próprio titular, pela tela de conta |
 | Senha e segundo fator | Autenticação | Enquanto a conta estiver ativa | Exclusão ao encerrar a conta | Sistema |
-| Vínculo docente | Validar a reserva contra a disciplina e a turma | Período letivo vigente | Substituído a cada novo período | Administração |
+| Vínculo de professor | Validar a reserva contra a disciplina e a turma | Período letivo vigente | Substituído a cada novo período | Administração |
 | Reservas | Registro institucional de uso dos espaços | Indefinido | Mantidas, sem vínculo com a pessoa após a anonimização | Não se aplica |
 | Registros de auditoria | Rastreabilidade das operações | Indefinido | Mantidos, com autor anonimizado | Não se aplica |
 | Cookies de sessão | Manter a autenticação entre requisições | Duração da sessão | Expiram sozinhos | Navegador |
@@ -22,7 +22,7 @@ coisas numa transação:
 
 1. cancela as reservas futuras da pessoa, com o motivo registrado;
 2. substitui o nome no perfil por "Usuário removido" e desfaz o vínculo
-   docente, marcando a data da anonimização;
+   professor, marcando a data da anonimização;
 3. grava o próprio evento na trilha de auditoria.
 
 Em seguida, a aplicação troca o endereço de e-mail em `auth.users` por um valor

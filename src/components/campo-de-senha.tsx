@@ -5,8 +5,6 @@ import { Eye, EyeOff } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 
-// O tipo alterna entre password e text: o valor digitado continua no mesmo
-// input, então nada se perde ao mostrar ou esconder.
 export function CampoDeSenha(
   props: Omit<React.ComponentProps<typeof Input>, "type">
 ) {

@@ -13,7 +13,6 @@ import {
   toDateInputValue,
 } from "./datetime";
 
-/** 14/09/2026, uma segunda-feira, às 19h em Brasília. */
 const SEGUNDA_19H = new Date("2026-09-14T19:00:00-03:00");
 
 describe("formatação", () => {
@@ -27,8 +26,6 @@ describe("formatação", () => {
   });
 
   it("exibe a hora no fuso de Brasília, e não em UTC", () => {
-    // O mesmo instante é 22h em UTC. Se esta asserção quebrar, a formatação
-    // voltou a seguir o fuso do ambiente.
     expect(formatTime(SEGUNDA_19H)).toBe("19:00");
   });
 
@@ -48,13 +45,10 @@ describe("combineDateTime", () => {
   it("interpreta os campos do formulário no fuso de Brasília", () => {
     const instante = combineDateTime("2026-09-14", "19:00");
 
-    // 19h em Brasília são 22h em UTC. É esta conversão que impede a aula
-    // noturna de ser gravada três horas mais cedo.
     expect(instante.toISOString()).toBe("2026-09-14T22:00:00.000Z");
   });
 
   it("aceita a hora com e sem segundos", () => {
-    // Navegadores diferentes preenchem o campo de hora de formas diferentes.
     expect(combineDateTime("2026-09-14", "19:00").getTime()).toBe(
       combineDateTime("2026-09-14", "19:00:00").getTime()
     );
@@ -67,8 +61,6 @@ describe("localMinutesOfDay", () => {
   });
 
   it("não usa o fuso do ambiente", () => {
-    // 23h em UTC são 20h em Brasília. Se esta função lesse o relógio local da
-    // máquina, o resultado seria 1380 em um servidor UTC.
     const instante = new Date("2026-09-14T23:00:00Z");
     expect(localMinutesOfDay(instante)).toBe(20 * 60);
   });
@@ -85,8 +77,6 @@ describe("localDayKey", () => {
   });
 
   it("mantém o dia correto em horário noturno", () => {
-    // 21h de 14/09 em Brasília já são 00h de 15/09 em UTC. É exatamente o caso
-    // que fazia a verificação de expediente recusar uma reserva válida.
     const noite = new Date("2026-09-14T21:00:00-03:00");
 
     expect(noite.toISOString()).toContain("2026-09-15");
@@ -105,8 +95,6 @@ describe("toDateInputValue", () => {
   });
 
   it("não adianta o dia em horário noturno", () => {
-    // toISOString devolveria 15/09 para este instante. O campo de data marcaria
-    // o dia seguinte, e o professor reservaria para a data errada.
     const noite = new Date("2026-09-14T21:30:00-03:00");
     expect(toDateInputValue(noite)).toBe("2026-09-14");
   });

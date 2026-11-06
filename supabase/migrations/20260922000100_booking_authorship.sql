@@ -1,10 +1,5 @@
--- As reservas anteriores à autenticação têm created_by nulo, porque não havia
--- usuário para registrar. São dados de demonstração e o seed as recria.
 delete from public.bookings where created_by is null;
 
--- on delete restrict, e não cascade: o banco passa a recusar a remoção de um
--- profile que registrou reserva, que é o que obriga a exclusão de conta a
--- anonimizar em vez de apagar.
 alter table public.bookings
   add constraint bookings_created_by_fkey
   foreign key (created_by) references public.profiles (id) on delete restrict;
@@ -15,8 +10,6 @@ alter table public.bookings
 comment on column public.bookings.created_by is
   'Quem registrou a reserva, que nem sempre é o professor da aula.';
 
--- Acrescenta o autor a create_booking. O drop remove a assinatura anterior para
--- não deixar duas versões sobrecarregadas.
 drop function if exists public.create_booking(
   uuid, uuid, uuid, text, timestamptz, timestamptz, uuid[], public.activity_type, uuid
 );

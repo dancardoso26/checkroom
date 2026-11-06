@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { cn } from "cn";
+import { cn } from "@/lib/utils";
 import { Popover as PopoverPrimitive } from "radix-ui";
 
 function Popover({
@@ -28,9 +28,6 @@ function PopoverContent({
         data-slot="popover-content"
         align={align}
         sideOffset={sideOffset}
-        // O popover vai para o body, fora de um Dialog ou Sheet aberto, e o
-        // bloqueio de rolagem do modal engole a roda do mouse e o toque.
-        // Interromper a propagação devolve a rolagem às listas dentro dele.
         onWheel={(evento) => evento.stopPropagation()}
         onTouchMove={(evento) => evento.stopPropagation()}
         className={cn(

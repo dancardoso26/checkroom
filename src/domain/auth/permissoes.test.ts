@@ -1,8 +1,18 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  podeAbrirChamado,
   podeAlterarUsuario,
+  podeAtenderChamado,
+  podeCadastrarPalestra,
+  podeCancelarChamado,
+  podeExcluirChamado,
   podeCriarReserva,
+  podeGerenciarCadastros,
+  podeInscreverEmPalestra,
+  podeVerPainel,
+  podeVerPalestras,
+  podeVerTodosOsChamados,
   podeGerenciarUsuarios,
   podeGerenciarReserva,
   podeReservarPara,
@@ -55,7 +65,6 @@ describe("podeGerenciarReserva", () => {
     expect(podeGerenciarReserva(admin, aulaDaAna)).toBe(true);
   });
 
-  // A secretaria registra pelo docente, e a aula continua sendo dele.
   it("permite ao professor gerenciar a reserva que a administração registrou para ele", () => {
     const registradaPelaSecretaria = {
       createdBy: PERFIL_ADMIN,
@@ -74,8 +83,6 @@ describe("podeGerenciarReserva", () => {
     expect(podeGerenciarReserva(ana, registradaPelaAna)).toBe(true);
   });
 
-  // Sem esta verificação, dois perfis sem vínculo docente se enxergariam como
-  // donos das reservas um do outro, porque null seria igual a null.
   it("não trata ausência de vínculo como vínculo em comum", () => {
     const semDono = { createdBy: "outro-perfil", professorId: PROFESSOR_ANA };
 
@@ -92,12 +99,12 @@ describe("podeReservarPara", () => {
     expect(podeReservarPara(ana, PROFESSOR_CARLOS)).toBe(false);
   });
 
-  it("permite à administração reservar em nome de qualquer docente", () => {
+  it("permite à administração reservar em nome de qualquer professor", () => {
     expect(podeReservarPara(admin, PROFESSOR_ANA)).toBe(true);
     expect(podeReservarPara(admin, PROFESSOR_CARLOS)).toBe(true);
   });
 
-  it("recusa a quem não tem vínculo docente nem é administração", () => {
+  it("recusa a quem não tem vínculo de professor nem é administração", () => {
     expect(podeReservarPara(aluno, PROFESSOR_ANA)).toBe(false);
   });
 });
@@ -116,13 +123,11 @@ describe("podeCriarReserva", () => {
     expect(podeCriarReserva(admin)).toBe(true);
   });
 
-  it("recusa a quem não tem vínculo docente", () => {
+  it("recusa a quem não tem vínculo de professor", () => {
     expect(podeCriarReserva(aluno)).toBe(false);
   });
 
-  // Um professor sem vínculo cadastrado não consegue reservar, e é o mesmo
-  // caminho que já impede reservar disciplina que não leciona.
-  it("recusa ao professor sem vínculo docente registrado", () => {
+  it("recusa ao professor sem vínculo de professor registrado", () => {
     const semVinculo: Ator = { ...ana, professorId: null };
 
     expect(podeCriarReserva(semVinculo)).toBe(false);
@@ -161,5 +166,83 @@ describe("gestão de usuários", () => {
 
   it("recusa a quem não administra", () => {
     expect(podeAlterarUsuario(ana, alvo(carlos))).toBe(false);
+  });
+});
+
+const ti: Ator = {
+  profileId: "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
+  papel: "it_support",
+  professorId: null,
+};
+
+describe("cadastros e painel", () => {
+  it("só a administração mantém os cadastros e vê o painel", () => {
+    expect(podeGerenciarCadastros(admin)).toBe(true);
+    expect(podeVerPainel(admin)).toBe(true);
+
+    for (const ator of [ana, aluno, ti]) {
+      expect(podeGerenciarCadastros(ator)).toBe(false);
+      expect(podeVerPainel(ator)).toBe(false);
+    }
+  });
+});
+
+describe("palestras", () => {
+  it("a equipe de TI não vê as palestras; os demais papéis veem", () => {
+    for (const ator of [ana, aluno, admin]) {
+      expect(podeVerPalestras(ator)).toBe(true);
+    }
+    expect(podeVerPalestras(ti)).toBe(false);
+  });
+});
+
+describe("chamados", () => {
+  it("professor e administração abrem; aluno e TI não", () => {
+    expect(podeAbrirChamado(ana)).toBe(true);
+    expect(podeAbrirChamado(admin)).toBe(true);
+    expect(podeAbrirChamado(aluno)).toBe(false);
+    expect(podeAbrirChamado(ti)).toBe(false);
+  });
+
+  it("a equipe de TI e o administrador master atendem", () => {
+    expect(podeAtenderChamado(ti)).toBe(true);
+    expect(podeAtenderChamado({ ...admin, ehMaster: true })).toBe(true);
+    expect(podeAtenderChamado(admin)).toBe(false);
+    expect(podeAtenderChamado(ana)).toBe(false);
+  });
+
+  it("TI e administração veem a fila inteira", () => {
+    expect(podeVerTodosOsChamados(ti)).toBe(true);
+    expect(podeVerTodosOsChamados(admin)).toBe(true);
+    expect(podeVerTodosOsChamados(ana)).toBe(false);
+  });
+
+  it("só o administrador master exclui", () => {
+    expect(podeExcluirChamado({ ...admin, ehMaster: true })).toBe(true);
+    expect(podeExcluirChamado(admin)).toBe(false);
+    expect(podeExcluirChamado(ti)).toBe(false);
+  });
+
+  it("o solicitante e o administrador master cancelam", () => {
+    expect(podeCancelarChamado(ana, { solicitanteId: PERFIL_ANA })).toBe(true);
+    expect(
+      podeCancelarChamado(
+        { ...admin, ehMaster: true },
+        { solicitanteId: PERFIL_ANA },
+      ),
+    ).toBe(true);
+    expect(podeCancelarChamado(admin, { solicitanteId: PERFIL_ANA })).toBe(
+      false,
+    );
+  });
+});
+
+describe("palestras", () => {
+  it("a administração cadastra e o aluno se inscreve", () => {
+    expect(podeCadastrarPalestra(admin)).toBe(true);
+    expect(podeCadastrarPalestra(ana)).toBe(false);
+    expect(podeInscreverEmPalestra(aluno)).toBe(true);
+    expect(podeInscreverEmPalestra(ana)).toBe(false);
+    expect(podeInscreverEmPalestra(admin)).toBe(false);
   });
 });

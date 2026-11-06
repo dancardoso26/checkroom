@@ -3,7 +3,7 @@ import { ExternalLink } from "lucide-react";
 import { redirect } from "next/navigation";
 
 import { Logo } from "@/components/logo";
-import { aceiteEmDia } from "@/lib/documentos";
+import { aceiteEmDia } from "@/domain/documentos/documentos";
 import { sessaoAtual } from "@/lib/sessao";
 import { BotaoDeAceite } from "./botao";
 
@@ -16,8 +16,6 @@ export const metadata = { title: "Termos de uso | CheckRoom" };
 export const dynamic = "force-dynamic";
 
 export default async function AceitarTermosPage() {
-  // sessaoAtual, e não exigirSessao: esta é a tela para onde exigirSessao
-  // manda quem ainda não aceitou, e chamá-la aqui seria um laço.
   const sessao = await sessaoAtual();
 
   if (!sessao) redirect("/login");
@@ -37,8 +35,6 @@ export default async function AceitarTermosPage() {
         </div>
 
         <div className="bg-card space-y-5 rounded-lg border p-6">
-          {/* Abrem em outra aba: quem lê não perde esta tela nem precisa
-              voltar pelo navegador. */}
           <ul className="space-y-2">
             {DOCUMENTOS.map(({ href, rotulo }) => (
               <li key={href}>

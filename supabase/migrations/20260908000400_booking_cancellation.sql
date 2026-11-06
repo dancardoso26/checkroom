@@ -3,8 +3,6 @@ create type public.booking_status as enum ('active', 'cancelled');
 alter table public.bookings
   add column status public.booking_status not null default 'active';
 
--- Quem cancelou e por quê. Nulos enquanto a reserva está ativa, e é o check
--- abaixo que impede uma reserva cancelada sem data de cancelamento.
 alter table public.bookings
   add column cancelled_at timestamptz,
   add column cancellation_reason text;
@@ -20,8 +18,6 @@ create index bookings_status_idx on public.bookings (status);
 
 set search_path = public, extensions;
 
--- As três constraints são recriadas com "where (status = 'active')". Sem isso a
--- linha cancelada continuaria bloqueando o horário que o cancelamento liberou.
 alter table public.bookings drop constraint bookings_no_room_overlap;
 alter table public.bookings drop constraint bookings_no_professor_overlap;
 alter table public.bookings drop constraint bookings_no_class_overlap;

@@ -1,0 +1,27 @@
+import "server-only";
+
+import { formatPeriod } from "@/lib/datetime";
+import { avisarSobreReserva } from "@/lib/email/enviar";
+import { findBookingNotificationData } from "@/lib/repositories/repositorio-de-reservas";
+
+const PREFIXO_DE_TESTE = "[e2e]";
+
+export async function notificarProfessor(
+  bookingId: string,
+  cancelada: boolean,
+  registradoPor: string
+): Promise<void> {
+  const dados = await findBookingNotificationData(bookingId);
+
+  if (!dados || dados.finalidade.startsWith(PREFIXO_DE_TESTE)) return;
+
+  await avisarSobreReserva(dados.professorEmail, cancelada, {
+    professorNome: dados.professorNome,
+    finalidade: dados.finalidade,
+    espaco: dados.espaco,
+    periodo: formatPeriod(dados.startsAt, dados.endsAt),
+    turma: dados.turma,
+    registradoPor,
+    motivo: dados.motivo,
+  });
+}

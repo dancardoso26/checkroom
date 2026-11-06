@@ -1,6 +1,8 @@
 "use client";
 
+import { RotuloDeCampo } from "@/components/rotulo-de-campo";
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -24,27 +26,34 @@ import {
   ROTULO_DO_PAPEL,
   type Papel,
 } from "@/domain/auth/permissoes";
-import type { UsuarioItem } from "@/lib/repositories/userRepository";
+import type { TurmaOpcao } from "@/lib/repositories/repositorio-de-turmas";
+import type { UsuarioItem } from "@/lib/repositories/repositorio-de-usuarios";
 
 import { alterarPapel } from "./acoes";
+import { CursoETurmaDoAluno } from "./curso-e-turma-do-aluno";
 
 export function EditarPapel({
   usuario,
+  turmas,
   onFechar,
 }: {
   usuario: UsuarioItem;
+  turmas: TurmaOpcao[];
   onFechar: () => void;
 }) {
   const [papel, setPapel] = useState<Papel>(usuario.papel);
+  const [turmaId, setTurmaId] = useState(usuario.turmaId ?? "");
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, startTransition] = useTransition();
 
   function salvar() {
     setErro(null);
     startTransition(async () => {
-      const resultado = await alterarPapel(usuario.id, papel);
-      if (resultado.ok) onFechar();
-      else setErro(resultado.mensagem);
+      const resultado = await alterarPapel(usuario.id, papel, turmaId || null);
+      if (resultado.ok) {
+        toast.success("Usuário atualizado.");
+        onFechar();
+      } else setErro(resultado.mensagem);
     });
   }
 
@@ -59,7 +68,9 @@ export function EditarPapel({
         </DialogHeader>
 
         <div className="space-y-2">
-          <Label htmlFor="papelDoUsuario">Perfil</Label>
+          <Label htmlFor="papelDoUsuario">
+            <RotuloDeCampo rotulo="Perfil" />
+          </Label>
           <Select value={papel} onValueChange={(v) => setPapel(v as Papel)}>
             <SelectTrigger id="papelDoUsuario" className="w-full">
               <SelectValue />
@@ -74,9 +85,18 @@ export function EditarPapel({
           </Select>
         </div>
 
+        {papel === "student" && (
+          <CursoETurmaDoAluno
+            idBase="usuario"
+            turmas={turmas}
+            turmaId={turmaId}
+            onChange={setTurmaId}
+          />
+        )}
+
         {usuario.papel === "professor" && papel !== "professor" && (
           <p className="text-muted-foreground text-sm">
-            O vínculo docente é desfeito: a conta deixa de reservar em nome do
+            O vínculo de professor é desfeito: a conta deixa de reservar em nome do
             professor.
           </p>
         )}
@@ -93,7 +113,11 @@ export function EditarPapel({
           </Button>
           <Button
             type="button"
-            disabled={salvando || papel === usuario.papel}
+            disabled={
+              salvando ||
+              (papel === usuario.papel &&
+                (papel !== "student" || turmaId === (usuario.turmaId ?? "")))
+            }
             onClick={salvar}
           >
             {salvando ? "Salvando..." : "Salvar"}

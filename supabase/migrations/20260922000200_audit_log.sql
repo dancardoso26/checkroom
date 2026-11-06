@@ -2,8 +2,6 @@ create table public.audit_logs (
   id bigint generated always as identity primary key,
   occurred_at timestamptz not null default now(),
 
-  -- set null, e não restrict: auditoria registra, não impede. O ator é nulo
-  -- quando a operação vem do servidor sem sessão, como no seed.
   actor_id uuid references public.profiles (id) on delete set null,
 
   action text not null,
@@ -22,8 +20,6 @@ create index audit_logs_entity_idx on public.audit_logs (entity, entity_id);
 
 alter table public.audit_logs enable row level security;
 
--- security definer porque a política de audit_logs não concede insert a
--- ninguém: o único caminho de escrita é esta função.
 create or replace function public.log_audit_event()
 returns trigger
 language plpgsql
@@ -55,8 +51,6 @@ begin
 end;
 $$;
 
--- after, para registrar apenas o que o banco confirmou: uma reserva recusada
--- por constraint de sobreposição não vira evento de auditoria.
 create trigger bookings_audit
   after insert or update or delete on public.bookings
   for each row

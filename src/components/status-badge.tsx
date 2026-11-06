@@ -6,6 +6,8 @@ const CLASSES: Record<Tom, string> = {
   sucesso: "border-success/30 bg-success-subtle text-success",
   informacao: "border-primary/30 bg-primary-subtle text-primary",
   perigo: "border-destructive/30 bg-destructive-subtle text-destructive",
+  atencao: "border-warning/40 bg-warning-subtle text-warning",
+  neutro: "border-border bg-muted text-muted-foreground",
 };
 
 export function StatusBadge({

@@ -9,8 +9,16 @@ import {
   useTransition,
 } from "react";
 
-import { criarReserva, type BookingFormState } from "../actions";
-import { analisarReserva, type AnaliseResult } from "./analise";
+import type { ActivityType } from "@/domain/booking/types";
+import { ESTADO_INICIAL as PALESTRA_OCIOSA } from "@/lib/formulario";
+
+import { cadastrarPalestra } from "../../palestras/acoes";
+import { criarReserva, type BookingFormState } from "../acoes/criar";
+import {
+  analisarPalestra,
+  analisarReserva,
+  type AnaliseResult,
+} from "./analise";
 import { CAMPOS_VAZIOS, ehPeriodoValido, type CamposDaReserva } from "./campos";
 
 const ESTADO_INICIAL: BookingFormState = { status: "idle" };
@@ -19,19 +27,35 @@ export type Preenchimento = {
   date?: string;
   startTime?: string;
   endTime?: string;
+  activityType?: ActivityType;
 };
+
+export type CamposDaPalestra = {
+  palestrante: string;
+  vagas: string;
+  cursoIds: string[];
+};
+
+export type Conclusao = { bookingId: string | null };
+
+function vagasValidas(vagas: string): number | null {
+  const numero = Number(vagas);
+  return vagas.trim() !== "" && Number.isInteger(numero) && numero > 0
+    ? numero
+    : null;
+}
 
 export function useFormularioDeReserva({
   hoje,
   professorFixo,
   preenchimento,
+  rooms,
 }: {
+  rooms: { id: string; capacity: number }[];
   hoje: string;
   professorFixo: string | null;
   preenchimento: Preenchimento;
 }) {
-  // Só entram os valores presentes: um undefined espalhado por cima apagaria
-  // a string vazia que o resto do formulário usa para "não preenchido".
   const [campos, setCampos] = useState<CamposDaReserva>(() => ({
     ...CAMPOS_VAZIOS(hoje),
     ...Object.fromEntries(
@@ -40,17 +64,37 @@ export function useFormularioDeReserva({
     professorId: professorFixo ?? "",
   }));
 
+  const [palestra, setPalestra] = useState<CamposDaPalestra>({
+    palestrante: "",
+    vagas: "",
+    cursoIds: [],
+  });
+
   const [recursos, setRecursos] = useState<string[]>([]);
   const [analise, setAnalise] = useState<AnaliseResult | null>(null);
   const [analisando, iniciarAnalise] = useTransition();
 
-  const [state, formAction, enviando] = useActionState(
+  const [estadoDaReserva, acaoDaReserva, reservando] = useActionState(
     criarReserva,
     ESTADO_INICIAL
   );
+  const [estadoDaPalestra, acaoDaPalestra, cadastrando] = useActionState(
+    cadastrarPalestra,
+    PALESTRA_OCIOSA
+  );
+
+  const ehPalestra = campos.activityType === "lecture";
+  const vagas = vagasValidas(palestra.vagas);
 
   function alterar(campo: keyof CamposDaReserva, valor: string) {
     setCampos((atuais) => ({ ...atuais, [campo]: valor }));
+  }
+
+  function alterarPalestra<C extends keyof CamposDaPalestra>(
+    campo: C,
+    valor: CamposDaPalestra[C]
+  ) {
+    setPalestra((atuais) => ({ ...atuais, [campo]: valor }));
   }
 
   function alternarRecurso(id: string, marcado: boolean) {
@@ -62,27 +106,34 @@ export function useFormularioDeReserva({
   const periodoPreenchido =
     campos.date !== "" && campos.startTime !== "" && campos.endTime !== "";
 
-  const dadosParaAnalise =
-    campos.professorId !== "" && campos.classId !== "" && periodoPreenchido;
+  const dadosParaAnalise = ehPalestra
+    ? periodoPreenchido
+    : campos.professorId !== "" && campos.classId !== "" && periodoPreenchido;
 
   useEffect(() => {
     if (!dadosParaAnalise) return;
 
-    // Descarta a resposta de uma análise que ficou obsoleta enquanto viajava:
-    // uma consulta lenta poderia chegar depois de outra mais recente.
     let atual = true;
 
     iniciarAnalise(async () => {
-      const resultado = await analisarReserva({
-        professorId: campos.professorId,
-        classId: campos.classId,
-        date: campos.date,
-        startTime: campos.startTime,
-        endTime: campos.endTime,
-        activityType: campos.activityType,
-        subjectId: campos.subjectId,
-        resourceIds: recursos,
-      });
+      const resultado = ehPalestra
+        ? await analisarPalestra({
+            date: campos.date,
+            startTime: campos.startTime,
+            endTime: campos.endTime,
+            vagas: 1,
+            resourceIds: recursos,
+          })
+        : await analisarReserva({
+            professorId: campos.professorId,
+            classId: campos.classId,
+            date: campos.date,
+            startTime: campos.startTime,
+            endTime: campos.endTime,
+            activityType: campos.activityType,
+            subjectId: campos.subjectId,
+            resourceIds: recursos,
+          });
 
       if (atual) setAnalise(resultado);
     });
@@ -92,6 +143,7 @@ export function useFormularioDeReserva({
     };
   }, [
     dadosParaAnalise,
+    ehPalestra,
     campos.professorId,
     campos.classId,
     campos.subjectId,
@@ -104,8 +156,6 @@ export function useFormularioDeReserva({
 
   const analiseAtual = dadosParaAnalise ? analise : null;
 
-  // A sala escolhida some da seleção se uma mudança posterior a tornar
-  // incompatível, em vez de seguir marcada até ser recusada no envio.
   const roomIdValido =
     campos.roomId !== "" &&
     analiseAtual?.status === "ok" &&
@@ -113,42 +163,72 @@ export function useFormularioDeReserva({
       ? campos.roomId
       : "";
 
-  const atividadeCompleta =
-    campos.professorId !== "" &&
-    campos.classId !== "" &&
-    campos.purpose.trim() !== "" &&
-    (campos.activityType !== "class" || campos.subjectId !== "");
+  const atividadeCompleta = ehPalestra
+    ? campos.purpose.trim() !== "" &&
+      palestra.palestrante.trim() !== "" &&
+      palestra.cursoIds.length > 0 &&
+      vagas !== null
+    : campos.professorId !== "" &&
+      campos.classId !== "" &&
+      campos.purpose.trim() !== "" &&
+      (campos.activityType !== "class" || campos.subjectId !== "");
 
   const agendaLivre =
     !analisando &&
     analiseAtual?.status === "ok" &&
     analiseAtual.scheduleMessages.length === 0;
 
-  // A primeira etapa termina quando a atividade está completa e a agenda livre;
-  // a segunda, quando há um espaço compatível escolhido.
   const prontoParaEspacos =
     atividadeCompleta && ehPeriodoValido(campos) && agendaLivre;
 
-  const prontoParaConfirmar = prontoParaEspacos && roomIdValido !== "";
+  const capacidadeDoEspaco =
+    rooms.find((r) => r.id === roomIdValido)?.capacity ?? null;
+
+  const prontoParaConfirmar =
+    prontoParaEspacos &&
+    roomIdValido !== "" &&
+    (!ehPalestra ||
+      (vagas !== null &&
+        capacidadeDoEspaco !== null &&
+        vagas <= capacidadeDoEspaco));
 
   const formulario = useRef<HTMLFormElement>(null);
 
-  const motivosDaRecusa =
-    state.status === "error"
-      ? [...state.messages, ...Object.values(state.fieldErrors).flat()]
+  const motivosDaRecusa = ehPalestra
+    ? estadoDaPalestra.status === "error"
+      ? [
+          ...(estadoDaPalestra.mensagem ? [estadoDaPalestra.mensagem] : []),
+          ...Object.values(estadoDaPalestra.erros).flat(),
+        ]
+      : []
+    : estadoDaReserva.status === "error"
+      ? [
+          ...estadoDaReserva.messages,
+          ...Object.values(estadoDaReserva.fieldErrors).flat(),
+        ]
       : [];
 
-  // Envio manual em vez de <form action>: o action do React 19 limpa o
-  // formulário ao responder, zerando os campos quando a reserva é recusada.
+  const conclusao: Conclusao | null =
+    estadoDaReserva.status === "success"
+      ? { bookingId: estadoDaReserva.bookingId }
+      : estadoDaPalestra.status === "success"
+        ? { bookingId: null }
+        : null;
+
   function enviar(evento: React.FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     const dados = new FormData(evento.currentTarget);
-    startTransition(() => formAction(dados));
+    startTransition(() =>
+      ehPalestra ? acaoDaPalestra(dados) : acaoDaReserva(dados)
+    );
   }
 
   return {
     campos,
     alterar,
+    palestra,
+    alterarPalestra,
+    ehPalestra,
     recursos,
     alternarRecurso,
     analise: analiseAtual,
@@ -157,8 +237,8 @@ export function useFormularioDeReserva({
     atividadeCompleta,
     prontoParaEspacos,
     prontoParaConfirmar,
-    state,
-    enviando,
+    conclusao,
+    enviando: reservando || cadastrando,
     enviar,
     formulario,
     motivosDaRecusa,

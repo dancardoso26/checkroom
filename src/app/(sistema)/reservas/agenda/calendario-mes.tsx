@@ -1,11 +1,16 @@
 "use client";
 
-import { mesmoMes, nomeCurtoDoDia, numeroDoDia } from "@/lib/calendario";
+import { mesmoMes, nomeCurtoDoDia, numeroDoDia } from "@/domain/agenda/navegacao-da-agenda";
 import { formatTime, localDayKey } from "@/lib/datetime";
-import type { BookingListItem } from "@/lib/repositories/bookingRepository";
+import type { BookingListItem } from "@/lib/repositories/repositorio-de-reservas";
 import { cn } from "@/lib/utils";
 
-import { COR_DA_ATIVIDADE, COR_DA_CANCELADA } from "./estilo";
+import {
+  COR_DA_ATIVIDADE,
+  COR_DA_CANCELADA,
+  COR_DA_INSCRICAO_ABERTA,
+  corDaEncerrada,
+} from "./estilo";
 
 const VISIVEIS_POR_DIA = 3;
 
@@ -13,6 +18,7 @@ export function CalendarioMes({
   dias,
   referencia,
   hoje,
+  agora,
   reservas,
   destaque,
   onEscolherDia,
@@ -22,9 +28,10 @@ export function CalendarioMes({
   dias: string[];
   referencia: string;
   hoje: string;
+  agora: Date;
   reservas: BookingListItem[];
   destaque?: string;
-  onEscolherDia: (dia: string) => void;
+  onEscolherDia?: (dia: string) => void;
   onAbrirDia: (dia: string) => void;
   onAbrirReserva: (id: string) => void;
 }) {
@@ -60,12 +67,10 @@ export function CalendarioMes({
               data-dia={dia}
               className={cn(
                 "group relative min-h-28 border-t border-l p-1.5 [&:nth-child(7n+1)]:border-l-0",
-                foraDoMes && "bg-muted/40"
+                foraDoMes && "bg-muted/40",
               )}
             >
-              {/* O fundo inteiro da célula abre uma reserva naquele dia; as
-                  reservas e o número ficam por cima, com ações próprias. */}
-              {!passado && (
+              {!passado && onEscolherDia && (
                 <button
                   type="button"
                   tabIndex={-1}
@@ -82,7 +87,7 @@ export function CalendarioMes({
                 className={cn(
                   "relative flex size-7 items-center justify-center rounded-full text-sm font-medium hover:underline",
                   dia === hoje && "bg-primary text-primary-foreground",
-                  foraDoMes && dia !== hoje && "text-muted-foreground"
+                  foraDoMes && dia !== hoje && "text-muted-foreground",
                 )}
               >
                 {numeroDoDia(dia)}
@@ -99,8 +104,12 @@ export function CalendarioMes({
                       "block w-full truncate rounded border border-l-4 px-1.5 py-0.5 text-left text-xs",
                       reserva.cancelled
                         ? COR_DA_CANCELADA
-                        : COR_DA_ATIVIDADE[reserva.activityType],
-                      destaque === reserva.id && "ring-primary ring-2"
+                        : [
+                            COR_DA_ATIVIDADE[reserva.activityType],
+                            corDaEncerrada(reserva.endsAt, agora),
+                            reserva.inscricaoAberta && COR_DA_INSCRICAO_ABERTA,
+                          ],
+                      destaque === reserva.id && "ring-primary ring-2",
                     )}
                   >
                     <span className="font-semibold">

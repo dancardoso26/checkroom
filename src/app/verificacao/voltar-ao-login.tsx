@@ -5,8 +5,6 @@ import { ArrowLeft } from "lucide-react";
 
 import { sair } from "@/app/login/acoes";
 
-// Depois da senha a sessão já existe, só sem o segundo fator: /login mandaria
-// de volta para cá. Sair encerra essa sessão e devolve ao login de verdade.
 export function VoltarAoLogin() {
   return (
     <button

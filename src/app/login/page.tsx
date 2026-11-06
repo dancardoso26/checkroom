@@ -3,7 +3,6 @@ import { FormularioDeLogin } from "./formulario";
 
 export const metadata = { title: "Entrar | CheckRoom" };
 
-// Motivos de voltar ao login vindos de fora da tela, como o link de um e-mail.
 const AVISOS: Record<string, string> = {
   link_invalido:
     "O link de recuperação está incompleto. Peça um novo em Esqueci minha senha.",

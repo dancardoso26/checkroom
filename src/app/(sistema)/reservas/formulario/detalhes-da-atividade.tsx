@@ -1,18 +1,10 @@
 "use client";
 
-import type { LucideIcon } from "lucide-react";
-import { BookOpen, Clock, Monitor, User, Users } from "lucide-react";
-
+import { SelecaoComPesquisa } from "@/components/selecao-com-pesquisa";
 import { SeletorDeData } from "@/components/seletor-de-data";
+import { SeletorDeHora } from "@/components/seletor-de-hora";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { ULTIMO_INICIO } from "@/domain/booking/businessHours";
 import type { ActivityType } from "@/domain/booking/types";
 import { cn } from "@/lib/utils";
@@ -23,41 +15,18 @@ import {
   ROTULO_DA_ATIVIDADE,
   type CamposDaReserva,
 } from "./campos";
+import {
+  CamposDaPalestraNoPainel,
+  EspacoEVagasDaPalestra,
+} from "./campos-da-palestra";
+import { LinhaDoFormulario } from "./linha-do-formulario";
 import type { Catalogos } from "./painel-de-reserva";
+import { ResultadoDaAgenda } from "./resultado-da-agenda";
 import { SeletorDeRecursos } from "./seletor-de-recursos";
-import { TimeSelect } from "./time-select";
-import { Aviso } from "./ui";
+import { Aviso } from "./aviso";
+import type { CamposDaPalestra } from "./use-formulario-de-reserva";
 
 const TIPOS = Object.entries(ROTULO_DA_ATIVIDADE) as [ActivityType, string][];
-
-// Uma linha do formulário: ícone à esquerda e o campo, como no Google Agenda.
-// O rótulo fica para o leitor de tela; na tela, ícone e placeholder bastam.
-function Linha({
-  icone: Icone,
-  rotulo,
-  htmlFor,
-  children,
-}: {
-  icone: LucideIcon;
-  rotulo: string;
-  htmlFor: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-start gap-3">
-      <Icone
-        aria-hidden
-        className="text-muted-foreground mt-2 size-5 shrink-0"
-      />
-      <div className="min-w-0 flex-1 space-y-2">
-        <Label htmlFor={htmlFor} className="sr-only">
-          {rotulo}
-        </Label>
-        {children}
-      </div>
-    </div>
-  );
-}
 
 export function DetalhesDaAtividade({
   campos,
@@ -70,6 +39,10 @@ export function DetalhesDaAtividade({
   analise,
   analisando,
   atividadeCompleta,
+  permitePalestra,
+  somentePalestra,
+  palestra,
+  alterarPalestra,
 }: {
   campos: CamposDaReserva;
   alterar: (campo: keyof CamposDaReserva, valor: string) => void;
@@ -80,9 +53,19 @@ export function DetalhesDaAtividade({
   alternarRecurso: (id: string, marcado: boolean) => void;
   analise: AnaliseResult | null;
   analisando: boolean;
-  /** Tudo preenchido: só então a agenda é verificada e o resultado, mostrado. */
   atividadeCompleta: boolean;
+  permitePalestra: boolean;
+  somentePalestra: boolean;
+  palestra: CamposDaPalestra;
+  alterarPalestra: <C extends keyof CamposDaPalestra>(
+    campo: C,
+    valor: CamposDaPalestra[C]
+  ) => void;
 }) {
+  const tipos = TIPOS.filter(
+    ([valor]) => valor !== "lecture" || permitePalestra
+  );
+  const ehPalestra = campos.activityType === "lecture";
   const { professors, classes, subjects, assignments, resources } = catalogos;
   const ehAula = campos.activityType === "class";
 
@@ -109,6 +92,13 @@ export function DetalhesDaAtividade({
 
   const periodoValido = ehPeriodoValido(campos);
 
+  const espacosLivres =
+    periodoValido && analise?.status === "ok"
+      ? catalogos.rooms.filter(
+          (r) => analise.rooms.find((v) => v.roomId === r.id)?.compatible
+        )
+      : null;
+
   return (
     <div className="space-y-5">
       <div className="space-y-4">
@@ -119,46 +109,46 @@ export function DetalhesDaAtividade({
           id="purposeField"
           value={campos.purpose}
           onChange={(e) => alterar("purpose", e.target.value)}
-          placeholder="Adicionar título"
+          placeholder={ehPalestra ? "Tema da palestra" : "Adicionar título"}
           maxLength={200}
           className="border-input focus:border-primary placeholder:text-muted-foreground w-full border-b-2 bg-transparent pb-1 text-xl outline-none focus-visible:outline-none!"
         />
 
-        <RadioGroup
-          aria-label="Tipo de atividade"
-          value={campos.activityType}
-          onValueChange={(v) => {
-            alterar("activityType", v);
-            alterar("subjectId", "");
-            // A aula filtra turmas pelo vínculo; a escolhida pode não estar nele.
-            if (v === "class") alterar("classId", "");
-          }}
-          className="flex flex-wrap gap-1.5"
-        >
-          {TIPOS.map(([valor, rotulo]) => (
-            <label
-              key={valor}
-              htmlFor={`tipo-${valor}`}
-              className={cn(
-                "has-focus-visible:ring-ring/50 cursor-pointer rounded-md px-3 py-1.5 text-sm font-medium transition-colors has-focus-visible:ring-[3px]",
-                campos.activityType === valor
-                  ? "bg-primary-subtle text-primary"
-                  : "text-muted-foreground hover:bg-accent"
-              )}
-            >
-              <RadioGroupItem
-                id={`tipo-${valor}`}
-                value={valor}
-                className="sr-only"
-              />
-              {rotulo}
-            </label>
-          ))}
-        </RadioGroup>
+        {!somentePalestra && (
+          <RadioGroup
+            aria-label="Tipo de atividade"
+            value={campos.activityType}
+            onValueChange={(v) => {
+              alterar("activityType", v);
+              alterar("subjectId", "");
+              if (v === "class") alterar("classId", "");
+            }}
+            className="flex flex-wrap gap-1.5"
+          >
+            {tipos.map(([valor, rotulo]) => (
+              <label
+                key={valor}
+                htmlFor={`tipo-${valor}`}
+                className={cn(
+                  "has-focus-visible:ring-ring/50 cursor-pointer rounded-md px-3 py-1.5 text-sm font-medium transition-colors has-focus-visible:ring-[3px]",
+                  campos.activityType === valor
+                    ? "bg-primary-subtle text-primary"
+                    : "text-muted-foreground hover:bg-accent"
+                )}
+              >
+                <RadioGroupItem
+                  id={`tipo-${valor}`}
+                  value={valor}
+                  className="sr-only"
+                />
+                {rotulo}
+              </label>
+            ))}
+          </RadioGroup>
+        )}
       </div>
 
-      <Linha icone={Clock} rotulo="Data" htmlFor="dateField">
-        {/* Data e horário na mesma linha, como no Google Agenda. */}
+      <LinhaDoFormulario rotulo="Data e hora" htmlFor="dateField">
         <div className="grid grid-cols-[minmax(0,1fr)_6.5rem_auto_6.5rem] items-center gap-2">
           <SeletorDeData
             id="dateField"
@@ -170,7 +160,7 @@ export function DetalhesDaAtividade({
           <Label htmlFor="startField" className="sr-only">
             Início
           </Label>
-          <TimeSelect
+          <SeletorDeHora
             id="startField"
             value={campos.startTime}
             onChange={(v) => alterar("startTime", v)}
@@ -180,11 +170,10 @@ export function DetalhesDaAtividade({
           <Label htmlFor="endField" className="sr-only">
             Término
           </Label>
-          <TimeSelect
+          <SeletorDeHora
             id="endField"
             value={campos.endTime}
             onChange={(v) => alterar("endTime", v)}
-            // Só horários depois do início: a opção de errar nem aparece.
             minimo={campos.startTime || undefined}
           />
         </div>
@@ -193,108 +182,91 @@ export function DetalhesDaAtividade({
             O término precisa ser posterior ao início.
           </p>
         )}
-      </Linha>
+      </LinhaDoFormulario>
 
-      <Linha
-        icone={User}
-        rotulo="Professor responsável"
-        htmlFor="professorField"
-      >
-        {professorFixo ? (
-          // Professor reserva em seu nome: não há escolha, só a informação.
-          <div id="professorField" className="flex h-9 items-center text-sm">
-            {professors.find((p) => p.id === professorFixo)?.name ??
-              "Professor não identificado"}
-          </div>
-        ) : (
-          <Select
-            value={campos.professorId}
-            onValueChange={(v) => {
-              alterar("professorId", v);
-              // Outro professor muda as turmas e disciplinas possíveis.
-              alterar("classId", "");
+      {ehPalestra ? (
+        <CamposDaPalestraNoPainel
+          palestra={palestra}
+          alterarPalestra={alterarPalestra}
+          professores={professors.map((p) => p.name)}
+          cursos={catalogos.cursos}
+        />
+      ) : (
+        <>
+        <LinhaDoFormulario rotulo="Professor"
+          htmlFor="professorField"
+        >
+          {professorFixo ? (
+            <div id="professorField" className="flex h-9 items-center text-sm">
+              {professors.find((p) => p.id === professorFixo)?.name ??
+                "Professor não identificado"}
+            </div>
+          ) : (
+            <SelecaoComPesquisa
+              id="professorField"
+              value={campos.professorId}
+              onChange={(v) => {
+                alterar("professorId", v);
+                alterar("classId", "");
+                alterar("subjectId", "");
+              }}
+              opcoes={professors.map((p) => ({ id: p.id, nome: p.name }))}
+              placeholder="Professor"
+              rotuloDaPesquisa="Pesquisar professores"
+            />
+          )}
+        </LinhaDoFormulario>
+
+        <LinhaDoFormulario rotulo="Turma" htmlFor="classField">
+          <SelecaoComPesquisa
+            id="classField"
+            value={campos.classId}
+            onChange={(v) => {
+              alterar("classId", v);
               alterar("subjectId", "");
             }}
-          >
-            <SelectTrigger id="professorField" className="w-full">
-              <SelectValue placeholder="Professor" />
-            </SelectTrigger>
-            <SelectContent>
-              {professors.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-      </Linha>
+            disabled={ehAula && !campos.professorId}
+            opcoes={turmasPermitidas.map((t) => ({
+              id: t.id,
+              nome: `${t.name} · ${t.courseName}`,
+              detalhe: `${t.studentCount} alunos`,
+            }))}
+            placeholder={
+              ehAula && !campos.professorId
+                ? "Turma (escolha o professor primeiro)"
+                : "Turma"
+            }
+            rotuloDaPesquisa="Pesquisar turmas"
+          />
 
-      <Linha icone={Users} rotulo="Turma" htmlFor="classField">
-        <Select
-          value={campos.classId}
-          onValueChange={(v) => {
-            alterar("classId", v);
-            alterar("subjectId", "");
-          }}
-          disabled={ehAula && !campos.professorId}
-        >
-          <SelectTrigger id="classField" className="w-full">
-            <SelectValue
+          {ehAula && campos.professorId && turmasPermitidas.length === 0 && (
+            <Aviso tom="erro" titulo="Sem vínculo acadêmico">
+              Este professor não leciona para nenhuma turma no período letivo.
+              Escolha outro, ou registre como prova ou evento.
+            </Aviso>
+          )}
+        </LinhaDoFormulario>
+
+        {ehAula && (
+          <LinhaDoFormulario rotulo="Disciplina" htmlFor="subjectField">
+            <SelecaoComPesquisa
+              id="subjectField"
+              value={campos.subjectId}
+              onChange={(v) => alterar("subjectId", v)}
+              disabled={!campos.classId || disciplinasPermitidas.length === 0}
+              opcoes={disciplinasPermitidas.map((s) => ({ id: s.id, nome: s.name }))}
               placeholder={
-                ehAula && !campos.professorId
-                  ? "Turma (escolha o professor primeiro)"
-                  : "Turma"
+                campos.classId ? "Disciplina" : "Disciplina (escolha a turma primeiro)"
               }
+              rotuloDaPesquisa="Pesquisar disciplinas"
             />
-          </SelectTrigger>
-          <SelectContent>
-            {turmasPermitidas.map((t) => (
-              <SelectItem key={t.id} value={t.id}>
-                {t.name} · {t.courseName} ({t.studentCount} alunos)
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {ehAula && campos.professorId && turmasPermitidas.length === 0 && (
-          <Aviso tom="erro" titulo="Sem vínculo acadêmico">
-            Este professor não leciona para nenhuma turma no período letivo.
-            Escolha outro, ou registre como palestra, prova, defesa ou evento.
-          </Aviso>
+          </LinhaDoFormulario>
         )}
-      </Linha>
 
-      {ehAula && (
-        <Linha icone={BookOpen} rotulo="Disciplina" htmlFor="subjectField">
-          <Select
-            value={campos.subjectId}
-            onValueChange={(v) => alterar("subjectId", v)}
-            disabled={!campos.classId || disciplinasPermitidas.length === 0}
-          >
-            <SelectTrigger id="subjectField" className="w-full">
-              <SelectValue
-                placeholder={
-                  campos.classId
-                    ? "Disciplina"
-                    : "Disciplina (escolha a turma primeiro)"
-                }
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {disciplinasPermitidas.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Linha>
+        </>
       )}
 
-      <Linha
-        icone={Monitor}
-        rotulo="Itens necessários"
+      <LinhaDoFormulario rotulo="Recursos"
         htmlFor="resourcesField"
       >
         <SeletorDeRecursos
@@ -303,51 +275,29 @@ export function DetalhesDaAtividade({
           selecionados={recursos}
           alternar={alternarRecurso}
         />
-      </Linha>
+      </LinhaDoFormulario>
 
-      {/* Só depois de tudo preenchido: antes disso, o que falta é preenchimento,
-          e não conflito de agenda. */}
-      {atividadeCompleta && periodoValido && (
+      {ehPalestra && (
+        <EspacoEVagasDaPalestra
+          palestra={palestra}
+          alterarPalestra={alterarPalestra}
+          espacosLivres={espacosLivres}
+          buscandoEspacos={periodoValido && analisando}
+          espacoId={campos.roomId}
+          aoEscolherEspaco={(id) => alterar("roomId", id)}
+        />
+      )}
+
+      {(atividadeCompleta || ehPalestra) && periodoValido && (
         <div className="pl-8">
-          <ResultadoDaAgenda analise={analise} analisando={analisando} />
+          <ResultadoDaAgenda
+            analise={analise}
+            analisando={analisando}
+            ehPalestra={ehPalestra}
+            espacosDisponiveis={ehPalestra ? (espacosLivres?.length ?? null) : null}
+          />
         </div>
       )}
     </div>
-  );
-}
-
-function ResultadoDaAgenda({
-  analise,
-  analisando,
-}: {
-  analise: AnaliseResult | null;
-  analisando: boolean;
-}) {
-  if (analisando || analise === null) {
-    return (
-      <p className="text-muted-foreground text-sm">Verificando agendas...</p>
-    );
-  }
-
-  if (analise.status === "invalid") {
-    return <p className="text-muted-foreground text-sm">{analise.message}</p>;
-  }
-
-  if (analise.scheduleMessages.length === 0) {
-    return (
-      <p aria-live="polite" className="text-success text-sm font-medium">
-        Horário disponível para o professor e a turma
-      </p>
-    );
-  }
-
-  return (
-    <Aviso tom="erro" titulo="Conflito de agenda">
-      <ul className="list-disc space-y-1 pl-4">
-        {analise.scheduleMessages.map((m) => (
-          <li key={m}>{m}</li>
-        ))}
-      </ul>
-    </Aviso>
   );
 }

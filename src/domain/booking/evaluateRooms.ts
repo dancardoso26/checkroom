@@ -8,24 +8,21 @@ import type {
 
 export type RoomEvaluation = {
   room: RoomSnapshot;
-  /** Verdadeiro quando este espaço atende ao pedido. */
   compatible: boolean;
   violations: BookingViolation[];
 };
 
-/** Violações que dependem do espaço escolhido. */
 const VIOLACOES_DO_ESPACO = new Set<BookingViolation["code"]>([
   "ROOM_CONFLICT",
   "INSUFFICIENT_CAPACITY",
   "MISSING_RESOURCES",
   "ROOM_NOT_FOUND",
+  "ROOM_BLOCKED",
 ]);
 
 export function evaluateRooms(
-  /** Sem o espaço: ele é justamente o que está sendo decidido. */
   request: Omit<BookingRequest, "roomId">,
   rooms: RoomSnapshot[],
-  /** O contexto sem o espaço, pela mesma razão. */
   context: Omit<BookingContext, "room">
 ): RoomEvaluation[] {
   const avaliacoes = rooms.map((room) => {
@@ -73,8 +70,6 @@ export function findScheduleConflicts(
     id: "__nenhum__",
     name: "",
     building: "",
-    // Capacidade e recursos suficientes para qualquer pedido, de modo que
-    // nenhuma violação de compatibilidade apareça e mascare o que interessa.
     capacity: Number.MAX_SAFE_INTEGER,
     resourceIds: [...request.requiredResourceIds],
   };

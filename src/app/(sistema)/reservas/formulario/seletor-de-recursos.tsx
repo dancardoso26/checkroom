@@ -8,7 +8,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import type { ResourceOption } from "@/lib/repositories/resourceRepository";
+import type { ResourceOption } from "@/lib/repositories/repositorio-de-recursos";
 import { cn } from "@/lib/utils";
 
 export function SeletorDeRecursos({
@@ -36,7 +36,7 @@ export function SeletorDeRecursos({
         )}
       >
         <span className="truncate">
-          {nomes.length === 0 ? "Nenhum item necessário" : nomes.join(", ")}
+          {nomes.length === 0 ? "Recursos" : nomes.join(", ")}
         </span>
         <ChevronDown aria-hidden className="size-4 shrink-0 opacity-50" />
       </PopoverTrigger>
@@ -46,7 +46,7 @@ export function SeletorDeRecursos({
         className="w-(--radix-popover-trigger-width) p-1"
       >
         <fieldset>
-          <legend className="sr-only">Itens necessários</legend>
+          <legend className="sr-only">Recursos</legend>
           {recursos.map((recurso) => (
             <label
               key={recurso.id}

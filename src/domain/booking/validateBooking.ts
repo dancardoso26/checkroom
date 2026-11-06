@@ -14,16 +14,14 @@ import type {
   ExistingBooking,
 } from "./types";
 
-// Intervalo semiaberto: uma reserva que termina 20:40 não conflita com outra
-// que começa 20:40. É a mesma regra do tstzrange usado nas constraints.
-function overlaps(
+export function overlaps(
   a: { startsAt: Date; endsAt: Date },
   b: { startsAt: Date; endsAt: Date }
 ): boolean {
   return a.startsAt < b.endsAt && a.endsAt > b.startsAt;
 }
 
-function dentroDoExpediente(request: {
+export function dentroDoExpediente(request: {
   startsAt: Date;
   endsAt: Date;
 }): boolean {
@@ -42,8 +40,6 @@ export function validateBooking(
   context: BookingContext
 ): BookingValidationResult {
   const violations: BookingViolation[] = [];
-
-  // 1. Verificações estruturais: o pedido faz sentido em si mesmo?
 
   const hasValidPeriod = request.endsAt > request.startsAt;
 
@@ -67,14 +63,26 @@ export function validateBooking(
     violations.push({ code: "STARTS_IN_THE_PAST" });
   }
 
-  // Só faz sentido com o período coerente: em uma reserva invertida o "início" é
-  // o fim, e INVALID_PERIOD já descreve o problema.
   if (hasValidPeriod && !dentroDoExpediente(request)) {
     violations.push({
       code: "OUTSIDE_BUSINESS_HOURS",
       opening: ABERTURA,
       closing: FECHAMENTO,
     });
+  }
+
+  const calendario = context.calendario;
+
+  if (calendario) {
+    if (calendario.periodo === null) {
+      violations.push({ code: "OUTSIDE_ACADEMIC_TERM" });
+    }
+
+    for (const bloqueio of calendario.bloqueios) {
+      if (bloqueio.espacoId === null) {
+        violations.push({ code: "DATE_BLOCKED", reason: bloqueio.motivo });
+      }
+    }
   }
 
   if (!hasValidPeriod || context.room === null || context.classGroup === null) {
@@ -89,8 +97,6 @@ export function validateBooking(
   let classConflict: ExistingBooking | undefined;
 
   for (const existing of context.conflictingBookings) {
-    // O repositório já filtra por período, mas a regra reconfere: ela não
-    // terceiriza a própria decisão.
     if (!overlaps(request, existing)) continue;
 
     if (!roomConflict && existing.roomId === request.roomId) {
@@ -110,6 +116,14 @@ export function validateBooking(
     violations.push({ code: "ROOM_CONFLICT", conflict: roomConflict });
   }
 
+  const bloqueioDoEspaco = calendario?.bloqueios.find(
+    (bloqueio) => bloqueio.espacoId === request.roomId
+  );
+
+  if (bloqueioDoEspaco) {
+    violations.push({ code: "ROOM_BLOCKED", reason: bloqueioDoEspaco.motivo });
+  }
+
   if (professorConflict) {
     violations.push({ code: "PROFESSOR_CONFLICT", conflict: professorConflict });
   }
@@ -124,13 +138,10 @@ export function validateBooking(
     } else if (context.teachingAssignment === null) {
       violations.push({
         code: "NO_TEACHING_ASSIGNMENT",
-        term: PERIODO_LETIVO_VIGENTE,
+        term: calendario?.periodo?.codigo ?? PERIODO_LETIVO_VIGENTE,
       });
     }
   }
-
-  // 5. Compatibilidade com o espaço. Ao contrário dos conflitos, seria verdadeira
-  // mesmo com a agenda vazia.
 
   if (classGroup.studentCount > room.capacity) {
     violations.push({
@@ -142,8 +153,6 @@ export function validateBooking(
 
   const offered = new Set(room.resourceIds);
 
-  // O Set na entrada evita que um recurso enviado duas vezes apareça duplicado
-  // na mensagem de erro.
   const missingResourceIds = [...new Set(request.requiredResourceIds)].filter(
     (resourceId) => !offered.has(resourceId)
   );

@@ -28,8 +28,6 @@ export async function excluirConta(): Promise<ExclusaoDeContaState> {
     };
   }
 
-  // A linha em auth.users não é apagada: bookings.created_by aponta para o
-  // profile com on delete restrict, e apagá-la levaria o histórico junto.
   await supabaseAdmin.auth.admin.updateUserById(user.id, {
     email: `removido-${user.id}@checkroom.invalid`,
     ban_duration: "876000h",

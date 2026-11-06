@@ -1,5 +1,3 @@
--- As disciplinas de cada curso. "Banco de Dados II" pertence a Sistemas de
--- Informação, e não existe solta.
 create table public.subjects (
   id uuid primary key default gen_random_uuid(),
   name text not null,
@@ -19,13 +17,10 @@ create table public.teaching_assignments (
   term text not null,
   created_at timestamptz not null default now(),
 
-  -- A mesma atribuição cadastrada duas vezes seria erro de digitação.
   constraint teaching_assignments_unique
     unique (professor_id, subject_id, class_id, term)
 );
 
--- A consulta da regra é "existe vínculo para este professor, esta disciplina,
--- esta turma e este período". Sem índice, seria uma varredura a cada reserva.
 create index teaching_assignments_lookup_idx
   on public.teaching_assignments (subject_id, class_id, term);
 

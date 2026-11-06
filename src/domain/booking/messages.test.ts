@@ -7,9 +7,7 @@ const conflito: ExistingBooking = {
   roomId: "room-101",
   professorId: "prof-ana",
   classId: "class-si8",
-  purpose: "Defesa de TCC",
-  // 19:00 no horário de Brasília, ou 22:00 UTC. A diferença entre os dois é
-  // justamente o que o teste de fuso abaixo verifica.
+  purpose: "Prova final",
   startsAt: new Date("2026-09-14T19:00:00-03:00"),
   endsAt: new Date("2026-09-14T20:40:00-03:00"),
 };
@@ -24,11 +22,9 @@ describe("describeViolation", () => {
   });
 
   it("cita a finalidade da reserva que causou o conflito", () => {
-    // É o dado que permite ao professor saber com quem negociar o horário, em
-    // vez de apenas descobrir que está ocupado.
     const texto = describeViolation({ code: "ROOM_CONFLICT", conflict: conflito });
 
-    expect(texto).toContain("Defesa de TCC");
+    expect(texto).toContain("Prova final");
   });
 
   it("distingue conflito de professor de conflito de turma", () => {
@@ -47,8 +43,6 @@ describe("describeViolation", () => {
   });
 
   it("mostra os dois números na recusa por capacidade", () => {
-    // Dizer apenas "capacidade insuficiente" obriga o usuário a ir conferir os
-    // dois valores em outro lugar da tela.
     const texto = describeViolation({
       code: "INSUFFICIENT_CAPACITY",
       capacity: 30,
@@ -70,8 +64,6 @@ describe("describeViolation", () => {
   });
 
   it("cai para o id quando o dicionário não traz o nome", () => {
-    // Uma mensagem de erro não pode falhar por falta de um dado acessório. O id
-    // é feio, mas ainda permite investigar o que aconteceu.
     const texto = describeViolation({
       code: "MISSING_RESOURCES",
       missingResourceIds: ["res-desconhecido"],
@@ -97,8 +89,6 @@ describe("describeViolation", () => {
 
 describe("describeViolations", () => {
   it("traduz a lista inteira preservando a ordem", () => {
-    // A ordem importa: validateBooking devolve as violações da mais estrutural
-    // para a mais específica, e a tela exibe nessa sequência.
     const textos = describeViolations([
       { code: "INVALID_PERIOD" },
       { code: "EMPTY_PURPOSE" },

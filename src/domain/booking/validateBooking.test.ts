@@ -97,8 +97,6 @@ function codesOf(result: ReturnType<typeof validateBooking>): string[] {
     : result.violations.map((violation: BookingViolation) => violation.code);
 }
 
-// ---------------------------------------------------------------------------
-
 describe("validateBooking", () => {
   describe("pedido válido", () => {
     it("aceita uma reserva sem conflito e compatível com o espaço", () => {
@@ -108,8 +106,6 @@ describe("validateBooking", () => {
     });
 
     it("aceita reservas simultâneas quando não compartilham espaço, professor nem turma", () => {
-      // Este é o contrário dos testes de conflito, e é tão importante quanto:
-      // uma regra que recusasse tudo passaria em todos os testes de recusa.
       const outraReserva = makeExisting({
         roomId: ROOM_LAB,
         professorId: PROF_CARLOS,
@@ -127,7 +123,6 @@ describe("validateBooking", () => {
 
   describe("conflito triplo", () => {
     it("recusa quando o espaço já está ocupado", () => {
-      // Professor e turma diferentes: o único vínculo em comum é o espaço.
       const ocupada = makeExisting({
         professorId: PROF_CARLOS,
         classId: CLASS_ENG2,
@@ -142,8 +137,6 @@ describe("validateBooking", () => {
     });
 
     it("recusa quando o professor já tem compromisso, mesmo em outro espaço", () => {
-      // Espaço e turma diferentes. É o conflito que uma agenda que só cuidasse
-      // de salas deixaria passar.
       const ocupado = makeExisting({
         roomId: ROOM_LAB,
         classId: CLASS_ENG2,
@@ -158,8 +151,6 @@ describe("validateBooking", () => {
     });
 
     it("recusa quando a turma já tem aula, mesmo em outro espaço", () => {
-      // Espaço e professor diferentes. Este é o conflito que a revisão do
-      // orientador acrescentou ao escopo.
       const ocupada = makeExisting({
         roomId: ROOM_LAB,
         professorId: PROF_CARLOS,
@@ -211,7 +202,7 @@ describe("validateBooking", () => {
     it("aponta qual reserva causou o conflito", () => {
       const ocupada = makeExisting({
         id: "b-alvo",
-        purpose: "Defesa de TCC",
+        purpose: "Prova de recuperação",
         professorId: PROF_CARLOS,
         classId: CLASS_ENG2,
       });
@@ -222,12 +213,12 @@ describe("validateBooking", () => {
       );
 
       expect(result.valid).toBe(false);
-      if (result.valid) return; // estreita o tipo para o TypeScript
+      if (result.valid) return;
 
       const violation = result.violations[0];
       expect(violation).toMatchObject({
         code: "ROOM_CONFLICT",
-        conflict: { id: "b-alvo", purpose: "Defesa de TCC" },
+        conflict: { id: "b-alvo", purpose: "Prova de recuperação" },
       });
     });
   });
@@ -262,8 +253,6 @@ describe("validateBooking", () => {
     });
 
     it("recusa quando a sobreposição é de um único minuto", () => {
-      // O contraponto do teste anterior: um minuto de invasão já é conflito.
-      // Os dois juntos fixam a fronteira exata do comportamento.
       const anterior = makeExisting({
         startsAt: segunda("17:20"),
         endsAt: segunda("19:01"),
@@ -278,8 +267,6 @@ describe("validateBooking", () => {
     });
 
     it("recusa quando a reserva existente está inteiramente contida no pedido", () => {
-      // Contenção não é detectada por comparar apenas os inícios ou apenas os
-      // fins. É o caso que uma verificação incompleta deixaria passar.
       const contida = makeExisting({
         startsAt: segunda("19:30"),
         endsAt: segunda("20:00"),
@@ -294,8 +281,6 @@ describe("validateBooking", () => {
     });
 
     it("ignora reservas que não tocam o período, mesmo se vierem na consulta", () => {
-      // O repositório já filtra por período, mas a regra reconfere. Este teste
-      // é a prova de que ela não terceiriza a própria decisão.
       const distante = makeExisting({
         startsAt: segunda("07:00"),
         endsAt: segunda("08:40"),
@@ -324,8 +309,6 @@ describe("validateBooking", () => {
     });
 
     it("aceita quando a turma ocupa exatamente a capacidade", () => {
-      // A comparação é "maior que", não "maior ou igual": uma sala de 42
-      // lugares comporta uma turma de 42 alunos.
       const result = validateBooking(
         makeRequest(),
         makeContext({
@@ -348,8 +331,6 @@ describe("validateBooking", () => {
 
       expect(result.violations[0]).toEqual({
         code: "MISSING_RESOURCES",
-        // Apenas o que falta, e não a lista inteira do pedido: o projetor
-        // existe na sala e não deve aparecer na mensagem de erro.
         missingResourceIds: [RES_COMPUTADORES],
       });
     });
@@ -406,8 +387,6 @@ describe("validateBooking", () => {
     });
 
     it("recusa quando início e término são iguais", () => {
-      // Duração zero. No banco isso produziria um tstzrange vazio, que não se
-      // sobrepõe a nada e escaparia de todas as constraints de exclusão.
       const result = validateBooking(
         makeRequest({
           startsAt: segunda("19:00"),
@@ -420,8 +399,6 @@ describe("validateBooking", () => {
     });
 
     it("não avalia conflitos quando o período é inválido", () => {
-      // Sem período válido não há o que sobrepor. Reportar "sala ocupada" aqui
-      // seria uma conclusão tirada de uma comparação sem sentido.
       const result = validateBooking(
         makeRequest({
           startsAt: segunda("20:40"),
@@ -479,8 +456,6 @@ describe("validateBooking", () => {
     });
 
     it("aceita o período que ocupa exatamente a abertura e o fechamento", () => {
-      // Os limites são inclusivos: 07:00 e 22:00 são horários válidos, e não o
-      // primeiro instante fora do expediente.
       const result = validateBooking(
         makeRequest({ startsAt: segunda("07:00"), endsAt: segunda("22:00") }),
         makeContext()
@@ -513,7 +488,6 @@ describe("validateBooking", () => {
     it("recusa um horário que já passou", () => {
       const result = validateBooking(
         makeRequest(),
-        // "Agora" adiantado para depois da reserva de referência.
         makeContext({ now: new Date("2026-09-20T12:00:00-03:00") })
       );
 
@@ -523,8 +497,6 @@ describe("validateBooking", () => {
 
   describe("vínculo acadêmico", () => {
     it("recusa quando o professor não leciona a disciplina para a turma", () => {
-      // Todos os horários livres, o espaço comporta e tem os recursos. O que
-      // torna a reserva impossível é apenas o vínculo inexistente.
       const result = validateBooking(
         makeRequest(),
         makeContext({ teachingAssignment: null })
@@ -548,14 +520,12 @@ describe("validateBooking", () => {
       });
     });
 
-    it("aceita defesa de TCC sem disciplina nem vínculo", () => {
-      // Nem toda atividade acadêmica é aula, e as demais não pertencem a
-      // disciplina nenhuma. A reserva segue sujeita a todas as outras regras.
+    it("aceita prova sem disciplina nem vínculo", () => {
       const result = validateBooking(
         makeRequest({
-          activityType: "defense",
+          activityType: "exam",
           subjectId: null,
-          purpose: "Defesa de TCC",
+          purpose: "Prova de recuperação",
         }),
         makeContext({ teachingAssignment: null })
       );
@@ -564,8 +534,6 @@ describe("validateBooking", () => {
     });
 
     it("exige disciplina quando a atividade é aula", () => {
-      // O furo que o tipo de atividade fechou: antes bastava deixar a
-      // disciplina em branco para escapar da verificação do vínculo.
       const result = validateBooking(
         makeRequest({ subjectId: null }),
         makeContext({ teachingAssignment: null })
@@ -613,6 +581,71 @@ describe("validateBooking", () => {
         "INSUFFICIENT_CAPACITY",
         "MISSING_RESOURCES",
       ]);
+    });
+  });
+});
+
+describe("calendário letivo", () => {
+  const LETIVO = { periodo: { codigo: "2026.2" }, bloqueios: [] };
+
+  function codigos(context: Partial<BookingContext>) {
+    const resultado = validateBooking(makeRequest(), makeContext(context));
+    return resultado.valid ? [] : resultado.violations.map((v) => v.code);
+  }
+
+  it("aceita a reserva dentro do período letivo e sem bloqueio", () => {
+    expect(codigos({ calendario: LETIVO })).toEqual([]);
+  });
+
+  it("recusa data fora de qualquer período letivo", () => {
+    expect(codigos({ calendario: { periodo: null, bloqueios: [] } })).toEqual([
+      "OUTSIDE_ACADEMIC_TERM",
+    ]);
+  });
+
+  it("recusa data com feriado, que vale para todos os espaços", () => {
+    expect(
+      codigos({
+        calendario: { ...LETIVO, bloqueios: [{ espacoId: null, motivo: "Finados" }] },
+      })
+    ).toEqual(["DATE_BLOCKED"]);
+  });
+
+  it("o bloqueio de um espaço recusa só aquele espaço", () => {
+    const bloqueioDoLab = { espacoId: ROOM_LAB, motivo: "Manutenção" };
+
+    expect(codigos({ calendario: { ...LETIVO, bloqueios: [bloqueioDoLab] } })).toEqual([]);
+    expect(
+      codigos({
+        room: makeRoom({ id: ROOM_LAB }),
+        calendario: { ...LETIVO, bloqueios: [bloqueioDoLab] },
+      })
+    ).toEqual([]);
+
+    const resultado = validateBooking(
+      makeRequest({ roomId: ROOM_LAB }),
+      makeContext({
+        room: makeRoom({ id: ROOM_LAB }),
+        calendario: { ...LETIVO, bloqueios: [bloqueioDoLab] },
+      })
+    );
+    expect(resultado.valid ? [] : resultado.violations).toEqual([
+      { code: "ROOM_BLOCKED", reason: "Manutenção" },
+    ]);
+  });
+
+  it("procura o vínculo de professor no período da data", () => {
+    const resultado = validateBooking(
+      makeRequest(),
+      makeContext({
+        teachingAssignment: null,
+        calendario: { periodo: { codigo: "2027.1" }, bloqueios: [] },
+      })
+    );
+
+    expect(resultado.valid ? [] : resultado.violations).toContainEqual({
+      code: "NO_TEACHING_ASSIGNMENT",
+      term: "2027.1",
     });
   });
 });

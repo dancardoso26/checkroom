@@ -14,8 +14,6 @@ export type CamposDaReserva = {
 };
 
 export const CAMPOS_VAZIOS = (hoje: string): CamposDaReserva => ({
-  // Aula é o caso mais comum, e começar por ele poupa um clique na maioria das
-  // reservas.
   activityType: "class",
   professorId: "",
   classId: "",
@@ -43,6 +41,5 @@ export const ROTULO_DA_ATIVIDADE: Record<ActivityType, string> = {
   class: "Aula",
   lecture: "Palestra",
   exam: "Prova",
-  defense: "Defesa",
   event: "Evento",
 };

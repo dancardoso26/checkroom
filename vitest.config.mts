@@ -5,8 +5,6 @@ import path from "node:path";
 export default defineConfig({
   plugins: [react()],
   test: {
-    // jsdom simula um navegador em memoria. E o que permite testar componentes
-    // de interface sem abrir um navegador de verdade.
     environment: "jsdom",
     globals: true,
     setupFiles: ["./vitest.setup.ts"],
@@ -17,9 +15,6 @@ export default defineConfig({
 
       include: ["src/domain/**", "src/lib/**"],
 
-      // Adaptadores de entrada e saída ficam de fora desta medição: testá-los
-      // em unidade exigiria dublês, e dublê não prova que a consulta funciona.
-      // Quem os cobre são os testes de ponta a ponta, contra o banco real.
       exclude: [
         "src/lib/supabase/**",
         "src/lib/repositories/**",
@@ -39,7 +34,6 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      // import.meta.dirname substitui __dirname, que nao existe em modulos ESM.
       "@": path.resolve(import.meta.dirname, "./src"),
     },
   },

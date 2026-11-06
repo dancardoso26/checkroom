@@ -10,8 +10,8 @@ export const ROTULO_DO_PAPEL: Record<Papel, string> = {
 export type Ator = {
   profileId: string;
   papel: Papel;
-  /** Nulo para quem não leciona, como a administração. */
   professorId: string | null;
+  ehMaster?: boolean;
 };
 
 export type ReservaAlvo = {
@@ -19,11 +19,9 @@ export type ReservaAlvo = {
   professorId: string;
 };
 
-// Espelha a política "altera a propria reserva" do banco. As duas precisam
-// dizer a mesma coisa: esta dá a mensagem, aquela dá a garantia.
 export function podeGerenciarReserva(
   ator: Ator,
-  reserva: ReservaAlvo
+  reserva: ReservaAlvo,
 ): boolean {
   if (ator.papel === "admin") return true;
   if (reserva.createdBy === ator.profileId) return true;
@@ -31,8 +29,6 @@ export function podeGerenciarReserva(
   return ator.professorId !== null && reserva.professorId === ator.professorId;
 }
 
-// A administração reserva em nome de qualquer docente, que é a secretaria
-// registrando pelo professor. O professor só reserva para si.
 export function podeReservarPara(ator: Ator, professorId: string): boolean {
   if (ator.papel === "admin") return true;
 
@@ -43,8 +39,6 @@ export function podeVerAuditoria(ator: Ator): boolean {
   return ator.papel === "admin";
 }
 
-// Quem não leciona nem administra não tem o que fazer no formulário: aluno e
-// equipe de TI entram no ciclo 2, com palestras e chamados.
 export function podeCriarReserva(ator: Ator): boolean {
   return ator.papel === "admin" || ator.professorId !== null;
 }
@@ -53,11 +47,50 @@ export function podeGerenciarUsuarios(ator: Ator): boolean {
   return ator.papel === "admin";
 }
 
+export function podeGerenciarCadastros(ator: Ator): boolean {
+  return ator.papel === "admin";
+}
+
+export function podeAbrirChamado(ator: Ator): boolean {
+  return ator.papel === "professor" || ator.papel === "admin";
+}
+
+export function podeAtenderChamado(ator: Ator): boolean {
+  return ator.papel === "it_support" || ator.ehMaster === true;
+}
+
+export function podeVerTodosOsChamados(ator: Ator): boolean {
+  return ator.papel === "it_support" || ator.papel === "admin";
+}
+
+export type ChamadoAlvo = { solicitanteId: string };
+
+export function podeCancelarChamado(ator: Ator, chamado: ChamadoAlvo): boolean {
+  return chamado.solicitanteId === ator.profileId || ator.ehMaster === true;
+}
+
+export function podeExcluirChamado(ator: Ator): boolean {
+  return ator.ehMaster === true;
+}
+
+export function podeVerPalestras(ator: Ator): boolean {
+  return ator.papel !== "it_support";
+}
+
+export function podeCadastrarPalestra(ator: Ator): boolean {
+  return ator.papel === "admin";
+}
+
+export function podeInscreverEmPalestra(ator: Ator): boolean {
+  return ator.papel === "student";
+}
+
+export function podeVerPainel(ator: Ator): boolean {
+  return ator.papel === "admin";
+}
+
 export type AlvoDeGestao = { id: string; papel: Papel; ehMaster: boolean };
 
-// O master, dono do sistema, nunca é alterado: sem ele o projeto perde quem o
-// administra. A própria conta também não, para ninguém se trancar do lado de
-// fora pela tela. O banco repete a trava do master.
 export function podeAlterarUsuario(ator: Ator, alvo: AlvoDeGestao): boolean {
   return ator.papel === "admin" && !alvo.ehMaster && alvo.id !== ator.profileId;
 }

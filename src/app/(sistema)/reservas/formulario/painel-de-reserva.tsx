@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -19,19 +20,20 @@ import {
   formatTimeRange,
 } from "@/lib/datetime";
 
-import type { RoomOption } from "@/lib/repositories/roomRepository";
-import type { ClassOption } from "@/lib/repositories/classRepository";
-import type { ProfessorOption } from "@/lib/repositories/professorRepository";
-import type { ResourceOption } from "@/lib/repositories/resourceRepository";
+import type { RoomOption } from "@/lib/repositories/repositorio-de-espacos";
+import type { ClassOption } from "@/lib/repositories/repositorio-de-turmas";
+import type { ProfessorOption } from "@/lib/repositories/repositorio-de-professores";
+import type { ResourceOption } from "@/lib/repositories/repositorio-de-recursos";
+import type { CursoOpcao } from "@/lib/repositories/repositorio-de-cursos";
 import type {
   SubjectOption,
   TeachingAssignmentOption,
-} from "@/lib/repositories/subjectRepository";
+} from "@/lib/repositories/repositorio-de-disciplinas";
 
 import type { Rascunho } from "../agenda/calendario-grade";
 import { ehPeriodoValido, ROTULO_DA_ATIVIDADE } from "./campos";
 import { DetalhesDaAtividade } from "./detalhes-da-atividade";
-import { RoomPicker } from "./room-picker";
+import { SeletorDeEspaco } from "./seletor-de-espaco";
 import {
   useFormularioDeReserva,
   type Preenchimento,
@@ -44,6 +46,7 @@ export type Catalogos = {
   resources: ResourceOption[];
   subjects: SubjectOption[];
   assignments: TeachingAssignmentOption[];
+  cursos: CursoOpcao[];
 };
 
 export function PainelDeReserva({
@@ -54,19 +57,25 @@ export function PainelDeReserva({
   onFechar,
   onConcluir,
   onRascunho,
+  permitePalestra,
+  somentePalestra = false,
 }: {
   catalogos: Catalogos;
   hoje: string;
   professorFixo: string | null;
   preenchimento: Preenchimento;
   onFechar: () => void;
-  onConcluir: (bookingId: string, dia: string) => void;
-  /** Avisa a agenda do horário em montagem, para ela desenhá-lo na grade. */
+  onConcluir: (bookingId: string | null, dia: string) => void;
   onRascunho: (rascunho: Rascunho | null) => void;
+  permitePalestra: boolean;
+  somentePalestra?: boolean;
 }) {
   const {
     campos,
     alterar,
+    palestra,
+    alterarPalestra,
+    ehPalestra,
     recursos,
     alternarRecurso,
     analise,
@@ -75,21 +84,22 @@ export function PainelDeReserva({
     atividadeCompleta,
     prontoParaEspacos,
     prontoParaConfirmar,
-    state,
+    conclusao,
     enviando,
     enviar,
     formulario,
     motivosDaRecusa,
-  } = useFormularioDeReserva({ hoje, professorFixo, preenchimento });
+  } = useFormularioDeReserva({
+    hoje,
+    professorFixo,
+    preenchimento,
+    rooms: catalogos.rooms,
+  });
 
-  // Duas etapas: o que e quando, e depois onde. Os espaços só fazem sentido
-  // com a atividade completa, porque a análise depende dela inteira.
   const [etapa, setEtapa] = useState<"detalhes" | "espaco">("detalhes");
 
-  // O Enter segue a etapa: nos detalhes avança para os espaços, e só na
-  // escolha do espaço cria a reserva. Incompleto, não faz nada.
   function aoEnviar(evento: React.FormEvent<HTMLFormElement>) {
-    if (etapa === "detalhes") {
+    if (etapa === "detalhes" && !ehPalestra) {
       evento.preventDefault();
       if (prontoParaEspacos) setEtapa("espaco");
       return;
@@ -104,8 +114,12 @@ export function PainelDeReserva({
   }
 
   useEffect(() => {
-    if (state.status === "success") onConcluir(state.bookingId, campos.date);
-  }, [state, campos.date, onConcluir]);
+    if (!conclusao) return;
+    toast.success(
+      conclusao.bookingId ? "Reserva confirmada." : "Palestra cadastrada.",
+    );
+    onConcluir(conclusao.bookingId, campos.date);
+  }, [conclusao, campos.date, onConcluir]);
 
   const periodoValido = ehPeriodoValido(campos);
 
@@ -117,6 +131,7 @@ export function PainelDeReserva({
             inicio: campos.startTime,
             fim: campos.endTime,
             titulo: campos.purpose,
+            tipo: campos.activityType,
           }
         : null
     );
@@ -126,6 +141,7 @@ export function PainelDeReserva({
     campos.startTime,
     campos.endTime,
     campos.purpose,
+    campos.activityType,
     onRascunho,
   ]);
 
@@ -141,12 +157,10 @@ export function PainelDeReserva({
 
   return (
     <Sheet open onOpenChange={(aberto) => !aberto && onFechar()}>
-      {/* Overlay claro: o horário em montagem continua visível na grade. */}
       <SheetContent
         side="right"
         className="w-full gap-0 p-0 sm:max-w-lg"
         overlayClassName="bg-black/10"
-        // O título é o primeiro campo, e já abre pronto para digitar.
         onOpenAutoFocus={(evento) => {
           evento.preventDefault();
           document.getElementById("purposeField")?.focus();
@@ -154,7 +168,7 @@ export function PainelDeReserva({
       >
         <SheetHeader className="px-6 pt-5 pb-2">
           <SheetTitle className="text-muted-foreground text-sm font-medium">
-            Nova reserva
+            {ehPalestra ? "Nova palestra" : "Nova reserva"}
           </SheetTitle>
           <SheetDescription className="sr-only">
             Etapa {etapa === "detalhes" ? "1" : "2"} de 2
@@ -167,7 +181,7 @@ export function PainelDeReserva({
           onSubmit={aoEnviar}
           className="flex-1 overflow-x-hidden overflow-y-auto px-6 py-4"
         >
-          {etapa === "detalhes" ? (
+          {etapa === "detalhes" || ehPalestra ? (
             <DetalhesDaAtividade
               campos={campos}
               alterar={alterar}
@@ -179,6 +193,10 @@ export function PainelDeReserva({
               analise={analise}
               analisando={analisando}
               atividadeCompleta={atividadeCompleta}
+              permitePalestra={permitePalestra}
+              somentePalestra={somentePalestra}
+              palestra={palestra}
+              alterarPalestra={alterarPalestra}
             />
           ) : (
             <div className="space-y-5">
@@ -196,16 +214,26 @@ export function PainelDeReserva({
                 <p className="text-muted-foreground text-sm first-letter:uppercase">
                   {ROTULO_DA_ATIVIDADE[campos.activityType]} · {periodo}
                 </p>
-                {turma && (
+                {ehPalestra ? (
                   <p className="text-muted-foreground text-sm">
-                    {turma.name}, {turma.studentCount} alunos
+                    {palestra.palestrante}, {palestra.vagas} vagas
                   </p>
+                ) : (
+                  turma && (
+                    <p className="text-muted-foreground text-sm">
+                      {turma.name}, {turma.studentCount} alunos
+                    </p>
+                  )
                 )}
               </div>
 
               {motivosDaRecusa.length > 0 && (
                 <Alert variant="destructive" role="alert">
-                  <AlertTitle>Não foi possível criar a reserva</AlertTitle>
+                  <AlertTitle>
+                    {ehPalestra
+                      ? "Não foi possível cadastrar a palestra"
+                      : "Não foi possível criar a reserva"}
+                  </AlertTitle>
                   <AlertDescription>
                     <ul className="list-disc space-y-1 pl-4">
                       {motivosDaRecusa.map((m) => (
@@ -221,7 +249,7 @@ export function PainelDeReserva({
                   Analisando espaços...
                 </p>
               ) : (
-                <RoomPicker
+                <SeletorDeEspaco
                   rooms={catalogos.rooms}
                   resources={catalogos.resources}
                   verdicts={analise.rooms}
@@ -232,30 +260,54 @@ export function PainelDeReserva({
             </div>
           )}
 
-          {/* Os valores vão escondidos porque os campos visíveis são controlados,
-              e alguns não têm input nativo, como o seletor de horário. */}
-          <input type="hidden" name="roomId" value={roomIdValido} />
-          <input type="hidden" name="professorId" value={campos.professorId} />
-          <input type="hidden" name="classId" value={campos.classId} />
-          <input type="hidden" name="subjectId" value={campos.subjectId} />
-          <input
-            type="hidden"
-            name="activityType"
-            value={campos.activityType}
-          />
-          <input type="hidden" name="purpose" value={campos.purpose} />
-          <input type="hidden" name="date" value={campos.date} />
-          <input type="hidden" name="startTime" value={campos.startTime} />
-          <input type="hidden" name="endTime" value={campos.endTime} />
-          {recursos.map((id) => (
-            <input key={id} type="hidden" name="resourceIds" value={id} />
-          ))}
+          {(ehPalestra || etapa === "espaco") &&
+            (ehPalestra ? (
+              <>
+                <input type="hidden" name="titulo" value={campos.purpose} />
+                <input
+                  type="hidden"
+                  name="palestrante"
+                  value={palestra.palestrante}
+                />
+                <input type="hidden" name="espacoId" value={roomIdValido} />
+                <input type="hidden" name="data" value={campos.date} />
+                <input type="hidden" name="inicio" value={campos.startTime} />
+                <input type="hidden" name="fim" value={campos.endTime} />
+                <input type="hidden" name="vagas" value={palestra.vagas} />
+                {palestra.cursoIds.map((id) => (
+                  <input key={id} type="hidden" name="cursoIds" value={id} />
+                ))}
+              </>
+            ) : (
+              <>
+                <input type="hidden" name="roomId" value={roomIdValido} />
+                <input
+                  type="hidden"
+                  name="professorId"
+                  value={campos.professorId}
+                />
+                <input type="hidden" name="classId" value={campos.classId} />
+                <input type="hidden" name="subjectId" value={campos.subjectId} />
+                <input
+                  type="hidden"
+                  name="activityType"
+                  value={campos.activityType}
+                />
+                <input type="hidden" name="purpose" value={campos.purpose} />
+                <input type="hidden" name="date" value={campos.date} />
+                <input type="hidden" name="startTime" value={campos.startTime} />
+                <input type="hidden" name="endTime" value={campos.endTime} />
+                {recursos.map((id) => (
+                  <input key={id} type="hidden" name="resourceIds" value={id} />
+                ))}
+              </>
+            ))}
         </form>
 
         <SheetFooter className="flex-row items-center justify-end gap-2 border-t px-6 py-4">
           {etapa === "espaco" && espaco && (
             <p className="text-muted-foreground mr-auto truncate text-sm">
-              {espaco.building} · {espaco.name}
+              {espaco.name}
             </p>
           )}
 
@@ -263,9 +315,7 @@ export function PainelDeReserva({
             Cancelar
           </Button>
 
-          {etapa === "detalhes" ? (
-            // Fora do formulário, no rodapé: o atributo form liga o botão a ele,
-            // e assim o Enter num campo aciona a mesma coisa que o clique.
+          {etapa === "detalhes" && !ehPalestra ? (
             <Button
               type="submit"
               form="formularioDaReserva"
@@ -279,7 +329,13 @@ export function PainelDeReserva({
               form="formularioDaReserva"
               disabled={!prontoParaConfirmar || enviando}
             >
-              {enviando ? "Reservando..." : "Reservar"}
+              {enviando
+                ? ehPalestra
+                  ? "Cadastrando..."
+                  : "Reservando..."
+                : ehPalestra
+                  ? "Cadastrar palestra"
+                  : "Reservar"}
             </Button>
           )}
         </SheetFooter>

@@ -32,7 +32,19 @@ dependem da extensão.
 | 15 | `migrations/20260922000200_audit_log.sql` | Cria `audit_logs` e a trigger que registra mudanças em `bookings` |
 | 16 | `migrations/20260922000300_row_level_security_policies.sql` | Concede acesso ao papel `authenticated` e cria as políticas de RLS |
 | 17 | `migrations/20260922000400_anonimizar_conta.sql` | Cria a função que anonimiza o perfil e cancela as reservas futuras |
-| 18 | `seed.sql` | Popula o mundo acadêmico (opcional, só em desenvolvimento) |
+| 18 | `migrations/20260924000000_gestao_de_usuarios.sql` | Remoção de usuário pela administração, por anonimização |
+| 19 | `migrations/20260924000100_administrador_unico.sql` | Administrador único (substituída pela 21) |
+| 20 | `migrations/20260924000200_alterar_papel.sql` | Cria `alterar_papel`, com registro na auditoria |
+| 21 | `migrations/20260926000000_administrador_master.sql` | Vários administradores, com um master que não pode ser removido |
+| 22 | `migrations/20260926000100_cadastro_seguro.sql` | Conta nasce como aluno; e-mail do professor oculto da sessão |
+| 23 | `migrations/20261012000000_curso_do_aluno.sql` | Curso do aluno em `profiles`, gravado junto com o papel |
+| 24 | `migrations/20261012000100_cadastro_de_espacos.sql` | Escrita de espaços e recursos pela administração, com auditoria |
+| 25 | `migrations/20261012000200_cadastro_academico.sql` | Escrita de cursos, disciplinas, turmas, professores e vínculos, com auditoria |
+| 26 | `migrations/20261012000300_chamados.sql` | Cria `tickets` e as transições assumir, resolver e cancelar |
+| 27 | `migrations/20261012000400_palestras.sql` | Cria palestras, cursos de destino e inscrições; trava comum com a reserva |
+| 28 | `migrations/20261012000500_calendario_letivo.sql` | Cria períodos letivos e bloqueios do calendário |
+| 29 | `migrations/20261012000600_codigo_dos_espacos.sql` | Espaços por prédio, andar e sala, com o código (3T-12) calculado |
+| 30 | `seed.sql` | Popula o mundo acadêmico (opcional, só em desenvolvimento) |
 
 Depois do `seed.sql`, rode no terminal:
 

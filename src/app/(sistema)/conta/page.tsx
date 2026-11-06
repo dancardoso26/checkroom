@@ -1,3 +1,4 @@
+import { RotuloDeCampo } from "@/components/rotulo-de-campo";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
@@ -34,12 +35,16 @@ export default async function ContaPage() {
 
           <dl className="grid gap-4 text-sm sm:grid-cols-2">
             <div>
-              <dt className="text-muted-foreground text-xs">Nome</dt>
+              <dt className="text-muted-foreground text-xs">
+                <RotuloDeCampo rotulo="Nome" />
+              </dt>
               <dd className="font-medium">{sessao.nome}</dd>
             </div>
 
             <div>
-              <dt className="text-muted-foreground text-xs">Papel</dt>
+              <dt className="text-muted-foreground text-xs">
+                <RotuloDeCampo rotulo="Perfil" />
+              </dt>
               <dd className="font-medium">
                 {ROTULO_DO_PAPEL[sessao.papel] ?? sessao.papel}
               </dd>
@@ -47,7 +52,7 @@ export default async function ContaPage() {
 
             <div>
               <dt className="text-muted-foreground text-xs">
-                Aceite dos termos
+                <RotuloDeCampo rotulo="Aceite dos termos" />
               </dt>
               <dd className="font-medium">
                 {sessao.aceitouTermosEm
@@ -58,21 +63,18 @@ export default async function ContaPage() {
 
             <div>
               <dt className="text-muted-foreground text-xs">
-                Verificação em duas etapas
+                <RotuloDeCampo rotulo="Verificação em duas etapas" />
               </dt>
               <dd className="font-medium">Ativa</dd>
             </div>
           </dl>
         </section>
 
-        {/* O master não pode cancelar a conta, então a seção nem aparece.
-            O banco também recusa, caso a ação seja chamada direto. */}
         {!sessao.ehMaster && (
           <section className="border-destructive/30 bg-card space-y-4 rounded-lg border p-6">
             <h2 className="font-medium">Cancelar minha conta</h2>
             <Separator />
 
-            {/* O detalhe do que acontece fica na confirmação, onde a decisão é tomada. */}
             <p className="text-muted-foreground text-sm">
               Cancele sua conta e remova seus dados pessoais.
             </p>

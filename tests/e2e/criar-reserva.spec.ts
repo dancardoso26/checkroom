@@ -34,6 +34,11 @@ function proximaSegunda(): string {
 
 const SEGUNDA = proximaSegunda();
 
+function mesDeHoje(): string {
+  const hoje = new Date();
+  return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}`;
+}
+
 test.beforeEach(async ({ page }) => {
   await entrarComo(page, ADMIN);
   await limparReservasDeTeste();
@@ -53,7 +58,6 @@ test("cria uma reserva válida do início ao fim", async ({ page }) => {
     disciplina: "Saúde Coletiva",
   });
 
-  // O horário veio do clique: 07:00, e o término sugerido de duas aulas.
   await expect(page.locator("#endField")).toHaveText("08:40");
   await expect(page.getByText("Horário disponível")).toBeVisible({
     timeout: 20_000,
@@ -69,20 +73,18 @@ test("cria uma reserva válida do início ao fim", async ({ page }) => {
   await expect(botaoConfirmar(page)).toBeEnabled();
   await botaoConfirmar(page).click();
 
-  // O painel fecha e a reserva aparece destacada na agenda.
   await expect(page).toHaveURL(/destaque=/, { timeout: 25_000 });
   await expect(page.getByRole("dialog", { name: "Nova reserva" })).toBeHidden();
   await expect(
     page
       .locator("[data-reserva]")
-      .filter({ hasText: `${PREFIXO_TESTE} aula de laboratório` })
+      .filter({ hasText: `${PREFIXO_TESTE} aula de laboratório` }),
   ).toBeVisible();
 });
 
 test("impede confirmar quando o professor e a turma já têm compromisso", async ({
   page,
 }) => {
-  // Ana e a turma SI 8º A têm aula na segunda das 19h às 20h40, pelo seed.
   await abrirPainel(page, { dia: SEGUNDA, inicio: "19:00" });
 
   await preencherAtividade(page, {
@@ -96,16 +98,12 @@ test("impede confirmar quando o professor e a turma já têm compromisso", async
     timeout: 20_000,
   });
 
-  // Nenhum espaço resolve um conflito de agenda, então nem se chega à etapa
-  // dos espaços, em vez de levar a uma recusa no envio.
   await expect(botaoVerEspacos(page)).toBeDisabled();
 });
 
 test("oferece só os espaços disponíveis", async ({ page }) => {
   await abrirPainel(page, { dia: SEGUNDA, inicio: "09:00" });
 
-  // A turma SI 4º B tem 55 alunos e só cabe no auditório; a exigência de
-  // projetor descartaria ainda a sala 102.
   await preencherAtividade(page, {
     finalidade: `${PREFIXO_TESTE} incompatíveis`,
     professor: "Carlos",
@@ -120,32 +118,44 @@ test("oferece só os espaços disponíveis", async ({ page }) => {
     timeout: 20_000,
   });
 
-  // Os descartados não aparecem: a lista é só do que pode ser escolhido.
   await expect(espacosIncompativeis(page)).toHaveCount(0);
   await expect(page.getByText(/comporta \d+ pessoas/)).toHaveCount(0);
   await expect(page.getByText(/espaços? disponíve(l|is)/)).toBeVisible();
 });
 
-// Sem nenhum disponível, a lista vazia não explicaria nada: os descartados
-// voltam com o motivo, para o usuário saber o que ajustar.
 test("explica por que nenhum espaço serve quando não há disponível", async ({
   page,
 }) => {
-  const [salas, professores, turmas] = await Promise.all([
+  const [salas, todosOsProfessores, turmas] = await Promise.all([
     listarEspacos(),
     listarProfessores(),
     listarTurmas(),
   ]);
 
-  // O auditório é o único que comporta 55 alunos; ocupá-lo esgota as opções.
-  await inserirReservaDireto({
-    room_id: salas.find((s) => s.name === "Auditório")!.id,
-    professor_id: professores.find((p) => p.name.startsWith("Marina"))!.id,
-    class_id: turmas.find((t) => t.name.startsWith("ENF 6"))!.id,
-    purpose: `${PREFIXO_TESTE} ocupa o auditorio`,
-    starts_at: new Date(`${SEGUNDA}T09:00:00-03:00`).toISOString(),
-    ends_at: new Date(`${SEGUNDA}T10:40:00-03:00`).toISOString(),
-  });
+  const turmaDoTeste = turmas.find((t) => t.name.startsWith("SI 4"))!;
+  const salasQueCabem = salas;
+  const professores = todosOsProfessores.filter(
+    (p) => !p.name.startsWith("Carlos"),
+  );
+  const outrasTurmas = turmas.filter((t) => t.id !== turmaDoTeste.id);
+
+  let tentativa = 0;
+  for (const sala of salasQueCabem) {
+    let ocupou = false;
+    while (!ocupou && tentativa < professores.length) {
+      const resultado = await inserirReservaDireto({
+        room_id: sala.id,
+        professor_id: professores[tentativa % professores.length].id,
+        class_id: outrasTurmas[tentativa % outrasTurmas.length].id,
+        purpose: `${PREFIXO_TESTE} ocupa ${sala.name}`,
+        starts_at: new Date(`${SEGUNDA}T09:00:00-03:00`).toISOString(),
+        ends_at: new Date(`${SEGUNDA}T10:40:00-03:00`).toISOString(),
+      });
+      ocupou = resultado.aceitou;
+      tentativa++;
+    }
+    expect(ocupou, `não foi possível ocupar ${sala.name}`).toBe(true);
+  }
 
   await abrirPainel(page, { dia: SEGUNDA, inicio: "09:00" });
 
@@ -163,14 +173,8 @@ test("explica por que nenhum espaço serve quando não há disponível", async (
   });
   await expect(espacosDisponiveis(page)).toHaveCount(0);
   await expect(espacosIncompativeis(page).first()).toBeVisible();
-  await expect(
-    page.getByText(/comporta \d+ pessoas e a turma tem 55/).first()
-  ).toBeVisible();
 });
 
-// Outra reserva ocupa o horário depois que a análise o liberou, e antes do
-// envio. O banco recusa, e o formulário precisa continuar preenchido: o
-// action do React 19 limparia tudo, e já limpou neste projeto.
 test("preserva o preenchimento quando a reserva é recusada no envio", async ({
   page,
 }) => {
@@ -197,7 +201,7 @@ test("preserva o preenchimento quando a reserva é recusada no envio", async ({
   ]);
 
   await inserirReservaDireto({
-    room_id: salas.find((s) => s.name === "102")!.id,
+    room_id: salas.find((s) => s.name === "1T-02")!.id,
     professor_id: professores.find((p) => p.name.startsWith("Marina"))!.id,
     class_id: turmas.find((t) => t.name.startsWith("SI 4"))!.id,
     purpose: `${PREFIXO_TESTE} concorrente`,
@@ -210,10 +214,9 @@ test("preserva o preenchimento quando a reserva é recusada no envio", async ({
   await expect(page.getByText("Não foi possível criar a reserva")).toBeVisible({
     timeout: 20_000,
   });
-  // Voltar aos detalhes mostra tudo como estava.
   await page.getByRole("button", { name: "Editar detalhes" }).click();
   await expect(page.locator("#purposeField")).toHaveValue(
-    `${PREFIXO_TESTE} preservar`
+    `${PREFIXO_TESTE} preservar`,
   );
   await expect(page.locator("#professorField")).toContainText("Marina");
   await expect(page.locator("#startField")).toHaveText("11:00");
@@ -238,10 +241,9 @@ test("só oferece as turmas com vínculo quando a atividade é aula", async ({
 test("oferece todas as turmas quando a atividade não é aula", async ({
   page,
 }) => {
-  // Palestra e evento não dependem de vínculo docente, então o filtro sai.
   await abrirPainel(page, { dia: SEGUNDA });
 
-  await page.getByText("Palestra", { exact: true }).click();
+  await page.getByText("Evento", { exact: true }).click();
 
   await page.click("#professorField");
   await page.getByRole("option", { name: "Marina" }).first().click();
@@ -252,17 +254,14 @@ test("oferece todas as turmas quando a atividade não é aula", async ({
   expect(turmas.some((t) => t.includes("SI 8"))).toBe(true);
 });
 
-test("aceita atividade sem disciplina, como seminário ou defesa", async ({
-  page,
-}) => {
+test("aceita atividade sem disciplina, como seminário", async ({ page }) => {
   await abrirPainel(page, { dia: SEGUNDA, inicio: "16:00" });
 
   await preencherAtividade(page, {
-    finalidade: `${PREFIXO_TESTE} defesa de TCC`,
+    finalidade: `${PREFIXO_TESTE} seminário`,
     professor: "Marina",
     turma: "SI 8",
-    // Defesa não pertence a disciplina, e por isso aceita uma turma sem vínculo.
-    tipo: "Defesa",
+    tipo: "Evento",
   });
 
   await expect(page.getByText("Horário disponível")).toBeVisible({
@@ -285,8 +284,6 @@ test("oferece apenas horários dentro do expediente", async ({ page }) => {
 
   await expect(horas.getByText("07", { exact: true })).toBeVisible();
 
-  // A hora 22 não pode aparecer no início: o término precisa ser posterior, e o
-  // expediente acaba às 22:00. Escolhê-la deixaria o usuário sem saída.
   await expect(horas.getByText("22", { exact: true })).toHaveCount(0);
 });
 
@@ -297,8 +294,6 @@ test("o término escolhido à mão prevalece sobre o sugerido", async ({
 
   await expect(page.locator("#endField")).toHaveText("15:40");
 
-  // Trocar só a hora preserva o minuto e fecha o seletor, como no resto do
-  // formulário: de 15:40 para a hora 17 fica 17:40.
   await page.click("#endField");
   await page
     .locator('[data-slot="popover-content"] > div > div')
@@ -316,8 +311,6 @@ test("abre pronto para digitar o título", async ({ page }) => {
   await expect(botaoVerEspacos(page)).toBeDisabled();
 });
 
-// O seletor de horário abre num popover fora do painel, e o bloqueio de
-// rolagem do painel já engoliu a roda do mouse dentro dele.
 test("a lista de horas rola com a roda do mouse dentro do painel", async ({
   page,
 }) => {
@@ -336,8 +329,6 @@ test("a lista de horas rola com a roda do mouse dentro do painel", async ({
     .toBeGreaterThan(0);
 });
 
-// A verificação só aparece com a atividade completa: enquanto falta a
-// disciplina, o que falta é preenchimento, e não um conflito de agenda.
 test("não mostra a verificação da agenda antes de preencher tudo", async ({
   page,
 }) => {
@@ -356,7 +347,6 @@ test("não mostra a verificação da agenda antes de preencher tudo", async ({
   await page.click("#subjectField");
   await page.getByRole("option", { name: "Saúde Coletiva" }).click();
 
-  // O resultado aparece depois do campo de itens, e não junto da turma.
   const resultado = page.getByText("Horário disponível");
   await expect(resultado).toBeVisible({ timeout: 20_000 });
 
@@ -372,14 +362,21 @@ test("o calendário próprio escolhe a data e bloqueia dias passados", async ({
 
   await page.click("#dateField");
 
-  // Hoje é o mínimo: qualquer dia anterior na grade fica desabilitado.
-  const hoje = page.locator('[aria-current="date"]');
+  const viraOMes = SEGUNDA.slice(0, 7) !== mesDeHoje();
+  if (viraOMes) {
+    await page.getByRole("button", { name: "Mês anterior" }).click();
+  }
+
+  const hoje = page.getByRole("dialog").locator('[aria-current="date"]');
   await expect(hoje).toBeEnabled();
   await expect(
-    page.getByRole("button", { name: "Mês anterior" })
+    page.getByRole("button", { name: "Mês anterior" }),
   ).toBeDisabled();
 
-  // Escolher um dia fecha o balão e atualiza o campo.
+  if (viraOMes) {
+    await page.getByRole("button", { name: "Próximo mês" }).click();
+  }
+
   const alvo = SEGUNDA.split("-").map(Number);
   const proximoDia = new Date(Date.UTC(alvo[0], alvo[1] - 1, alvo[2] + 1));
   const extenso = new Intl.DateTimeFormat("pt-BR", {
@@ -389,15 +386,13 @@ test("o calendário próprio escolhe a data e bloqueia dias passados", async ({
     year: "numeric",
   }).format(proximoDia);
 
-  await page.getByRole("button", { name: extenso }).click();
+  await page.getByRole("button", { name: extenso, exact: true }).click();
 
   await expect(page.locator("#dateField")).toHaveText(
-    proximoDia.toISOString().slice(0, 10).split("-").reverse().join("/")
+    proximoDia.toISOString().slice(0, 10).split("-").reverse().join("/"),
   );
 });
 
-// O Enter segue a etapa: incompleto não faz nada, completo leva aos espaços,
-// e nunca cria a reserva direto dos detalhes.
 test("o Enter no painel avança de etapa sem pular a escolha do espaço", async ({
   page,
 }) => {

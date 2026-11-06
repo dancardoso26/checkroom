@@ -42,8 +42,6 @@ function pedido(
     professorId: PROF_ANA,
     classId: CLASS_SI8,
     subjectId: null,
-    // Palestra: a avaliação de espaços não depende de vínculo docente, e usar o
-    // tipo que não o exige mantém cada teste medindo uma coisa só.
     activityType: "lecture" as const,
     purpose: "Aula de Banco de Dados II",
     startsAt: segunda("19:00"),
@@ -147,15 +145,11 @@ describe("evaluateRooms", () => {
 
     for (const avaliacao of resultado) {
       expect(avaliacao.violations).toEqual([]);
-      // Mas nenhum espaço é apresentado como utilizável, porque o pedido
-      // inteiro é inválido enquanto a professora estiver ocupada.
       expect(avaliacao.compatible).toBe(false);
     }
   });
 
   it("sugere o espaço mais justo antes do maior", () => {
-    // Turma de 38 alunos. O auditório de 120 cabe, mas ocupá-lo inviabiliza o
-    // evento grande que viesse depois. O laboratório de 40 é a escolha certa.
     const salas = [
       sala({ id: "auditorio", capacity: 120 }),
       sala({ id: "lab", capacity: 40 }),
@@ -214,8 +208,6 @@ describe("findScheduleConflicts", () => {
   });
 
   it("ignora capacidade e recursos, que são assunto de cada espaço", () => {
-    // Turma enorme e recurso exigido: nada disso deve aparecer aqui, porque a
-    // resposta depende de qual espaço se está olhando.
     const violacoes = findScheduleConflicts(
       pedido({ requiredResourceIds: [RES_COMPUTADORES] }),
       contexto({ classGroup: makeClass({ studentCount: 5000 }) })

@@ -10,8 +10,6 @@ export type Secao = {
   conteudo: React.ReactNode;
 };
 
-// Termos e política têm a mesma estrutura: seções numeradas, cada uma com
-// âncora própria, e um índice que acompanha a leitura.
 export function Documento({
   titulo,
   subtitulo,
@@ -25,7 +23,6 @@ export function Documento({
 }) {
   const [atual, setAtual] = useState(secoes[0]?.id);
 
-  // Marca no índice a seção que está no topo da tela.
   useEffect(() => {
     const observador = new IntersectionObserver(
       (entradas) => {
@@ -57,8 +54,6 @@ export function Documento({
           <section
             key={id}
             id={id}
-            // O deslocamento evita que o título fique colado no topo ao
-            // navegar pelo índice.
             className="scroll-mt-8 border-t pt-8 pb-2 first-of-type:mt-8"
           >
             <h2 className="mb-4 flex items-baseline gap-3 text-xl font-semibold tracking-tight">

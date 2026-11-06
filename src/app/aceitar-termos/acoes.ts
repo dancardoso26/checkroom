@@ -4,15 +4,13 @@ import { redirect } from "next/navigation";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { registrarEventoDeAutenticacao } from "@/lib/auditoria";
-import { VERSAO_DOS_TERMOS } from "@/lib/documentos";
+import { VERSAO_DOS_TERMOS } from "@/domain/documentos/documentos";
 
 export type AceiteState =
   | { status: "idle" }
   | { status: "success" }
   | { status: "error"; message: string };
 
-// Recebe o estado anterior porque useActionState o exige. Nada vem do
-// formulário: marcar a caixa já é a informação inteira.
 export async function aceitarTermos(
   estadoAnterior: AceiteState,
   dados: FormData
@@ -44,7 +42,5 @@ export async function aceitarTermos(
     versao: VERSAO_DOS_TERMOS,
   });
 
-  // Sem redirect: ele resolve o destino sem revalidar a sessão, e a tela
-  // seguinte voltaria a pedir o aceite que acabou de ser gravado.
   return { status: "success" };
 }

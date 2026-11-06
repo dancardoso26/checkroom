@@ -35,7 +35,6 @@ test.beforeAll(async () => {
       listarReservas(),
     ]);
 
-  // Sexta-feira da semana seguinte, longe de tudo o que o seed cria.
   const hoje = new Date();
   const diasAteSexta = (12 - hoje.getDay()) % 7 || 7;
   const sexta = new Date(hoje);
@@ -77,8 +76,6 @@ async function criarReservaDeTeste(sufixo: string) {
   return criada.id!;
 }
 
-// O detalhe e a confirmação têm um botão Excluir cada; o da confirmação é o
-// último a abrir.
 async function confirmarExclusao(page: Page) {
   await page
     .getByRole("button", { name: "Excluir", exact: true })
@@ -107,7 +104,6 @@ test("exclui pelo detalhe e a reserva some do banco", async ({ page }) => {
     timeout: 15_000,
   });
 
-  // A asserção que dá sentido ao arquivo: cancelar deixaria a linha no banco.
   expect(
     await buscarReserva(id),
     "a reserva excluída não deveria continuar no banco"
@@ -115,8 +111,6 @@ test("exclui pelo detalhe e a reserva some do banco", async ({ page }) => {
 });
 
 test("os recursos vinculados somem junto", async () => {
-  // Prova o "on delete cascade" de booking_resources. Sem ele, sobrariam linhas
-  // apontando para uma reserva que não existe mais.
   const id = await criarReservaDeTeste("cascade");
   await vincularRecursos(id, recursos);
 
@@ -145,8 +139,6 @@ test("exclui uma reserva já cancelada, pelo filtro de canceladas", async ({
     timeout: 15_000,
   });
 
-  // Sem o filtro, a cancelada ficaria fora de alcance para sempre: some da tela
-  // mas continua no banco.
   await page.goto(semanaDoDia(inicio, true));
 
   const cancelada = await abrirDetalhe(page, finalidade);

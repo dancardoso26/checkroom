@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { VERSAO_DOS_TERMOS, VIGENTE_DESDE } from "@/lib/documentos";
+import { VERSAO_DOS_TERMOS, VIGENTE_DESDE } from "@/domain/documentos/documentos";
 
 import { Documento, type Secao } from "../documento";
 import { TabelaDoDocumento } from "../tabela-do-documento";
@@ -80,15 +80,19 @@ const SECOES: Secao[] = [
           linhas={[
             [
               "Professor",
-              "Consultar a agenda, reservar espaços em seu próprio nome e cancelar ou excluir as reservas que são suas ou que registrou.",
+              "Consultar a agenda e as palestras, reservar espaços em seu próprio nome, cancelar ou excluir as reservas que são suas ou que registrou e abrir chamados de suporte sobre os espaços.",
             ],
             [
               "Administrador",
-              "Tudo o que o professor faz, em nome de qualquer docente, além de gerenciar usuários e consultar a trilha de auditoria.",
+              "Tudo o que o professor faz, em nome de qualquer professor, além de gerenciar usuários, manter espaços, recursos, cadastro acadêmico e calendário letivo, cadastrar palestras e consultar o painel de métricas e a trilha de auditoria.",
             ],
             [
-              "Aluno e Equipe de TI",
-              "Consultar a agenda. As funções próprias desses perfis, como inscrição em palestras e chamados de manutenção, fazem parte das próximas etapas do projeto.",
+              "Aluno",
+              "Consultar a agenda e as palestras do seu curso, inscrever-se nelas enquanto houver vagas e cancelar a inscrição antes do início.",
+            ],
+            [
+              "Equipe de TI",
+              "Consultar a agenda e atender os chamados de suporte: assumir, registrar a solução e resolver.",
             ],
           ]}
         />
@@ -114,6 +118,10 @@ const SECOES: Secao[] = [
         <ul>
           <li>reservar espaços em nome de outra pessoa sem autorização;</li>
           <li>
+            abrir chamados sem um problema real, ou se inscrever em palestras
+            sem a intenção de comparecer, ocupando a vaga de outra pessoa;
+          </li>
+          <li>
             registrar reservas fictícias para bloquear espaços que não serão
             usados;
           </li>
@@ -136,7 +144,9 @@ const SECOES: Secao[] = [
         Os textos que você escreve, como o título de uma reserva ou o motivo de
         um cancelamento, ficam visíveis para todas as pessoas com acesso à
         agenda, e o motivo do cancelamento também é enviado por e-mail ao
-        professor da reserva. Não inclua neles informações pessoais
+        professor da reserva. A descrição de um chamado é lida pela equipe de
+        TI e pela administração, e a solução registrada é enviada por e-mail a
+        quem abriu o chamado. Não inclua nesses textos informações pessoais
         desnecessárias, de outras pessoas ou de natureza sensível.
       </p>
     ),
@@ -161,7 +171,8 @@ const SECOES: Secao[] = [
       <>
         <p>
           Você pode cancelar a sua conta a qualquer momento, em Minha conta. O
-          cancelamento encerra o acesso, cancela as suas reservas futuras e
+          cancelamento encerra o acesso, cancela as suas reservas futuras e os
+          chamados ainda abertos, remove as inscrições em palestras futuras e
           remove os dados que identificam você, conforme descrito na{" "}
           <Link
             href="/privacidade"

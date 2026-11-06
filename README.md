@@ -4,9 +4,11 @@ Sistema web de gestão de espaços e eventos acadêmicos, desenvolvido como Proj
 Final de Curso em Sistemas de Informação.
 
 O sistema reserva salas, laboratórios e auditórios verificando conflito de
-espaço, de professor e de turma, capacidade, recursos e vínculo docente. O acesso
-exige login com segundo fator, a autorização é aplicada na aplicação e no banco,
-e toda alteração em reserva entra numa trilha de auditoria.
+espaço, de professor e de turma, capacidade, recursos, vínculo de professor e o
+calendário letivo. Além das reservas, atende chamados de suporte sobre os
+espaços, palestras com inscrição dos alunos e um painel de métricas para a
+administração. O acesso exige login com segundo fator, a autorização é aplicada
+na aplicação e no banco, e toda alteração entra numa trilha de auditoria.
 
 ## A agenda
 
@@ -26,6 +28,24 @@ reserva. Não valem enquanto o foco está num campo de texto.
 
 A regra de negócio não mudou com a nova jornada: o painel chama as mesmas
 funções que o formulário anterior chamava.
+
+## Módulos
+
+| Módulo        | Quem usa                                   | O que faz                                                                                                                        |
+| ------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| Reservas      | professor, administração                   | agenda e reserva com as regras abaixo                                                                                            |
+| Chamados      | professor e administração abrem; TI atende | aberto, em atendimento, resolvido (com nota) ou cancelado pelo solicitante; aviso por e-mail na resolução                        |
+| Palestras     | administração cadastra; aluno se inscreve  | curso de destino, espaço livre, vagas até a capacidade; aviso aos alunos dos cursos; inscrição única, antes do início e com vaga |
+| Painel        | administração                              | ocupação por espaço, chamados por situação e prioridade, inscritos por palestra, num período                                     |
+| Configurações | administração                              | usuários, espaços e recursos, cadastro acadêmico e calendário letivo (períodos e bloqueios)                                      |
+
+Cada módulo segue o mesmo caminho da reserva: a Server Action confere sessão e
+papel, a regra mora numa função pura em `src/domain/`, e o banco repete a
+garantia (RLS, constraints e funções com trava para o que é concorrente, como a
+última vaga de uma palestra ou duas pessoas da TI assumindo o mesmo chamado).
+
+A palestra ocupa o espaço como uma reserva: as duas gravações pegam a mesma
+trava por espaço no banco, e a palestra aparece na grade da agenda.
 
 ## A regra de negócio
 
@@ -48,17 +68,17 @@ dando aula em outro bloco.
 
 O vínculo acadêmico vai além disso. Ele é o que torna o modelo **exclusivo de
 educação**, e não transportável para qualquer área: uma agenda de consultórios
-ou de coworking não tem onde encaixar a relação entre docente, disciplina e
+ou de coworking não tem onde encaixar a relação entre professor, disciplina e
 turma. Uma reserva com todos os horários livres e o espaço perfeito continua
 sendo recusada se aquele professor não leciona aquela disciplina para aquela
 turma.
 
-Toda reserva declara um **tipo de atividade**: aula, palestra, prova, defesa ou
-evento. Só a aula exige disciplina e vínculo docente, porque só ela pertence a
+Toda reserva declara um **tipo de atividade**: aula, palestra, prova ou
+evento. Só a aula exige disciplina e vínculo de professor, porque só ela pertence a
 uma disciplina.
 
 Essa declaração não é enfeite. Antes dela a disciplina era simplesmente
-opcional, para acomodar defesa de TCC e seminário, e bastava deixar o campo
+opcional, para acomodar seminário e palestra, e bastava deixar o campo
 vazio para escapar da verificação do vínculo. Com o tipo declarado, a exigência
 deixa de depender de o usuário não preencher um campo.
 
@@ -90,10 +110,9 @@ canceladas" da listagem. Sem ele, o histórico existiria só no banco e a reserv
 cancelada nunca poderia ser excluída.
 
 Excluir apaga também os recursos vinculados, pelo `on delete cascade` de
-`booking_resources`. Não há registro de quem excluiu, e não haveria como: a linha
-que o guardaria é justamente a que se apaga. Quando os logs de auditoria
-existirem como tabela própria, a exclusão passa a gravar um evento lá antes de
-remover a reserva.
+`booking_resources`. Quem excluiu e o que foi excluído ficam na trilha de
+auditoria: o gatilho `bookings_audit` grava o estado anterior da reserva e o
+autor da exclusão antes de a linha deixar de existir.
 
 Isso exigiu um cuidado nas constraints de exclusão. A linha cancelada continua na
 tabela, e sem a cláusula `where (status = 'active')` ela seguiria bloqueando o
@@ -123,7 +142,7 @@ com uma fotografia dele, e a terceira é a única dentro da transação.
 ### Autenticação
 
 - Senha, com no mínimo oito caracteres, e **segundo fator TOTP** obrigatório
-  (aplicativo autenticador). O middleware confere o nível da sessão (`aal2`)
+  (aplicativo autenticador). O proxy (`src/proxy.ts`) confere o nível da sessão (`aal2`)
   em toda requisição, e quem ainda não passou pelo segundo fator só alcança as
   telas de verificação.
 - A sessão é validada no servidor de autenticação a cada requisição
@@ -172,7 +191,7 @@ com uma fotografia dele, e a terceira é a única dentro da transação.
 - A trilha registra entradas, saídas, tentativas recusadas, reservas (por
   gatilho no banco) e a gestão de usuários. Ninguém tem permissão de escrever
   nela pela API.
-- Excluir uma conta anonimiza o perfil, o cadastro de docente e os e-mails da
+- Excluir uma conta anonimiza o perfil, o cadastro de professor e os e-mails da
   trilha de auditoria. Depois disso, nenhum dado identifica a pessoa.
 
 ## Tecnologias
@@ -197,20 +216,26 @@ O banco precisa ser criado antes. As instruções, na ordem de aplicação, est�
 
 ### Contas
 
-`npm run seed:usuarios` cria três grupos de contas, todos com a senha de
-`SEED_USER_PASSWORD`:
+`npm run seed:usuarios` cria as contas de demonstração, todas com a senha de
+`SEED_USER_PASSWORD`, e popula o banco com reservas, palestras, inscrições e
+chamados fictícios (a base de referência vem do `supabase/seed.sql`, que roda
+antes):
 
-| Grupo           | Contas                                                                                              | Segundo fator                          |
-| --------------- | --------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| Demonstração    | `coordenacao@exemplo.edu.br`, a da Ana (e-mail de `SEED_DEMO_EMAIL`), `marina.prado@exemplo.edu.br` | Exigido                                |
-| Desenvolvimento | `dev.admin@exemplo.edu.br`, `dev.professor@exemplo.edu.br`                                          | Dispensado fora de produção            |
-| Teste do TOTP   | `teste.mfa@exemplo.edu.br`                                                                          | Exigido, e apagado antes de cada suíte |
+| Grupo         | Contas                                                                                                                   | Segundo fator                          |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------ | -------------------------------------- |
+| Demonstração  | `coordenacao@exemplo.edu.br`, a da Ana (e-mail de `SEED_DEMO_EMAIL`), `marina.prado@exemplo.edu.br`                      | Exigido                                |
+| Uso diário    | `adm@umc.br` (administrador master), `professor@umc.br` (professor), `aluno@umc.br` (aluno de SI), `suporte@umc.br` (TI) | Dispensado fora de produção            |
+| Demais contas | Professores, alunos de cada curso e a segunda pessoa de TI, todas em `@exemplo.edu.br`                                   | Exigido                                |
+| Teste do TOTP | `teste.mfa@exemplo.edu.br`                                                                                               | Exigido, e apagado antes de cada suíte |
 
-As de desenvolvimento servem para entrar rápido enquanto se programa, e são as
-que os testes usam. A dispensa vem da variável `MFA_DISPENSADO_PARA` e o código a
+As de uso diário servem para entrar rápido enquanto se programa, e são as que os
+testes usam. A dispensa vem da variável `MFA_DISPENSADO_PARA` e o código a
 ignora quando `NODE_ENV` é `production`, então nenhuma configuração esquecida
 abre essa porta num ambiente publicado. Um aviso no cabeçalho identifica a conta,
 para que ela não apareça por engano numa demonstração.
+
+O script também cria um chamado em cada situação e uma palestra com uma
+inscrição, para o painel e a fila da TI não começarem vazios.
 
 Rodar o script de novo apaga todas as contas e seus segundos fatores: quem já
 tinha cadastrado o autenticador numa conta de demonstração precisa cadastrar de
@@ -252,29 +277,48 @@ CHECKROOM_PORT=3002 npm run test:e2e
 
 ```
 src/
-  domain/booking/          a regra de negócio, sem I/O e sem framework
+  domain/booking/          a regra da reserva, sem I/O e sem framework
+  domain/chamados/         a máquina de estados do chamado
+  domain/palestras/        cadastro e inscrição em palestras
+  domain/calendario/       períodos letivos e bloqueios
+  domain/painel/           as métricas do painel, calculadas sem SQL
+  domain/espacos/, academico/  as regras dos cadastros
   domain/auth/             quem pode fazer o quê, como função pura
-  lib/calendario.ts        aritmética de dias, semanas e meses, e a grade
+  domain/agenda/           navegação da agenda (dias, semanas, meses) e filtros
+  domain/tabela/           busca, ordenação e paginação das tabelas
+  domain/documentos/       versão vigente dos termos e da política
+  domain/formulario/       erros por campo, comuns aos formulários
+  hooks/                   estado de tabela, pesquisa e ordenação nas telas
   lib/repositories/        tradução entre as linhas do banco e o domínio
   lib/supabase/            clientes do servidor e do navegador, e tipos gerados
   app/reservas/agenda/     calendário, lista, tabela e detalhe
   app/reservas/formulario/ o painel de nova reserva e suas seções
-  app/reservas/            a página e as Server Actions
+  app/reservas/acoes/      criar, cancelar, excluir e notificar (Server Actions)
+  app/reservas/            a página da agenda
 supabase/migrations/  o esquema do banco, versionado
 tests/e2e/            navegador e banco reais
 ```
+
+Para achar a regra, a tela e o teste de um requisito (RF08, RN09...), use a
+tabela em [docs/rastreabilidade.md](docs/rastreabilidade.md).
 
 A separação entre `domain` e o restante é o ponto central. `validateBooking` não
 importa o Supabase, não lê o relógio e não conhece HTTP: recebe o pedido e um
 contexto já carregado. É isso que permite testá-la sem infraestrutura e
 reaproveitá-la sem duplicação em uma futura API pública.
 
-## O que esta entrega ainda não faz
+## Limites conhecidos
 
 Registrado aqui de propósito, porque são decisões de escopo e não omissões.
 
-**Calendário acadêmico.** O período letivo existe como rótulo no vínculo
-docente (`2026.2`), mas não como calendário com datas de início, fim, recesso e
-feriados. Por isso o sistema ainda não recusa uma reserva marcada em pleno
-recesso. Quando o calendário entrar, o período passa a ser deduzido da data da
-reserva em vez de fixado em constante, e a estrutura já prevê essa troca.
+**Calendário e reservas existentes.** Cadastrar um feriado ou um bloqueio não
+cancela as reservas e palestras já marcadas na data: o bloqueio impede as
+novas. Cancelar as antigas é decisão da administração, reserva a reserva.
+
+**Feriados no seed.** O `seed.sql` cria só o período letivo, sem feriados: os
+testes reservam em datas relativas a hoje, e um feriado fixo os faria falhar
+no dia em que caíssem nele. Os feriados são cadastrados pela tela.
+
+**Edição de palestra.** A palestra é cadastrada e excluída, não editada:
+mudar o horário de uma palestra com inscritos pede avisar cada um, o que fica
+para depois.

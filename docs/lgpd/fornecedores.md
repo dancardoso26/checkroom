@@ -28,7 +28,7 @@ Entrega os avisos de reserva criada e cancelada. Recebe apenas o necessário
 para compor e endereçar a mensagem, conforme o princípio da necessidade: nome
 e e-mail do destinatário, e os dados da reserva que a mensagem cita.
 
-Não recebe senha, papel, vínculo docente nem qualquer registro de auditoria. O
+Não recebe senha, papel, vínculo de professor nem qualquer registro de auditoria. O
 rastreamento de abertura e de cliques está desligado.
 
 Enquanto não houver domínio próprio verificado, o sistema usa o remetente de

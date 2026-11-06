@@ -57,7 +57,6 @@ export function describeViolation(
       return `O espaço comporta ${violation.capacity} pessoas e a turma tem ${violation.studentCount} alunos.`;
 
     case "MISSING_RESOURCES": {
-      // Cai para o id quando falta o nome: feio, mas investigável.
       const nomes = violation.missingResourceIds.map(
         (id) => labels.resourceNames?.[id] ?? id
       );
@@ -66,6 +65,15 @@ export function describeViolation(
         ? `O espaço não oferece o recurso exigido: ${nomes[0]}.`
         : `O espaço não oferece os recursos exigidos: ${nomes.join(", ")}.`;
     }
+
+    case "OUTSIDE_ACADEMIC_TERM":
+      return "A data não pertence a nenhum período letivo cadastrado.";
+
+    case "DATE_BLOCKED":
+      return `A instituição não funciona nesta data: ${violation.reason}.`;
+
+    case "ROOM_BLOCKED":
+      return `O espaço está bloqueado nesta data: ${violation.reason}.`;
   }
 }
 

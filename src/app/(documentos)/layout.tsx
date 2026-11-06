@@ -9,8 +9,6 @@ export default function DocumentosLayout({
   children: React.ReactNode;
 }) {
   return (
-    // Fundo branco na página inteira: o azul-claro do resto do sistema cansa a
-    // leitura de um texto longo.
     <div className="bg-card min-h-screen">
       <header className="border-b">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">

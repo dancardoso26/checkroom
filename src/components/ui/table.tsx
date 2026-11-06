@@ -1,7 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { cn } from "cn"
+import { RotuloDeCampo } from "@/components/rotulo-de-campo"
+import { cn } from "@/lib/utils"
 
 function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
@@ -11,7 +12,10 @@ function Table({ className, ...props }: React.ComponentProps<"table">) {
     >
       <table
         data-slot="table"
-        className={cn("w-full caption-bottom text-sm", className)}
+        className={cn(
+          "w-full caption-bottom text-sm [&.table-fixed_td]:h-[52px]",
+          className
+        )}
         {...props}
       />
     </div>
@@ -64,16 +68,26 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
   )
 }
 
-function TableHead({ className, ...props }: React.ComponentProps<"th">) {
+function TableHead({
+  className,
+  children,
+  ...props
+}: React.ComponentProps<"th">) {
   return (
     <th
       data-slot="table-head"
       className={cn(
-        "h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+        "h-11 px-4 text-left align-middle font-medium whitespace-nowrap text-foreground first:pl-5 last:pr-5 [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
         className
       )}
       {...props}
-    />
+    >
+      {typeof children === "string" ? (
+        <RotuloDeCampo rotulo={children} />
+      ) : (
+        children
+      )}
+    </th>
   )
 }
 
@@ -82,7 +96,7 @@ function TableCell({ className, ...props }: React.ComponentProps<"td">) {
     <td
       data-slot="table-cell"
       className={cn(
-        "p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+        "overflow-hidden px-4 py-2.5 align-middle text-ellipsis whitespace-nowrap first:pl-5 last:pr-5 [&:has(button)]:overflow-visible [&:has([role=checkbox])]:overflow-visible [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
         className
       )}
       {...props}

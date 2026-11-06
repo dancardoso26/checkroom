@@ -1,17 +1,9 @@
 "use client";
 
-import type { LucideIcon } from "lucide-react";
-import {
-  BookOpen,
-  Clock,
-  MapPin,
-  Monitor,
-  Trash2,
-  User,
-  Users,
-  X,
-} from "lucide-react";
-
+import { toast } from "sonner";
+import Link from "next/link";
+import { useState, useTransition } from "react";
+import { AvisoDeConflito } from "@/components/aviso-de-conflito";
 import { StatusBadge } from "@/components/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,31 +14,70 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { MENSAGEM_DA_INSCRICAO } from "@/domain/palestras/palestra";
 import { statusDaReserva } from "@/domain/status/status";
-import { formatFullDate, formatTimeRange } from "@/lib/datetime";
-import type { BookingListItem } from "@/lib/repositories/bookingRepository";
+import { formatFullDate, formatPeriod } from "@/lib/datetime";
+import { RotuloDeCampo } from "@/components/rotulo-de-campo";
+import { Loader2, Trash2, X } from "lucide-react";
+import type { BookingListItem } from "@/lib/repositories/repositorio-de-reservas";
 
+import { cancelarInscricao, inscreverEmPalestra } from "../../palestras/acoes";
 import { ROTULO_DA_ATIVIDADE } from "../formulario/campos";
 
-// Cancelar e excluir fecham este detalhe e abrem a confirmação no lugar dele:
-// dois diálogos empilhados escureciam a tela duas vezes.
 export function DetalheDaReserva({
   reserva,
   agora,
+  vePalestras,
+  podeExcluirPalestra,
   onFechar,
   onCancelar,
   onExcluir,
 }: {
   reserva: BookingListItem;
   agora: Date;
+  vePalestras: boolean;
+  podeExcluirPalestra: boolean;
   onFechar: () => void;
   onCancelar: () => void;
   onExcluir: () => void;
 }) {
+  const [pendente, startTransition] = useTransition();
+  const [erro, setErro] = useState<string | null>(null);
+  const [conflito, setConflito] = useState<string | null>(null);
+
+  const idDaPalestra = reserva.id.replace("palestra:", "");
+  const podeInscrever = reserva.ehPalestra && reserva.inscricaoAberta;
+  const podeCancelarInscricao = reserva.ehPalestra && reserva.inscrito;
+
+  function alterarInscricao(
+    acao: (id: string) => Promise<{ ok: boolean; mensagem?: string }>,
+    sucesso: string,
+  ) {
+    setErro(null);
+    startTransition(async () => {
+      const resultado = await acao(idDaPalestra);
+      if (resultado.ok) {
+        toast.success(sucesso);
+        return;
+      }
+      if (resultado.mensagem === MENSAGEM_DA_INSCRICAO.CONFLITO_DE_HORARIO) {
+        setConflito(resultado.mensagem);
+      } else {
+        setErro(resultado.mensagem ?? null);
+      }
+    });
+  }
+
   return (
     <Dialog open onOpenChange={(aberto) => !aberto && onFechar()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
+          <DialogTitle
+            className={reserva.cancelled ? "line-through" : undefined}
+          >
+            {reserva.purpose}
+          </DialogTitle>
+
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="outline" className="font-normal">
               {ROTULO_DA_ATIVIDADE[reserva.activityType]}
@@ -54,39 +85,27 @@ export function DetalheDaReserva({
             <StatusBadge status={statusDaReserva(reserva, agora)} />
           </div>
 
-          <DialogTitle
-            className={reserva.cancelled ? "line-through" : undefined}
-          >
-            {reserva.purpose}
-          </DialogTitle>
-
-          <DialogDescription className="first-letter:uppercase">
+          <DialogDescription className="sr-only first-letter:uppercase">
             {formatFullDate(reserva.startsAt)}
           </DialogDescription>
         </DialogHeader>
 
         <dl className="space-y-3 text-sm">
-          <Linha icone={Clock} termo="Horário">
-            {formatTimeRange(reserva.startsAt, reserva.endsAt)}
+          <Linha termo="Data e hora">
+            {formatPeriod(reserva.startsAt, reserva.endsAt)}
           </Linha>
-          <Linha icone={MapPin} termo="Espaço">
-            {reserva.building} · {reserva.roomName}
-          </Linha>
-          <Linha icone={User} termo="Professor">
+          <Linha termo="Espaço">{reserva.roomName}</Linha>
+          <Linha termo={reserva.ehPalestra ? "Palestrante" : "Professor"}>
             {reserva.professorName}
           </Linha>
-          <Linha icone={Users} termo="Turma">
+          <Linha termo={reserva.ehPalestra ? "Cursos" : "Turma"}>
             {reserva.className}
           </Linha>
           {reserva.subjectName && (
-            <Linha icone={BookOpen} termo="Disciplina">
-              {reserva.subjectName}
-            </Linha>
+            <Linha termo="Disciplina">{reserva.subjectName}</Linha>
           )}
           {reserva.resourceNames.length > 0 && (
-            <Linha icone={Monitor} termo="Necessidades">
-              {reserva.resourceNames.join(", ")}
-            </Linha>
+            <Linha termo="Recursos">{reserva.resourceNames.join(", ")}</Linha>
           )}
         </dl>
 
@@ -96,43 +115,96 @@ export function DetalheDaReserva({
           </p>
         )}
 
-        <div className="flex justify-end gap-2 border-t pt-3">
-          {!reserva.cancelled && (
-            <Button variant="outline" onClick={onCancelar}>
-              <X />
-              Cancelar reserva
+        {erro && (
+          <p className="text-destructive text-sm" role="alert">
+            {erro}
+          </p>
+        )}
+
+        {reserva.ehPalestra ? (
+          (vePalestras ||
+            podeExcluirPalestra ||
+            podeInscrever ||
+            podeCancelarInscricao) && (
+            <div className="flex justify-end gap-2 border-t pt-3">
+              {podeExcluirPalestra && (
+                <Button
+                  variant="ghost"
+                  className="text-destructive hover:text-destructive"
+                  onClick={onExcluir}
+                >
+                  <Trash2 />
+                  Excluir palestra
+                </Button>
+              )}
+              {vePalestras && (
+                <Button asChild variant="outline">
+                  <Link href="/palestras">Ver palestras</Link>
+                </Button>
+              )}
+              {podeInscrever && (
+                <Button
+                  disabled={pendente}
+                  onClick={() => alterarInscricao(inscreverEmPalestra, "Inscrição realizada.")}
+                >
+                  {pendente && <Loader2 className="animate-spin" aria-hidden />}
+                  Inscrever-se
+                </Button>
+              )}
+              {podeCancelarInscricao && (
+                <Button
+                  variant="outline"
+                  disabled={pendente}
+                  onClick={() => alterarInscricao(cancelarInscricao, "Inscrição cancelada.")}
+                >
+                  {pendente ? (
+                    <Loader2 className="animate-spin" aria-hidden />
+                  ) : (
+                    <X aria-hidden />
+                  )}
+                  Cancelar inscrição
+                </Button>
+              )}
+            </div>
+          )
+        ) : reserva.gerenciavel ? (
+          <div className="flex justify-end gap-2 border-t pt-3">
+            {!reserva.cancelled && (
+              <Button variant="outline" onClick={onCancelar}>
+                <X />
+                Cancelar reserva
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              className="text-destructive hover:text-destructive"
+              onClick={onExcluir}
+            >
+              <Trash2 />
+              Excluir
             </Button>
-          )}
-          <Button
-            variant="ghost"
-            className="text-destructive hover:text-destructive"
-            onClick={onExcluir}
-          >
-            <Trash2 />
-            Excluir
-          </Button>
-        </div>
+          </div>
+        ) : null}
       </DialogContent>
+
+      <AvisoDeConflito mensagem={conflito} onFechar={() => setConflito(null)} />
     </Dialog>
   );
 }
 
 function Linha({
-  icone: Icone,
   termo,
   children,
 }: {
-  icone: LucideIcon;
   termo: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex gap-2.5">
-      <Icone aria-hidden className="text-primary mt-0.5 size-4 shrink-0" />
-      <div>
-        <dt className="text-muted-foreground text-xs">{termo}</dt>
-        <dd className="font-medium">{children}</dd>
-      </div>
+    <div>
+      <dt className="text-muted-foreground text-xs">
+        <RotuloDeCampo rotulo={termo} />
+      </dt>
+      <dd className="font-medium">{children}</dd>
     </div>
   );
 }

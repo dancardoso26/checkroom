@@ -1,6 +1,3 @@
--- Vários administradores, com um master: o dono do sistema, que não pode ser
--- removido, desativado nem rebaixado. Sem ele, ninguém mais gerenciaria o resto.
-
 drop index if exists public.profiles_administrador_unico;
 
 alter table public.profiles
@@ -14,8 +11,6 @@ create unique index profiles_master_unico
 comment on column public.profiles.user_master is
   'O administrador dono do sistema. Único, e só alterável pelo service role.';
 
--- A trigger recusa trocar papel sem sessão de admin; aqui quem roda é o dono
--- do banco, então ela fica desligada só durante estes dois ajustes.
 alter table public.profiles disable trigger profiles_protege_papel;
 
 update public.profiles p
@@ -39,8 +34,6 @@ security definer
 set search_path = pg_catalog, public
 as $$
 begin
-  -- Sessão de usuário nunca mexe no master; só o service role (seed, scripts),
-  -- que não tem auth.uid(), transfere o posto.
   if new.user_master is distinct from old.user_master and auth.uid() is not null then
     raise exception 'O administrador master só é alterado pelo dono do banco.';
   end if;
@@ -61,8 +54,6 @@ begin
 end;
 $$;
 
--- Esquecer de verdade: além do perfil, o docente vinculado e os e-mails que a
--- trilha de auditoria guardou. As linhas da auditoria ficam, sem o dado pessoal.
 create or replace function public.anonimizar_perfil(p_alvo uuid, p_ator uuid)
 returns void
 language plpgsql
@@ -94,8 +85,6 @@ begin
          anonymized_at = now()
    where id = p_alvo;
 
-  -- O e-mail do docente é único e obrigatório: vira um endereço inválido e
-  -- exclusivo, que o envio de e-mail do sistema também recusa.
   if v_professor is not null then
     update public.professors
        set name = 'Docente removido',
@@ -155,8 +144,6 @@ begin
     return;
   end if;
 
-  -- Só professor tem vínculo docente: em outro papel, a conta reservaria em
-  -- nome do docente, porque a regra olha o vínculo.
   update public.profiles
      set role = p_papel,
          professor_id = case when p_papel = 'professor' then professor_id else null end

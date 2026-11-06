@@ -9,7 +9,6 @@ function assinar(aoMudar: () => void) {
   return () => mql.removeEventListener("change", aoMudar)
 }
 
-// No servidor não há janela: assume desktop, que é onde a agenda é mais usada.
 export function useIsMobile() {
   return React.useSyncExternalStore(
     assinar,

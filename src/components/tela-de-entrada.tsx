@@ -2,8 +2,6 @@ import Link from "next/link";
 
 import { Logo } from "@/components/logo";
 
-// A moldura das telas de quem ainda não entrou: marca no canto, o formulário
-// sozinho no centro e os documentos legais sempre à vista no rodapé.
 export function TelaDeEntrada({
   titulo,
   children,
@@ -28,8 +26,6 @@ export function TelaDeEntrada({
         </div>
       </main>
 
-      {/* Os documentos ficam acessíveis antes do login, a qualquer momento,
-          como a LGPD pede, e abrem sem tirar a pessoa desta tela. */}
       <footer className="text-muted-foreground flex justify-center gap-4 px-6 py-5 text-sm">
         <Link
           href="/termos"

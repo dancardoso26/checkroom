@@ -9,8 +9,6 @@ create or replace function public.create_booking(
 )
 returns uuid
 language plpgsql
--- search_path fixo: sem isto, quem chama poderia alterá-lo e fazer "bookings"
--- apontar para uma tabela própria em outro schema.
 set search_path = pg_catalog, public
 as $$
 declare
@@ -24,13 +22,9 @@ begin
   )
   returning id into v_booking_id;
 
-  -- Reserva sem recurso é comum: uma aula expositiva não precisa de nada além
-  -- da sala. O coalesce trata o array nulo como vazio.
   insert into public.booking_resources (booking_id, resource_id)
   select v_booking_id, resource_id
   from unnest(coalesce(p_resource_ids, array[]::uuid[])) as resource_id
-  -- Segunda barreira contra duplicatas, para o caso de a função ser chamada por
-  -- outro caminho que não a aplicação.
   on conflict (booking_id, resource_id) do nothing;
 
   return v_booking_id;

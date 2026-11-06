@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { VERSAO_DA_POLITICA, VIGENTE_DESDE } from "@/lib/documentos";
+import { VERSAO_DA_POLITICA, VIGENTE_DESDE } from "@/domain/documentos/documentos";
 
 import { Documento, type Secao } from "../documento";
 import { TabelaDoDocumento } from "../tabela-do-documento";
@@ -49,7 +49,7 @@ const SECOES: Secao[] = [
           linhas={[
             [
               "Nome e e-mail",
-              "Identificar quem usa o sistema, enviar o convite, permitir a recuperação de senha e avisar sobre reservas feitas ou canceladas em seu nome.",
+              "Identificar quem usa o sistema, enviar o convite, permitir a recuperação de senha e enviar os avisos: reservas feitas ou canceladas em seu nome, chamados que você abriu e foram resolvidos e, para alunos, palestras novas do seu curso.",
               "Execução de contrato (inciso V)",
             ],
             [
@@ -63,13 +63,28 @@ const SECOES: Secao[] = [
               "Legítimo interesse em segurança (inciso IX)",
             ],
             [
-              "Perfil e vínculo docente",
+              "Perfil e vínculo de professor",
               "Definir o que cada pessoa pode fazer e conferir se uma aula é reservada por quem leciona a disciplina para aquela turma.",
+              "Execução de contrato (inciso V)",
+            ],
+            [
+              "Curso (alunos)",
+              "Mostrar ao aluno as palestras do seu curso, permitir a inscrição nelas e enviar o aviso de palestra nova.",
               "Execução de contrato (inciso V)",
             ],
             [
               "Reservas",
               "Espaço, data, horário, título, turma, disciplina e, no cancelamento, o motivo. Servem para organizar o uso dos espaços e evitar conflitos.",
+              "Execução de contrato (inciso V)",
+            ],
+            [
+              "Inscrições em palestras",
+              "Em quais palestras o aluno se inscreveu e quando. Servem para controlar as vagas. Só o próprio aluno e a administração veem quem se inscreveu.",
+              "Execução de contrato (inciso V)",
+            ],
+            [
+              "Chamados de suporte",
+              "Espaço, descrição do problema, prioridade, quem abriu, quem atendeu e a solução. Servem para a equipe de TI resolver problemas nos espaços.",
               "Execução de contrato (inciso V)",
             ],
             [
@@ -79,7 +94,7 @@ const SECOES: Secao[] = [
             ],
             [
               "Trilha de auditoria",
-              "Quem fez o quê e quando: entradas, saídas, tentativas de acesso recusadas (com o e-mail digitado), reservas e gestão de usuários. Serve para rastrear as operações.",
+              "Quem fez o quê e quando: entradas, saídas, tentativas de acesso recusadas (com o e-mail digitado), reservas, chamados, palestras, inscrições, cadastros e gestão de usuários. Serve para rastrear as operações.",
               "Legítimo interesse em rastreabilidade (inciso IX)",
             ],
           ]}
@@ -87,9 +102,10 @@ const SECOES: Secao[] = [
         <p>
           <strong>O que o sistema não coleta.</strong> Não há dados pessoais
           sensíveis (LGPD, art. 5º, II), nem CPF, data de nascimento, endereço,
-          telefone, fotografia ou documentos. Os alunos não são cadastrados
-          individualmente: cada turma guarda apenas a quantidade de alunos,
-          usada para conferir se o espaço comporta a turma.
+          telefone, fotografia ou documentos. Dos alunos com conta, o sistema
+          guarda apenas nome, e-mail e curso; o tamanho de cada turma continua
+          sendo só um número, usado para conferir se o espaço comporta a
+          turma.
         </p>
         <p>
           <strong>Cookies.</strong> O sistema usa apenas os cookies que mantêm a
@@ -119,7 +135,7 @@ const SECOES: Secao[] = [
             [
               "Resend",
               "Envio de e-mails a partir do domínio checkroom.com.br, pela região de São Paulo.",
-              "O e-mail do destinatário e o conteúdo da mensagem: os dados da reserva, o convite ou o link de recuperação de senha.",
+              "O e-mail do destinatário e o conteúdo da mensagem: os dados da reserva, do chamado resolvido ou da palestra, o convite ou o link de recuperação de senha. Cada aluno recebe a própria mensagem, sem ver o endereço dos demais.",
             ],
             [
               "Vercel",
@@ -163,6 +179,11 @@ const SECOES: Secao[] = [
             "Excluídas. Se a conta for cancelada antes, ficam sem ligação com a pessoa.",
           ],
           [
+            "Chamados e inscrições",
+            "Até o fim do projeto acadêmico.",
+            "Excluídos. Se a conta for cancelada antes, as inscrições em palestras futuras são removidas, os chamados ainda abertos são cancelados e o histórico fica sem ligação com a pessoa.",
+          ],
+          [
             "Trilha de auditoria",
             "Até o fim do projeto acadêmico.",
             "Excluída. Se a conta for cancelada antes, o e-mail da pessoa é apagado dos registros.",
@@ -201,7 +222,7 @@ const SECOES: Secao[] = [
             ],
             [
               "Correção",
-              "Pedindo à administração do sistema, porque nome e vínculo docente são dados institucionais.",
+              "Pedindo à administração do sistema, porque nome, curso e vínculo de professor são dados institucionais.",
             ],
             [
               "Eliminação",
@@ -215,9 +236,10 @@ const SECOES: Secao[] = [
         />
         <p>
           <strong>O que o cancelamento apaga.</strong> O nome é substituído em
-          todo o sistema, o cadastro de docente ligado à conta é anonimizado, o
+          todo o sistema, o cadastro de professor ligado à conta é anonimizado, o
           e-mail é apagado da trilha de auditoria, as reservas futuras são
-          canceladas e o acesso é encerrado. As reservas já realizadas e os
+          canceladas, as inscrições em palestras futuras são removidas, os
+          chamados ainda abertos são cancelados e o acesso é encerrado. As reservas já realizadas e os
           registros de auditoria continuam existindo, porque documentam o uso
           dos espaços, mas nada neles permite mais identificar a pessoa.
         </p>

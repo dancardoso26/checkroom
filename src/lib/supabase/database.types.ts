@@ -14,6 +14,31 @@ export type Database = {
   }
   public: {
     Tables: {
+      academic_terms: {
+        Row: {
+          code: string
+          created_at: string
+          ends_on: string
+          id: string
+          starts_on: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          ends_on: string
+          id?: string
+          starts_on: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          ends_on?: string
+          id?: string
+          starts_on?: string
+        }
+        Relationships: [
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -172,27 +197,59 @@ export type Database = {
           },
         ]
       }
+      calendar_blocks: {
+        Row: {
+          created_at: string
+          ends_on: string
+          id: string
+          reason: string
+          room_id: string | null
+          starts_on: string
+        }
+        Insert: {
+          created_at?: string
+          ends_on: string
+          id?: string
+          reason: string
+          room_id?: string | null
+          starts_on: string
+        }
+        Update: {
+          created_at?: string
+          ends_on?: string
+          id?: string
+          reason?: string
+          room_id?: string | null
+          starts_on?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_blocks_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       classes: {
         Row: {
           course_id: string
           created_at: string
           id: string
           name: string
-          student_count: number
         }
         Insert: {
           course_id: string
           created_at?: string
           id?: string
           name: string
-          student_count: number
         }
         Update: {
           course_id?: string
           created_at?: string
           id?: string
           name?: string
-          student_count?: number
         }
         Relationships: [
           {
@@ -225,6 +282,123 @@ export type Database = {
         }
         Relationships: []
       }
+      lecture_courses: {
+        Row: {
+          course_id: string
+          lecture_id: string
+        }
+        Insert: {
+          course_id: string
+          lecture_id: string
+        }
+        Update: {
+          course_id?: string
+          lecture_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lecture_courses_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lecture_courses_lecture_id_fkey"
+            columns: ["lecture_id"]
+            isOneToOne: false
+            referencedRelation: "lectures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lecture_enrollments: {
+        Row: {
+          enrolled_at: string
+          id: string
+          lecture_id: string
+          profile_id: string
+        }
+        Insert: {
+          enrolled_at?: string
+          id?: string
+          lecture_id: string
+          profile_id: string
+        }
+        Update: {
+          enrolled_at?: string
+          id?: string
+          lecture_id?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lecture_enrollments_lecture_id_fkey"
+            columns: ["lecture_id"]
+            isOneToOne: false
+            referencedRelation: "lectures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lecture_enrollments_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lectures: {
+        Row: {
+          created_at: string
+          created_by: string
+          ends_at: string
+          id: string
+          room_id: string
+          seats: number
+          speaker: string
+          starts_at: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          ends_at: string
+          id?: string
+          room_id: string
+          seats: number
+          speaker: string
+          starts_at: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          ends_at?: string
+          id?: string
+          room_id?: string
+          seats?: number
+          speaker?: string
+          starts_at?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lectures_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lectures_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       professors: {
         Row: {
           created_at: string
@@ -249,6 +423,8 @@ export type Database = {
       profiles: {
         Row: {
           anonymized_at: string | null
+          class_id: string | null
+          course_id: string | null
           created_at: string
           user_master: boolean
           full_name: string
@@ -260,6 +436,8 @@ export type Database = {
         }
         Insert: {
           anonymized_at?: string | null
+          class_id?: string | null
+          course_id?: string | null
           created_at?: string
           user_master?: boolean
           full_name: string
@@ -271,6 +449,8 @@ export type Database = {
         }
         Update: {
           anonymized_at?: string | null
+          class_id?: string | null
+          course_id?: string | null
           created_at?: string
           user_master?: boolean
           full_name?: string
@@ -281,6 +461,20 @@ export type Database = {
           terms_version?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "profiles_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "profiles_professor_id_fkey"
             columns: ["professor_id"]
@@ -341,26 +535,31 @@ export type Database = {
       rooms: {
         Row: {
           building: string
+          building_number: number
           capacity: number
           created_at: string
           id: string
           name: string
+          floor: string
+          room_number: number
           room_type: Database["public"]["Enums"]["room_type"]
         }
         Insert: {
-          building: string
+          building_number: number
           capacity: number
           created_at?: string
           id?: string
-          name: string
+          floor: string
+          room_number: number
           room_type: Database["public"]["Enums"]["room_type"]
         }
         Update: {
-          building?: string
+          building_number?: number
           capacity?: number
           created_at?: string
           id?: string
-          name?: string
+          floor?: string
+          room_number?: number
           room_type?: Database["public"]["Enums"]["room_type"]
         }
         Relationships: []
@@ -443,6 +642,73 @@ export type Database = {
           },
         ]
       }
+      tickets: {
+        Row: {
+          assigned_to: string | null
+          cancelled_at: string | null
+          created_at: string
+          description: string
+          id: string
+          priority: Database["public"]["Enums"]["ticket_priority"]
+          requested_by: string
+          resolution_note: string | null
+          resolved_at: string | null
+          room_id: string
+          started_at: string | null
+          status: Database["public"]["Enums"]["ticket_status"]
+        }
+        Insert: {
+          assigned_to?: string | null
+          cancelled_at?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          priority?: Database["public"]["Enums"]["ticket_priority"]
+          requested_by: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          room_id: string
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["ticket_status"]
+        }
+        Update: {
+          assigned_to?: string | null
+          cancelled_at?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          priority?: Database["public"]["Enums"]["ticket_priority"]
+          requested_by?: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          room_id?: string
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["ticket_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tickets_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -454,9 +720,26 @@ export type Database = {
         Args: {
           p_alvo: string
           p_papel: Database["public"]["Enums"]["user_role"]
+          p_turma?: string | null
         }
         Returns: undefined
       }
+      assumir_chamado: { Args: { p_chamado: string }; Returns: string }
+      cadastrar_palestra: {
+        Args: {
+          p_cursos: string[]
+          p_fim: string
+          p_inicio: string
+          p_palestrante: string
+          p_room_id: string
+          p_titulo: string
+          p_vagas: number
+        }
+        Returns: string
+      }
+      cancelar_chamado: { Args: { p_chamado: string }; Returns: string }
+      excluir_chamado: { Args: { p_chamado: string }; Returns: string }
+      cancelar_inscricao: { Args: { p_palestra: string }; Returns: string }
       cancel_booking: {
         Args: { p_booking_id: string; p_reason?: string }
         Returns: string
@@ -477,12 +760,39 @@ export type Database = {
         Returns: string
       }
       eh_admin: { Args: never; Returns: boolean }
+      inscrever_em_palestra: { Args: { p_palestra: string }; Returns: string }
+      inscritos_por_palestra: {
+        Args: { p_palestras: string[] }
+        Returns: { inscritos: number; lecture_id: string }[]
+      }
+      papel_atual: {
+        Args: never
+        Returns: Database["public"]["Enums"]["user_role"]
+      }
       professor_atual: { Args: never; Returns: string }
+      resolver_chamado: {
+        Args: { p_chamado: string; p_nota: string }
+        Returns: string
+      }
+      salvar_espaco: {
+        Args: {
+          p_andar: string
+          p_capacidade: number
+          p_id: string | null
+          p_predio: number
+          p_recursos: string[]
+          p_sala: number
+          p_tipo: Database["public"]["Enums"]["room_type"]
+        }
+        Returns: string
+      }
     }
     Enums: {
-      activity_type: "class" | "lecture" | "exam" | "defense" | "event"
+      activity_type: "class" | "lecture" | "exam" | "event"
       booking_status: "active" | "cancelled"
       room_type: "classroom" | "laboratory" | "auditorium"
+      ticket_priority: "low" | "medium" | "high"
+      ticket_status: "open" | "in_progress" | "resolved" | "cancelled"
       user_role: "student" | "professor" | "it_support" | "admin"
     }
     CompositeTypes: {
@@ -611,9 +921,11 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      activity_type: ["class", "lecture", "exam", "defense", "event"],
+      activity_type: ["class", "lecture", "exam", "event"],
       booking_status: ["active", "cancelled"],
       room_type: ["classroom", "laboratory", "auditorium"],
+      ticket_priority: ["low", "medium", "high"],
+      ticket_status: ["open", "in_progress", "resolved", "cancelled"],
       user_role: ["student", "professor", "it_support", "admin"],
     },
   },

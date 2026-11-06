@@ -1,9 +1,23 @@
-// O padrão de cores do projeto: verde para o que está em ordem ou terminou bem,
-// azul para o que ainda vai acontecer, vermelho para o que foi interrompido.
-export type Tom = "sucesso" | "informacao" | "perigo";
+export type Tom = "sucesso" | "informacao" | "perigo" | "atencao" | "neutro";
 
 export type Status =
-  "agendada" | "concluida" | "cancelada" | "ativo" | "inativo" | "convidado";
+  | "agendada"
+  | "concluida"
+  | "cancelada"
+  | "ativo"
+  | "inativo"
+  | "convidado"
+  | "aberto"
+  | "em_atendimento"
+  | "resolvido"
+  | "chamado_cancelado"
+  | "prioridade_alta"
+  | "prioridade_media"
+  | "prioridade_baixa"
+  | "inscrito"
+  | "vagas_abertas"
+  | "lotada"
+  | "encerrada";
 
 export const STATUS: Record<Status, { rotulo: string; tom: Tom }> = {
   agendada: { rotulo: "Agendada", tom: "informacao" },
@@ -12,9 +26,19 @@ export const STATUS: Record<Status, { rotulo: string; tom: Tom }> = {
   ativo: { rotulo: "Ativo", tom: "sucesso" },
   inativo: { rotulo: "Inativo", tom: "perigo" },
   convidado: { rotulo: "Convite pendente", tom: "informacao" },
+  aberto: { rotulo: "Aberto", tom: "informacao" },
+  em_atendimento: { rotulo: "Em atendimento", tom: "atencao" },
+  resolvido: { rotulo: "Resolvido", tom: "sucesso" },
+  chamado_cancelado: { rotulo: "Cancelado", tom: "neutro" },
+  prioridade_alta: { rotulo: "Alta", tom: "perigo" },
+  prioridade_media: { rotulo: "Média", tom: "atencao" },
+  prioridade_baixa: { rotulo: "Baixa", tom: "neutro" },
+  inscrito: { rotulo: "Inscrito", tom: "sucesso" },
+  vagas_abertas: { rotulo: "Inscrições abertas", tom: "informacao" },
+  lotada: { rotulo: "Lotada", tom: "perigo" },
+  encerrada: { rotulo: "Encerrada", tom: "neutro" },
 };
 
-// Concluída não é gravada no banco: é a reserva ativa cujo horário já passou.
 export function statusDaReserva(
   reserva: { cancelled: boolean; endsAt: Date },
   agora: Date

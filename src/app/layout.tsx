@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
@@ -22,11 +23,10 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    // lang="pt-BR" não é detalhe: é o que informa ao leitor de tela em que
-    // idioma pronunciar o conteúdo da página.
     <html lang="pt-BR" className={inter.variable}>
       <body className="min-h-screen antialiased">
         <TooltipProvider>{children}</TooltipProvider>
+        <Toaster />
       </body>
     </html>
   );

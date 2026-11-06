@@ -1,0 +1,1 @@
+alter table public.classes drop column student_count;

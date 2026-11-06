@@ -15,8 +15,6 @@ test("exige login para chegar à agenda", async ({ page }) => {
   await expect(page.getByLabel("E-mail institucional")).toBeVisible();
 });
 
-// A rota pedida volta na query para que o login devolva a pessoa onde ela
-// estava, em vez de despejá-la sempre na agenda.
 test("guarda o destino pedido antes do login", async ({ page }) => {
   await page.goto("/reservas/nova");
 
@@ -41,13 +39,10 @@ test("exige o segundo fator antes de liberar o sistema", async ({ page }) => {
   await page.fill("#senha", SENHA);
   await page.getByRole("button", { name: "Entrar" }).click();
 
-  // A senha correta leva à verificação, não à agenda.
   await expect(page).toHaveURL(/\/verificacao/);
   await expect(page.getByRole("button", { name: "Verificar" })).toBeVisible();
 });
 
-// Sem saída, quem errou de conta ficava preso: /login redireciona de volta
-// enquanto houver sessão, mesmo sem o segundo fator.
 test("da verificação é possível voltar ao login", async ({ page }) => {
   await page.goto("/login");
   await page.fill("#email", CONTA_COM_SEGUNDO_FATOR);
@@ -55,8 +50,6 @@ test("da verificação é possível voltar ao login", async ({ page }) => {
   await page.getByRole("button", { name: "Entrar" }).click();
   await expect(page).toHaveURL(/\/verificacao/);
 
-  // A tela é estática e só responde ao clique depois que o React assume;
-  // o QR code, pedido ao servidor na montagem, marca esse momento.
   await expect(page.getByRole("img", { name: /QR code/ })).toBeVisible({
     timeout: 20_000,
   });
@@ -65,7 +58,6 @@ test("da verificação é possível voltar ao login", async ({ page }) => {
   await expect(page).toHaveURL(/\/login/);
   await expect(page.getByRole("button", { name: "Entrar" })).toBeVisible();
 
-  // A sessão foi encerrada: abrir /login de novo não redireciona.
   await page.goto("/login");
   await expect(page).toHaveURL(/\/login/);
 });
@@ -77,11 +69,10 @@ test("o professor reserva apenas em seu próprio nome", async ({ page }) => {
   const campo = page.locator("#professorField");
 
   await expect(campo).toHaveText("Carlos Eduardo Lima");
-  // Sem combobox: o nome é fixo, não uma escolha.
   await expect(campo).not.toHaveAttribute("role", "combobox");
 });
 
-test("a administração reserva em nome de qualquer docente", async ({
+test("a administração reserva em nome de qualquer professor", async ({
   page,
 }) => {
   await entrarComo(page, ADMIN);
@@ -97,24 +88,23 @@ test("a administração reserva em nome de qualquer docente", async ({
   ).toBeVisible();
 });
 
-test("a trilha de auditoria é exclusiva da administração", async ({ page }) => {
+test("o log de auditoria é exclusivo da administração", async ({ page }) => {
   await entrarComo(page, PROFESSOR);
 
   await expect(
-    page.getByRole("menuitem", { name: "Trilha de auditoria" })
+    page.getByRole("menuitem", { name: "Log de auditoria" })
   ).toBeHidden();
 
-  // Esconder o item do menu não é o controle: a rota recusa por conta própria.
-  await page.goto("/auditoria");
+  await page.goto("/configuracoes/auditoria");
   await expect(page).toHaveURL(/\/reservas/);
 });
 
-test("a administração alcança a trilha de auditoria", async ({ page }) => {
+test("a administração alcança o log de auditoria", async ({ page }) => {
   await entrarComo(page, ADMIN);
-  await page.goto("/auditoria");
+  await page.goto("/configuracoes/auditoria");
 
   await expect(
-    page.getByRole("heading", { name: "Trilha de auditoria" })
+    page.getByRole("heading", { name: "Log de auditoria" })
   ).toBeVisible();
 
   await expect(
@@ -122,13 +112,13 @@ test("a administração alcança a trilha de auditoria", async ({ page }) => {
   ).toBeVisible();
 });
 
-test("o login entra na trilha de auditoria", async ({ page }) => {
+test("o login entra no log de auditoria", async ({ page }) => {
   await entrarComo(page, ADMIN);
-  await page.goto("/auditoria");
+  await page.goto("/configuracoes/auditoria");
 
   const primeiraLinha = page.locator("tbody tr").first();
 
-  await expect(primeiraLinha).toContainText("Conta de desenvolvimento");
+  await expect(primeiraLinha).toContainText("Rafael Teixeira");
   await expect(primeiraLinha).toContainText(ADMIN);
   await expect(primeiraLinha).toContainText("Entrou no sistema");
 });
@@ -136,7 +126,7 @@ test("o login entra na trilha de auditoria", async ({ page }) => {
 test("sair encerra a sessão", async ({ page }) => {
   await entrarComo(page, ADMIN);
 
-  await page.getByRole("button", { name: /Conta de desenvolvimento/ }).click();
+  await page.getByRole("button", { name: /Rafael Teixeira/ }).click();
   await page.getByRole("menuitem", { name: "Sair" }).click();
 
   await expect(page).toHaveURL(/\/login/);
@@ -145,8 +135,6 @@ test("sair encerra a sessão", async ({ page }) => {
   await expect(page).toHaveURL(/\/login/);
 });
 
-// O caminho completo do TOTP: cadastro pelo QR, código gerado a partir do
-// segredo, e a sessão elevada a aal2 chegando de fato à agenda.
 test("cadastra e verifica o segundo fator", async ({ page }) => {
   await entrarComo(page, CONTA_COM_SEGUNDO_FATOR);
 
@@ -164,7 +152,7 @@ test("a conta de desenvolvimento entra sem segundo fator e avisa disso", async (
 
   await expect(page).toHaveURL(/\/reservas/);
   await expect(
-    page.getByText("Conta de desenvolvimento, sem segundo fator")
+    page.getByText("Segundo fator dispensado neste ambiente")
   ).toBeVisible();
 });
 
@@ -193,8 +181,6 @@ test("o olho mostra e oculta a senha digitada", async ({ page }) => {
   await expect(page.locator("#senha")).toHaveAttribute("type", "password");
 });
 
-// Abrir /verificacao sem sessão manda ao login com proximo=/verificacao. A conta
-// dispensada do segundo fator não pode ser levada a ela depois de entrar.
 test("a conta dispensada não cai na verificação por um destino antigo", async ({
   page,
 }) => {
@@ -242,18 +228,16 @@ test("o menu do perfil abre os documentos em outra aba", async ({
   ]);
 
   await expect(aba).toHaveURL(/\/privacidade/);
-  // A tela original continua onde estava.
   await expect(page).toHaveURL(/\/reservas/);
 });
 
-test("a trilha de auditoria cabe na tela, pagina e pesquisa", async ({
+test("o log de auditoria cabe na tela, pagina e pesquisa", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await entrarComo(page, ADMIN);
-  await page.goto("/auditoria");
+  await page.goto("/configuracoes/auditoria");
 
-  // Sem vazamento: a página não rola na horizontal.
   const sobra = await page.evaluate(
     () => document.documentElement.scrollWidth - window.innerWidth
   );
@@ -263,22 +247,19 @@ test("a trilha de auditoria cabe na tela, pagina e pesquisa", async ({
   await page.getByRole("button", { name: "Seguinte" }).click();
   await expect(page).toHaveURL(/pagina=2/);
 
-  // Digitar o número leva direto à página.
   const campo = page.getByLabel("Número da página");
   await campo.fill("3");
   await campo.press("Enter");
   await expect(page).toHaveURL(/pagina=3/);
 
-  // Trocar o tamanho volta à primeira página e muda quantas linhas aparecem.
   await page.getByLabel("Itens por página").click();
   await page.getByRole("option", { name: "10", exact: true }).click();
   await expect(page).toHaveURL(/porPagina=10/);
   await expect(page).not.toHaveURL(/pagina=3/);
   await expect(page.locator("tbody tr")).toHaveCount(10);
 
-  await page.getByLabel("Pesquisar na trilha de auditoria").fill("entrou");
+  await page.getByLabel("Pesquisar no log de auditoria").fill("entrou");
   await expect(page).toHaveURL(/q=entrou/);
-  // Pesquisar volta à primeira página.
   await expect(page).not.toHaveURL(/pagina=/);
   await expect(page.locator("tbody tr").first()).toContainText("Entrou");
 });
@@ -316,14 +297,12 @@ test("o Enter no campo de senha entra no sistema", async ({ page }) => {
   await expect(page).toHaveURL(/\/reservas/);
 });
 
-// Quem só sabe a senha não troca a senha: a tela exige o link do e-mail ou o
-// segundo fator. A conta de desenvolvimento entra só com a senha.
 test("a sessão aberta só com a senha não troca a senha", async ({ page }) => {
   await entrarComo(page, ADMIN);
   await page.goto("/nova-senha");
 
-  await page.fill("#senha", "outra-senha-123");
-  await page.fill("#confirmacao", "outra-senha-123");
+  await page.fill("#senha", "Outra-senha-123");
+  await page.fill("#confirmacao", "Outra-senha-123");
   await page.getByRole("button", { name: "Salvar nova senha" }).click();
 
   await expect(page.getByText("use o link enviado por e-mail")).toBeVisible();
@@ -339,8 +318,6 @@ test("as respostas trazem os cabeçalhos de segurança", async ({ request }) => 
   expect(resposta.headers()["x-content-type-options"]).toBe("nosniff");
 });
 
-// A LGPD pede os documentos acessíveis a qualquer instante, inclusive antes
-// do login.
 test("o login leva aos termos e à política sem precisar entrar", async ({
   page,
 }) => {
@@ -357,8 +334,6 @@ test("o login leva aos termos e à política sem precisar entrar", async ({
   ).toHaveAttribute("href", "/privacidade");
 });
 
-// Termos que mudaram de versão pedem um novo aceite, como os documentos
-// prometem, e a tela avisa que é uma atualização.
 test("uma versão nova dos termos pede o aceite de novo", async ({ page }) => {
   await entrarComo(page, PROFESSOR);
 

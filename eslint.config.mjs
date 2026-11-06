@@ -3,8 +3,6 @@ import nextTypeScript from "eslint-config-next/typescript";
 
 const config = [
   {
-    // Diretórios gerados. Sem isto, o ESLint tentaria analisar o build inteiro
-    // e a saída ficaria dominada por avisos de código que ninguém escreveu.
     ignores: [
       ".next/**",
       "node_modules/**",

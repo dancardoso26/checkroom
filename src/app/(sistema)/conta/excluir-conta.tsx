@@ -55,6 +55,10 @@ export function ExcluirConta() {
           <ul className="text-muted-foreground list-disc space-y-1 pl-5 text-sm">
             <li>Seu nome é substituído em todo o sistema</li>
             <li>Suas reservas futuras são canceladas</li>
+            <li>
+              Suas inscrições em palestras futuras e seus chamados ainda abertos
+              são removidos
+            </li>
             <li>Seu acesso é encerrado imediatamente</li>
             <li>
               Reservas passadas e registros de auditoria permanecem, sem vínculo

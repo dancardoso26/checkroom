@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { destinoAposLogin } from "@/lib/destino-apos-login";
+import { destinoAposLogin } from "@/domain/auth/destino-apos-login";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { registrarEventoDeAutenticacao } from "@/lib/auditoria";
 
@@ -44,15 +44,11 @@ export async function entrar(
       email: parsed.data.email,
     });
 
-    // A mensagem não distingue e-mail inexistente de senha errada: fazer isso
-    // entregaria quais endereços têm conta no sistema.
     return { status: "error", message: "E-mail ou senha incorretos." };
   }
 
   await registrarEventoDeAutenticacao("login", data.user.id);
 
-  // Sem redirect aqui: o Next resolve o destino sem passar pelo middleware, e
-  // a exigência de segundo fator seria pulada. Quem navega é a tela.
   return {
     status: "success",
     destino: destinoAposLogin(parsed.data.proximo),

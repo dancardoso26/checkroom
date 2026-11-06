@@ -28,7 +28,6 @@ test.beforeAll(async () => {
     listarReservas(),
   ]);
 
-  // Um horário em que nada do seed acontece: quinta-feira da próxima semana.
   const hoje = new Date();
   const diasAteQuinta = (11 - hoje.getDay()) % 7 || 7;
   const quinta = new Date(hoje);
@@ -77,27 +76,21 @@ test("cancela pelo detalhe e some da agenda", async ({ page }) => {
 
   await detalhe.getByRole("button", { name: "Cancelar reserva" }).click();
 
-  // O detalhe cede lugar à confirmação, e o motivo é obrigatório.
   await expect(detalhe).toBeHidden();
   await page.getByRole("button", { name: "Confirmar" }).click();
   await expect(
     page.getByText("Informe o motivo do cancelamento.")
   ).toBeVisible();
 
-  // Confirma com Enter no campo do motivo, sem precisar do botão.
   await page.getByLabel("Motivo").fill("Professor afastado");
   await page.getByLabel("Motivo").press("Enter");
 
-  // A asserção é sobre o bloco da grade, e não sobre o texto: a confirmação
-  // aberta repete a descrição da reserva, e o texto encontraria os dois.
   await expect(blocoDaReserva(page, `${PREFIXO_TESTE} a cancelar`)).toBeHidden({
     timeout: 15_000,
   });
 });
 
 test("a reserva cancelada continua no banco, com data e motivo", async () => {
-  // É o que diferencia cancelar de apagar. Sem o registro, "quem cancelou a aula
-  // de sexta e por quê" não teria resposta.
   const reservas = await listarReservas();
   const cancelada = reservas.find(
     (r) => r.purpose === `${PREFIXO_TESTE} a cancelar`

@@ -6,7 +6,7 @@ describe("quem pode receber e-mail", () => {
   it("aceita endereços reais, inclusive com alias", () => {
     expect(podeReceber("dc801270@gmail.com")).toBe(true);
     expect(podeReceber("dc801270+carlos@gmail.com")).toBe(true);
-    expect(podeReceber("professor@umc.br")).toBe(true);
+    expect(podeReceber("coordenacao@umc.br")).toBe(true);
   });
 
   it("recusa os domínios fictícios do seed", () => {
@@ -14,7 +14,12 @@ describe("quem pode receber e-mail", () => {
     expect(podeReceber("alguem@example.com")).toBe(false);
   });
 
-  // Contas removidas trocam o e-mail por um .invalid.
+  it("recusa as contas de teste do desenvolvimento", () => {
+    for (const email of ["adm", "professor", "aluno", "suporte"]) {
+      expect(podeReceber(`${email}@umc.br`)).toBe(false);
+    }
+  });
+
   it("recusa terminações reservadas para teste", () => {
     expect(podeReceber("removido-123@checkroom.invalid")).toBe(false);
     expect(podeReceber("a@site.test")).toBe(false);

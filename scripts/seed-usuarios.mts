@@ -1,11 +1,17 @@
-// Cria as contas de demonstração e as reservas que dependem delas. Roda depois
-// de supabase/seed.sql: profiles referencia professors, e bookings, profiles.
-
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
-import { VERSAO_DOS_TERMOS } from "../src/lib/documentos";
+import { VERSAO_DOS_TERMOS } from "../src/domain/documentos/documentos.ts";
+import {
+  CHAMADOS,
+  EMAIL_DO_ADMIN,
+  montarContas,
+  montarPalestras,
+  montarReservas,
+  verificar,
+  type Conta,
+} from "./dados-de-demonstracao.mts";
 
-for (const linha of readFileSync(".env.local", "utf8").split("\n")) {
+for (const linha of readFileSync(".env.local", "utf8").split(/\r?\n/)) {
   const par = linha.match(/^([A-Z_]+)=(.*)$/);
   if (par && !process.env[par[1]]) process.env[par[1]] = par[2].trim();
 }
@@ -14,8 +20,6 @@ const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const secretKey = process.env.SUPABASE_SECRET_KEY;
 const senha = process.env.SEED_USER_PASSWORD;
 
-// O e-mail que recebe as notificações na demonstração. Sem domínio verificado,
-// o Resend só entrega no endereço dono da conta.
 const emailDemo = process.env.SEED_DEMO_EMAIL;
 
 if (!url || !secretKey || !senha || !emailDemo) {
@@ -28,125 +32,42 @@ const supabase = createClient(url, secretKey, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 
-type Conta = {
-  email: string;
-  fullName: string;
-  role: "professor" | "admin";
-  /** O nome identifica o docente, e não o e-mail: o da demonstração muda. */
-  professorNome?: string;
-  /** Contas de desenvolvimento já nascem com os termos aceitos. */
-  termosAceitos?: boolean;
-};
+const CONTAS: Conta[] = montarContas(emailDemo);
+const RESERVAS = montarReservas(CONTAS);
+const PALESTRAS = montarPalestras(new Date());
 
-const COORDENACAO = "coordenacao@exemplo.edu.br";
+verificar(RESERVAS, PALESTRAS);
 
-// Master provisório: passa para a conta definitiva antes da banca (TASKS.md).
-const MASTER = "dev.admin@exemplo.edu.br";
-
-// Dois grupos que não se misturam (o do segundo fator é criado pela suíte, em
-// tests/e2e/global-setup.ts). As de demonstração exigem segundo fator e
-// nunca são usadas pelos testes, que já apagaram o fator cadastrado nelas.
-const CONTAS: Conta[] = [
-  // Demonstração: as do vídeo.
-  {
-    email: emailDemo,
-    fullName: "Ana Beatriz Moura",
-    role: "professor",
-    professorNome: "Ana Beatriz Moura",
-  },
-  {
-    email: "marina.prado@exemplo.edu.br",
-    fullName: "Marina Alves Prado",
-    role: "professor",
-    professorNome: "Marina Alves Prado",
-  },
-  { email: COORDENACAO, fullName: "Coordenação Acadêmica", role: "admin" },
-
-  // Desenvolvimento: dispensadas do segundo fator pela variável
-  // MFA_DISPENSADO_PARA, e só fora de produção. Usadas pelo Daniel e pelos testes.
-  {
-    email: "dev.admin@exemplo.edu.br",
-    fullName: "Conta de desenvolvimento",
-    role: "admin",
-    termosAceitos: true,
-  },
-  {
-    email: "dev.professor@exemplo.edu.br",
-    fullName: "Professor de desenvolvimento",
-    role: "professor",
-    professorNome: "Carlos Eduardo Lima",
-    termosAceitos: true,
-  },
-];
-
-// Ancorados na próxima segunda, para não envelhecerem.
-function slot(diasDepoisDaSegunda: number, hora: string): string {
-  const hoje = new Date();
-  const diaDaSemana = (hoje.getDay() + 6) % 7;
-  const segunda = new Date(hoje);
-  segunda.setDate(hoje.getDate() - diaDaSemana + 7 + diasDepoisDaSegunda);
-
-  // Montada a partir dos componentes locais: toISOString converte para UTC, e
-  // à noite isso empurra a data para o dia seguinte.
-  const mes = String(segunda.getMonth() + 1).padStart(2, "0");
-  const dia = String(segunda.getDate()).padStart(2, "0");
-
-  return `${segunda.getFullYear()}-${mes}-${dia}T${hora}:00-03:00`;
+for (const chamado of CHAMADOS) {
+  for (const email of [chamado.solicitante, chamado.atribuidoA]) {
+    if (email && !CONTAS.some((c) => c.email === email)) {
+      throw new Error(`Chamado aponta para conta inexistente: ${email}`);
+    }
+  }
 }
 
-const RESERVAS = [
-  {
-    building: "Bloco A",
-    room: "101",
-    professor: "Ana Beatriz Moura",
-    registradaPor: emailDemo,
-    className: "SI 8º semestre A",
-    subject: "Engenharia de Software",
-    activityType: "class",
-    purpose: "Aula de Engenharia de Software",
-    startsAt: slot(0, "19:00"),
-    endsAt: slot(0, "20:40"),
-    resources: ["Projetor"],
-  },
-  {
-    building: "Bloco B",
-    room: "Lab 01",
-    professor: "Carlos Eduardo Lima",
-    // Registrada pela secretaria em nome do docente, que é o caso que a
-    // administração existe para cobrir.
-    registradaPor: "dev.admin@exemplo.edu.br",
-    className: "ENG 2º semestre A",
-    subject: "Resistência dos Materiais",
-    activityType: "class",
-    purpose: "Laboratório de Materiais",
-    startsAt: slot(0, "19:00"),
-    endsAt: slot(0, "20:40"),
-    resources: ["Computadores"],
-  },
-  {
-    building: "Bloco C",
-    room: "Auditório",
-    professor: "Marina Alves Prado",
-    registradaPor: "marina.prado@exemplo.edu.br",
-    className: "ENF 6º semestre A",
-    subject: null,
-    activityType: "lecture",
-    purpose: "Seminário de Saúde Coletiva",
-    startsAt: slot(1, "20:00"),
-    endsAt: slot(1, "21:40"),
-    resources: ["Projetor", "Sistema de som"],
-  },
-];
+function emLotes<T>(itens: T[], tamanho: number): T[][] {
+  const lotes: T[][] = [];
+  for (let i = 0; i < itens.length; i += tamanho) {
+    lotes.push(itens.slice(i, i + tamanho));
+  }
+  return lotes;
+}
 
 async function removerContasAntigas() {
-  // As reservas saem primeiro: bookings.created_by referencia profiles com
-  // on delete restrict, então o banco recusa apagar a conta antes delas.
-  const { error: falhaAoLimpar } = await supabase
-    .from("bookings")
-    .delete()
-    .not("id", "is", null);
+  for (const tabela of [
+    "lecture_enrollments",
+    "lectures",
+    "tickets",
+    "bookings",
+  ] as const) {
+    const { error } = await supabase
+      .from(tabela)
+      .delete()
+      .not("id", "is", null);
 
-  if (falhaAoLimpar) throw falhaAoLimpar;
+    if (error) throw error;
+  }
 
   const { data, error } = await supabase.auth.admin.listUsers({
     perPage: 1000,
@@ -161,88 +82,88 @@ async function removerContasAntigas() {
   console.log(`${data.users.length} conta(s) removida(s)`);
 }
 
-// Resolvidos de uma vez, antes de qualquer escrita: o e-mail do professor de
-// demonstração muda no fim, e buscas tardias por ele não achariam mais nada.
-async function mapearProfessores(): Promise<Map<string, string>> {
-  const { data, error } = await supabase.from("professors").select("id, name");
-
+async function mapear(
+  tabela: "professors" | "courses" | "classes" | "subjects" | "resources",
+  coluna = "name"
+): Promise<Map<string, string>> {
+  const { data, error } = await supabase.from(tabela).select(`id, ${coluna}`);
   if (error) throw error;
 
-  if (data.length === 0) {
-    throw new Error(
-      "Nenhum professor no banco. Rode o supabase/seed.sql antes."
-    );
+  if (!data || data.length === 0) {
+    throw new Error(`Tabela ${tabela} vazia. Rode o supabase/seed.sql antes.`);
   }
 
-  return new Map(data.map((professor) => [professor.name, professor.id]));
+  const linhas = data as unknown as Record<string, string>[];
+  return new Map(linhas.map((linha) => [linha[coluna], linha.id]));
 }
 
-function exigirProfessor(
-  professores: Map<string, string>,
-  nome: string
-): string {
-  const id = professores.get(nome);
+async function mapearEspacos(): Promise<Map<string, string>> {
+  const { data, error } = await supabase.from("rooms").select("id, name");
+  if (error) throw error;
+  if (data.length === 0) {
+    throw new Error("Nenhum espaço no banco. Rode o supabase/seed.sql antes.");
+  }
+  return new Map(data.map((sala) => [sala.name, sala.id]));
+}
 
+function exigir(mapa: Map<string, string>, chave: string, tipo: string): string {
+  const id = mapa.get(chave);
   if (!id) {
     throw new Error(
-      `Professor ${nome} não encontrado. Rode o supabase/seed.sql antes.`
+      `${tipo} ${chave} não encontrado. Rode o supabase/seed.sql antes.`
     );
   }
-
   return id;
 }
 
 async function criarContas(
-  professores: Map<string, string>
+  professores: Map<string, string>,
+  cursos: Map<string, string>,
+  turmas: Map<string, string>
 ): Promise<Map<string, string>> {
   const porEmail = new Map<string, string>();
 
   for (const conta of CONTAS) {
-    const professorId = conta.professorNome
-      ? exigirProfessor(professores, conta.professorNome)
+    const professorId = conta.professor
+      ? exigir(professores, conta.professor, "Professor")
       : null;
+    const cursoId = conta.curso ? exigir(cursos, conta.curso, "Curso") : null;
+    const turmaId = conta.turma ? exigir(turmas, conta.turma, "Turma") : null;
 
     const { data, error } = await supabase.auth.admin.createUser({
       email: conta.email,
       password: senha,
       email_confirm: true,
-      user_metadata: { full_name: conta.fullName },
+      user_metadata: { full_name: conta.nome },
     });
 
     if (error) throw error;
 
-    // A conta nasce como aluno: a trigger não confia em metadados. Papel e
-    // vínculo são gravados aqui, pelo service role.
     const { error: falhaDoPapel } = await supabase
       .from("profiles")
-      .update({ role: conta.role, professor_id: professorId })
+      .update({
+        role: conta.papel,
+        professor_id: professorId,
+        course_id: cursoId,
+        class_id: turmaId,
+        ...(conta.termosAceitos
+          ? {
+              terms_accepted_at: new Date().toISOString(),
+              terms_version: VERSAO_DOS_TERMOS,
+            }
+          : {}),
+      })
       .eq("id", data.user.id);
 
     if (falhaDoPapel) throw falhaDoPapel;
 
     porEmail.set(conta.email, data.user.id);
-
-    if (conta.termosAceitos) {
-      const { error: falha } = await supabase
-        .from("profiles")
-        .update({
-          terms_accepted_at: new Date().toISOString(),
-          terms_version: VERSAO_DOS_TERMOS,
-        })
-        .eq("id", data.user.id);
-
-      if (falha) throw falha;
-    }
-
-    console.log(`conta criada: ${conta.email} (${conta.role})`);
   }
 
+  console.log(`${CONTAS.length} contas criadas`);
   return porEmail;
 }
 
-// O endereço real fica só no .env.local: o SQL versionado usa domínio de
-// exemplo, que o envio de e-mail recusa. Carlos e Marina recebem aliases do
-// mesmo endereço (+carlos, +marina), que caem na mesma caixa de entrada.
 function comAlias(email: string, alias: string): string {
   const [usuario, dominio] = email.split("@");
   return `${usuario}+${alias}@${dominio}`;
@@ -264,11 +185,9 @@ async function apontarProfessoresDeDemonstracao() {
   }
 }
 
-// O dono do sistema, que não pode ser removido. Pelo service role: a trigger
-// recusa essa mudança vinda de qualquer sessão de usuário.
 async function marcarMaster(perfilPorEmail: Map<string, string>) {
-  const id = perfilPorEmail.get(MASTER);
-  if (!id) throw new Error(`Sem conta para ${MASTER}`);
+  const id = perfilPorEmail.get(EMAIL_DO_ADMIN);
+  if (!id) throw new Error(`Sem conta para ${EMAIL_DO_ADMIN}`);
 
   const { error } = await supabase
     .from("profiles")
@@ -279,64 +198,181 @@ async function marcarMaster(perfilPorEmail: Map<string, string>) {
 
 async function criarReservas(
   professores: Map<string, string>,
+  turmas: Map<string, string>,
+  disciplinas: Map<string, string>,
+  recursos: Map<string, string>,
+  espacos: Map<string, string>,
   perfilPorEmail: Map<string, string>
 ) {
-  for (const reserva of RESERVAS) {
-    const [sala, turma, disciplina, recursos] = await Promise.all([
-      supabase
-        .from("rooms")
-        .select("id")
-        .eq("building", reserva.building)
-        .eq("name", reserva.room)
-        .single(),
-      supabase
-        .from("classes")
-        .select("id")
-        .eq("name", reserva.className)
-        .single(),
-      reserva.subject
-        ? supabase
-            .from("subjects")
-            .select("id")
-            .eq("name", reserva.subject)
-            .single()
-        : Promise.resolve({ data: null, error: null }),
-      supabase
-        .from("resources")
-        .select("id, name")
-        .in("name", reserva.resources),
-    ]);
+  const linhas = RESERVAS.map((reserva) => ({
+    room_id: exigir(espacos, reserva.espaco, "Espaço"),
+    professor_id: exigir(professores, reserva.professor, "Professor"),
+    class_id: exigir(turmas, reserva.turma, "Turma"),
+    subject_id: reserva.disciplina
+      ? exigir(disciplinas, reserva.disciplina, "Disciplina")
+      : null,
+    activity_type: reserva.tipo,
+    purpose: reserva.titulo,
+    starts_at: reserva.inicio,
+    ends_at: reserva.fim,
+    created_by: exigir(perfilPorEmail, reserva.registradaPor, "Conta"),
+    status: reserva.cancelada ? "cancelled" : "active",
+    cancelled_at: reserva.cancelada?.em ?? null,
+    cancellation_reason: reserva.cancelada?.motivo ?? null,
+  }));
 
-    const professorId = exigirProfessor(professores, reserva.professor);
-    const createdBy = perfilPorEmail.get(reserva.registradaPor);
+  let criadas = 0;
 
-    if (!createdBy) throw new Error(`Sem conta para ${reserva.registradaPor}`);
-
-    const { error } = await supabase.rpc("create_booking", {
-      p_room_id: sala.data!.id,
-      p_professor_id: professorId,
-      p_class_id: turma.data!.id,
-      p_purpose: reserva.purpose,
-      p_starts_at: reserva.startsAt,
-      p_ends_at: reserva.endsAt,
-      p_resource_ids: (recursos.data ?? []).map((r) => r.id),
-      p_created_by: createdBy,
-      p_activity_type: reserva.activityType,
-      p_subject_id: disciplina.data?.id ?? null,
-    });
+  for (const lote of emLotes(linhas.map((linha, i) => ({ linha, i })), 100)) {
+    const { data, error } = await supabase
+      .from("bookings")
+      .insert(lote.map(({ linha }) => linha))
+      .select("id");
 
     if (error) throw error;
-    console.log(`reserva criada: ${reserva.purpose}`);
+
+    const ligacoes = lote.flatMap(({ i }, posicao) =>
+      RESERVAS[i].recursos.map((nome) => ({
+        booking_id: data[posicao].id,
+        resource_id: exigir(recursos, nome, "Recurso"),
+      }))
+    );
+
+    if (ligacoes.length > 0) {
+      const { error: falha } = await supabase
+        .from("booking_resources")
+        .insert(ligacoes);
+      if (falha) throw falha;
+    }
+
+    criadas += lote.length;
   }
+
+  console.log(`${criadas} reservas criadas`);
+}
+
+async function criarChamados(
+  espacos: Map<string, string>,
+  perfilPorEmail: Map<string, string>
+) {
+  const agora = Date.now();
+  const horasAtras = (h: number) =>
+    new Date(agora - h * 60 * 60 * 1000).toISOString();
+
+  const linhas = CHAMADOS.map((c) => ({
+    room_id: exigir(espacos, c.espaco, "Espaço"),
+    requested_by: exigir(perfilPorEmail, c.solicitante, "Conta"),
+    description: c.descricao,
+    priority: c.prioridade,
+    status: c.status,
+    assigned_to: c.atribuidoA
+      ? exigir(perfilPorEmail, c.atribuidoA, "Conta")
+      : null,
+    created_at: horasAtras(c.criadoHa),
+    started_at: c.iniciadoHa ? horasAtras(c.iniciadoHa) : null,
+    resolved_at: c.resolvidoHa ? horasAtras(c.resolvidoHa) : null,
+    cancelled_at: c.canceladoHa ? horasAtras(c.canceladoHa) : null,
+    resolution_note: c.nota ?? null,
+  }));
+
+  const { error } = await supabase.from("tickets").insert(linhas);
+  if (error) throw error;
+
+  console.log(`${linhas.length} chamados criados`);
+}
+
+async function criarPalestras(
+  espacos: Map<string, string>,
+  cursos: Map<string, string>,
+  perfilPorEmail: Map<string, string>
+) {
+  const admin = exigir(perfilPorEmail, EMAIL_DO_ADMIN, "Conta");
+  const alunos = CONTAS.filter((c) => c.papel === "student");
+  let inscricoes = 0;
+
+  for (const [indice, palestra] of PALESTRAS.entries()) {
+    const { data, error } = await supabase
+      .from("lectures")
+      .insert({
+        title: palestra.titulo,
+        speaker: palestra.palestrante,
+        room_id: exigir(espacos, palestra.espaco, "Espaço"),
+        starts_at: palestra.inicio,
+        ends_at: palestra.fim,
+        seats: palestra.vagas,
+        created_by: admin,
+      })
+      .select("id")
+      .single();
+    if (error) throw error;
+
+    const { error: falhaDestino } = await supabase
+      .from("lecture_courses")
+      .insert(
+        palestra.cursos.map((curso) => ({
+          lecture_id: data.id,
+          course_id: exigir(cursos, curso, "Curso"),
+        }))
+      );
+    if (falhaDestino) throw falhaDestino;
+
+    const inscritos = alunos
+      .map((aluno, posicao) => ({ aluno, posicao }))
+      .filter(
+        ({ aluno, posicao }) =>
+          palestra.cursos.includes(aluno.curso ?? "") &&
+          (posicao + indice) % 4 !== 0
+      );
+
+    if (inscritos.length > 0) {
+      const { error: falhaInscricao } = await supabase
+        .from("lecture_enrollments")
+        .insert(
+          inscritos.map(({ aluno }) => ({
+            lecture_id: data.id,
+            profile_id: exigir(perfilPorEmail, aluno.email, "Conta"),
+          }))
+        );
+      if (falhaInscricao) throw falhaInscricao;
+      inscricoes += inscritos.length;
+    }
+  }
+
+  console.log(`${PALESTRAS.length} palestras e ${inscricoes} inscrições criadas`);
+}
+
+const professores = await mapear("professors");
+const cursos = await mapear("courses");
+const turmas = await mapear("classes");
+const disciplinas = await mapear("subjects");
+const recursos = await mapear("resources");
+const espacos = await mapearEspacos();
+
+for (const [mapa, chave, tipo] of [
+  [turmas, "SI 2º semestre A", "Turma"],
+  [espacos, "4T-01", "Espaço"],
+  [professores, "Ricardo Tavares", "Professor"],
+] as const) {
+  exigir(mapa, chave, tipo);
 }
 
 await removerContasAntigas();
-const professores = await mapearProfessores();
-const perfilPorEmail = await criarContas(professores);
-await criarReservas(professores, perfilPorEmail);
+
+const perfilPorEmail = await criarContas(professores, cursos, turmas);
+await criarReservas(
+  professores,
+  turmas,
+  disciplinas,
+  recursos,
+  espacos,
+  perfilPorEmail
+);
+await criarChamados(espacos, perfilPorEmail);
+await criarPalestras(espacos, cursos, perfilPorEmail);
 await marcarMaster(perfilPorEmail);
 await apontarProfessoresDeDemonstracao();
 
 console.log(
-  "\nPronto. Entre com qualquer e-mail acima e a senha de SEED_USER_PASSWORD."
+  "\nPronto. Entre com qualquer conta e a senha de SEED_USER_PASSWORD."
 );
+

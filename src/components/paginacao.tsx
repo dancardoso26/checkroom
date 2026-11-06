@@ -1,7 +1,8 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -13,75 +14,71 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { OPCOES_POR_PAGINA } from "@/lib/tabela";
+import { OPCOES_POR_PAGINA } from "@/domain/tabela/tabela";
 
-// Lê e escreve "pagina" e "porPagina" na URL, preservando os demais parâmetros,
-// como a pesquisa: cada combinação continua tendo endereço próprio.
-export function Paginacao({
-  pagina,
-  totalDePaginas,
-  porPagina,
-}: {
+const semAssinatura = () => () => {};
+
+function useAlvoDoRodape(): HTMLElement | null {
+  return useSyncExternalStore(
+    semAssinatura,
+    () => document.getElementById("rodape-fixo"),
+    () => null
+  );
+}
+
+export type PropsDoRodape = {
   pagina: number;
   totalDePaginas: number;
   porPagina: number;
-}) {
-  const router = useRouter();
-  const caminho = usePathname();
-  const parametros = useSearchParams();
+  total?: number;
+  onPagina: (pagina: number) => void;
+  onPorPagina: (porPagina: number) => void;
+  fixo?: boolean;
+};
 
-  // Rascunho do campo: só vira navegação ao confirmar, e não a cada tecla.
-  // A chave em "pagina" o reinicia quando a página muda por outro caminho.
+function intervaloExibido(pagina: number, porPagina: number, total: number) {
+  if (total === 0) return "Nenhum item";
+  const de = (pagina - 1) * porPagina + 1;
+  const ate = Math.min(pagina * porPagina, total);
+  return `${de}–${ate} de ${total}`;
+}
+
+export function RodapeDaTabela({
+  pagina,
+  totalDePaginas,
+  porPagina,
+  total,
+  onPagina,
+  onPorPagina,
+  fixo = true,
+}: PropsDoRodape) {
+  const alvo = useAlvoDoRodape();
   const [digitada, setDigitada] = useState({
     base: pagina,
     valor: String(pagina),
   });
   const valor = digitada.base === pagina ? digitada.valor : String(pagina);
 
-  function ir(mudancas: { pagina?: number; porPagina?: number }) {
-    const novos = new URLSearchParams(parametros);
-
-    if (mudancas.porPagina !== undefined)
-      novos.set("porPagina", String(mudancas.porPagina));
-    const destino = mudancas.pagina ?? 1;
-    if (destino > 1) novos.set("pagina", String(destino));
-    else novos.delete("pagina");
-
-    router.push(novos.size ? `${caminho}?${novos}` : caminho, {
-      scroll: false,
-    });
-  }
-
   function confirmar() {
     const numero = Math.trunc(Number(valor));
 
-    // Fora do intervalo ou inválido: o campo volta à página atual em vez de
-    // navegar para um lugar que não existe.
     if (!Number.isFinite(numero) || numero < 1 || numero > totalDePaginas) {
       setDigitada({ base: pagina, valor: String(pagina) });
       return;
     }
 
-    if (numero !== pagina) ir({ pagina: numero });
+    if (numero !== pagina) onPagina(numero);
   }
 
-  return (
-    <nav
-      aria-label="Paginação"
-      className="flex flex-wrap items-center justify-between gap-3 border-t px-3 py-2"
-    >
+  const conteudo = (
+    <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-2">
       <div className="flex items-center gap-2 text-sm">
         <span className="text-muted-foreground">Itens por página</span>
         <Select
           value={String(porPagina)}
-          // Trocar o tamanho muda o que cada página contém; volta à primeira.
-          onValueChange={(v) => ir({ porPagina: Number(v) })}
+          onValueChange={(v) => onPorPagina(Number(v))}
         >
-          <SelectTrigger
-            size="sm"
-            className="w-20"
-            aria-label="Itens por página"
-          >
+          <SelectTrigger size="sm" className="w-20" aria-label="Itens por página">
             <SelectValue />
           </SelectTrigger>
           <SelectContent position="popper" side="top">
@@ -92,6 +89,11 @@ export function Paginacao({
             ))}
           </SelectContent>
         </Select>
+        {total !== undefined && (
+          <span className="text-muted-foreground hidden sm:inline">
+            {intervaloExibido(pagina, porPagina, total)}
+          </span>
+        )}
       </div>
 
       <div className="flex items-center gap-2 text-sm">
@@ -99,7 +101,7 @@ export function Paginacao({
           variant="outline"
           size="sm"
           disabled={pagina <= 1}
-          onClick={() => ir({ pagina: pagina - 1 })}
+          onClick={() => onPagina(pagina - 1)}
         >
           <ChevronLeft />
           Anterior
@@ -133,12 +135,73 @@ export function Paginacao({
           variant="outline"
           size="sm"
           disabled={pagina >= totalDePaginas}
-          onClick={() => ir({ pagina: pagina + 1 })}
+          onClick={() => onPagina(pagina + 1)}
         >
           Seguinte
           <ChevronRight />
         </Button>
       </div>
-    </nav>
+    </div>
+  );
+
+  if (!fixo) {
+    return (
+      <nav aria-label="Paginação" className="border-t">
+        {conteudo}
+      </nav>
+    );
+  }
+
+  if (!alvo) return null;
+
+  return createPortal(
+    <nav
+      aria-label="Paginação"
+      className="bg-card border-t px-3 shadow-[0_-1px_3px_rgb(0_0_0/0.04)] sm:px-4"
+    >
+      {conteudo}
+    </nav>,
+    alvo
+  );
+}
+
+export function Paginacao({
+  pagina,
+  totalDePaginas,
+  porPagina,
+  total,
+}: {
+  pagina: number;
+  totalDePaginas: number;
+  porPagina: number;
+  total?: number;
+}) {
+  const router = useRouter();
+  const caminho = usePathname();
+  const parametros = useSearchParams();
+
+  function ir(mudancas: { pagina?: number; porPagina?: number }) {
+    const novos = new URLSearchParams(parametros);
+
+    if (mudancas.porPagina !== undefined)
+      novos.set("porPagina", String(mudancas.porPagina));
+    const destino = mudancas.pagina ?? 1;
+    if (destino > 1) novos.set("pagina", String(destino));
+    else novos.delete("pagina");
+
+    router.push(novos.size ? `${caminho}?${novos}` : caminho, {
+      scroll: false,
+    });
+  }
+
+  return (
+    <RodapeDaTabela
+      pagina={pagina}
+      totalDePaginas={totalDePaginas}
+      porPagina={porPagina}
+      total={total}
+      onPagina={(destino) => ir({ pagina: destino })}
+      onPorPagina={(novo) => ir({ porPagina: novo })}
+    />
   );
 }

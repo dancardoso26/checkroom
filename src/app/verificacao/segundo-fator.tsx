@@ -40,8 +40,6 @@ export function SegundoFator({ cadastrando }: { cadastrando: boolean }) {
         return;
       }
 
-      // Um cadastro interrompido deixa o fator pendente para trás. Removê-lo
-      // evita acumular fatores mortos a cada visita a esta tela.
       const pendente = fatores.all.find(
         (fator) => fator.factor_type === "totp" && fator.status === "unverified"
       );
@@ -103,13 +101,9 @@ export function SegundoFator({ cadastrando }: { cadastrando: boolean }) {
     }
 
     if (cadastro) {
-      await registrarCadastroDeSegundoFator().catch(() => {
-        // Auditoria não pode impedir o acesso de quem acabou de se verificar.
-      });
+      await registrarCadastroDeSegundoFator().catch(() => {});
     }
 
-    // Navegação dura, e não router: a sessão acabou de mudar, e só uma
-    // requisição nova leva o cookie renovado ao middleware.
     // eslint-disable-next-line @next/next/no-location-assign-relative-destination
     window.location.assign("/reservas");
   }
@@ -118,8 +112,6 @@ export function SegundoFator({ cadastrando }: { cadastrando: boolean }) {
     <div className="space-y-6">
       {cadastro && (
         <div className="flex flex-col items-center gap-4">
-          {/* next/image recusa data URI, e o QR chega como SVG embutido.
-              Otimizar não faria sentido: a imagem já vem pronta e inline. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={cadastro.qrCode}

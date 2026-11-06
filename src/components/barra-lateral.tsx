@@ -6,10 +6,17 @@ import { startTransition } from "react";
 import {
   ArrowLeft,
   CalendarDays,
+  CalendarRange,
+  ChartColumn,
   ChevronsUpDown,
   CircleHelp,
+  DoorOpen,
   ExternalLink,
+  GraduationCap,
+  LifeBuoy,
   LogOut,
+  Package,
+  Presentation,
   ScrollText,
   Settings,
   UserCog,
@@ -18,7 +25,16 @@ import {
 } from "lucide-react";
 
 import { sair } from "@/app/login/acoes";
-import { ROTULO_DO_PAPEL, type Papel } from "@/domain/auth/permissoes";
+import {
+  ROTULO_DO_PAPEL,
+  podeAbrirChamado,
+  podeGerenciarCadastros,
+  podeVerPainel,
+  podeVerPalestras,
+  podeVerTodosOsChamados,
+  type Ator,
+  type Papel,
+} from "@/domain/auth/permissoes";
 import { Logo } from "@/components/logo";
 import {
   DropdownMenu,
@@ -42,10 +58,53 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarSeparator,
   SidebarRail,
+  SidebarTrigger,
 } from "@/components/ui/sidebar";
 
 type Item = { href: string; rotulo: string; icone: LucideIcon };
+
+function atorDoPapel(papel: Papel): Ator {
+  return { papel, profileId: "", professorId: null };
+}
+
+function itensDoPapel(papel: Papel): Item[] {
+  const ator = atorDoPapel(papel);
+
+  return [
+    {
+      href: "/dashboard",
+      rotulo: "Dashboard",
+      icone: ChartColumn,
+      ver: podeVerPainel(ator),
+    },
+    {
+      href: "/reservas",
+      rotulo: papel === "student" ? "Minha agenda" : "Reservas",
+      icone: CalendarDays,
+      ver: true,
+    },
+    {
+      href: "/chamados",
+      rotulo: "Chamados",
+      icone: LifeBuoy,
+      ver: podeAbrirChamado(ator) || podeVerTodosOsChamados(ator),
+    },
+    {
+      href: "/palestras",
+      rotulo: "Palestras",
+      icone: Presentation,
+      ver: podeVerPalestras(ator),
+    },
+  ]
+    .filter((item) => item.ver)
+    .map(({ href, rotulo, icone }) => ({ href, rotulo, icone }));
+}
+
+function veConfiguracoes(papel: Papel): boolean {
+  return podeGerenciarCadastros(atorDoPapel(papel));
+}
 
 const DOCUMENTOS = [
   { href: "/privacidade", rotulo: "Política de Privacidade" },
@@ -54,21 +113,34 @@ const DOCUMENTOS = [
 
 const OPCOES_DE_CONFIGURACAO: Item[] = [
   { href: "/configuracoes/usuarios", rotulo: "Usuários", icone: Users },
+  { href: "/configuracoes/espacos", rotulo: "Espaços", icone: DoorOpen },
+  { href: "/configuracoes/recursos", rotulo: "Recursos", icone: Package },
+  {
+    href: "/configuracoes/academico",
+    rotulo: "Cadastro acadêmico",
+    icone: GraduationCap,
+  },
+  {
+    href: "/configuracoes/calendario",
+    rotulo: "Calendário letivo",
+    icone: CalendarRange,
+  },
+  {
+    href: "/configuracoes/auditoria",
+    rotulo: "Log de auditoria",
+    icone: ScrollText,
+  },
 ];
 
-// A tela de onde se entrou nas configurações, com a query: voltar para a agenda
-// devolve a mesma semana e o mesmo filtro. Sem ela, volta às reservas.
 const CHAVE_DO_RETORNO = "checkroom:retorno-das-configuracoes";
 
 function guardarRetorno() {
   try {
     sessionStorage.setItem(
       CHAVE_DO_RETORNO,
-      location.pathname + location.search
+      location.pathname + location.search,
     );
-  } catch {
-    // Sem armazenamento, o Voltar cai no padrão.
-  }
+  } catch {}
 }
 
 function lerRetorno(): string {
@@ -91,67 +163,55 @@ function iniciais(nome: string): string {
 export function BarraLateral({
   nome,
   papel,
-  ehAdmin,
+  semSegundoFator,
 }: {
   nome: string;
-  papel: string;
-  ehAdmin: boolean;
+  papel: Papel;
+  semSegundoFator: boolean;
 }) {
   const caminho = usePathname();
   const router = useRouter();
   const emConfiguracoes = caminho.startsWith("/configuracoes");
 
-  // Auditoria e configurações só aparecem para a administração. As rotas recusam
-  // por conta própria: esconder o item é conveniência, não controle de acesso.
-  const itens: Item[] = [
-    { href: "/reservas", rotulo: "Reservas", icone: CalendarDays },
-    ...(ehAdmin
-      ? [
-          {
-            href: "/auditoria",
-            rotulo: "Trilha de auditoria",
-            icone: ScrollText,
-          },
-        ]
-      : []),
-  ];
+  const itens = itensDoPapel(papel);
+  const ehAdmin = veConfiguracoes(papel);
 
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        <Link
-          href="/reservas"
-          aria-label="Página inicial do CheckRoom"
-          className="flex h-10 items-center px-2"
-        >
-          <Logo altura={24} className="group-data-[collapsible=icon]:hidden" />
-          {/* Recolhida, a barra só comporta o símbolo, e não o nome inteiro. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/favico-checkroom.svg"
-            alt=""
-            className="hidden size-6 group-data-[collapsible=icon]:block"
-          />
-        </Link>
+        <div className="flex h-10 items-center justify-between gap-2 pl-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:pl-0">
+          <Link
+            href="/reservas"
+            aria-label="Página inicial do CheckRoom"
+            className="flex items-center group-data-[collapsible=icon]:hidden"
+          >
+            <Logo altura={24} />
+          </Link>
+          <SidebarTrigger className="text-muted-foreground hidden md:inline-flex" />
+        </div>
       </SidebarHeader>
 
       <SidebarContent>
         {emConfiguracoes ? (
-          // Nas configurações, a barra troca de conteúdo em vez de empilhar um
-          // segundo menu dentro da página.
           <SidebarGroup>
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
+                  type="button"
                   tooltip="Voltar"
+                  aria-label="Voltar"
+                  className="relative cursor-pointer"
                   onClick={() => router.push(lerRetorno())}
                 >
                   <ArrowLeft />
-                  <span>Voltar</span>
+                  <span className="absolute inset-x-0 text-center group-data-[collapsible=icon]:hidden">
+                    Voltar
+                  </span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
 
+            <SidebarSeparator className="mx-0 my-2 hidden group-data-[collapsible=icon]:block" />
             <SidebarGroupLabel className="mt-2">
               Configurações
             </SidebarGroupLabel>
@@ -169,6 +229,11 @@ export function BarraLateral({
       </SidebarContent>
 
       <SidebarFooter>
+        {semSegundoFator && (
+          <p className="border-warning/40 bg-warning-subtle text-warning mx-2 rounded-md border px-2.5 py-1.5 text-xs font-medium group-data-[collapsible=icon]:hidden">
+            Segundo fator dispensado neste ambiente
+          </p>
+        )}
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
@@ -180,7 +245,7 @@ export function BarraLateral({
                   <span className="grid flex-1 text-left leading-tight">
                     <span className="truncate text-sm font-medium">{nome}</span>
                     <span className="text-muted-foreground truncate text-xs">
-                      {ROTULO_DO_PAPEL[papel as Papel] ?? papel}
+                      {ROTULO_DO_PAPEL[papel]}
                     </span>
                   </span>
                   <ChevronsUpDown className="ml-auto" />
@@ -191,7 +256,7 @@ export function BarraLateral({
                 <DropdownMenuLabel className="font-normal">
                   <p className="truncate text-sm font-medium">{nome}</p>
                   <p className="text-muted-foreground text-xs">
-                    {ROTULO_DO_PAPEL[papel as Papel] ?? papel}
+                    {ROTULO_DO_PAPEL[papel]}
                   </p>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
@@ -215,8 +280,6 @@ export function BarraLateral({
                     Saiba mais
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent>
-                    {/* Em outra aba: quem está no meio de uma reserva não perde
-                        a tela para ler o documento. */}
                     {DOCUMENTOS.map(({ href, rotulo }) => (
                       <DropdownMenuItem key={href} asChild>
                         <a

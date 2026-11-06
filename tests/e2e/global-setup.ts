@@ -24,9 +24,6 @@ export function clienteAdmin() {
   };
 }
 
-// A conta de teste do segundo fator é recriada a cada suíte e apagada no fim
-// (global-teardown): o segredo dela só existe na memória de uma execução, então
-// uma conta permanente cairia num desafio cujo código não tem como gerar.
 export default async function globalSetup() {
   const { supabase, senha } = clienteAdmin();
 

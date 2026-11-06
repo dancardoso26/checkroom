@@ -50,14 +50,14 @@ Supabase Auth, configurado para entregar pelo SMTP do Resend.
 Tela (painel de reserva ou diálogo de cancelamento)
   │  Server Action
   ▼
-criarReserva / cancelarReserva          src/app/(sistema)/reservas/actions.ts, cancelar.ts
+criarReserva / cancelarReserva          src/app/(sistema)/reservas/acoes/criar.ts, cancelar.ts
   │  1. valida a entrada e a permissão
   │  2. grava no banco (a reserva já existe antes do e-mail)
   ▼
-notificarProfessor                      src/app/(sistema)/reservas/actions.ts
+notificarProfessor                      src/app/(sistema)/reservas/acoes/notificar.ts
   │  busca os dados da mensagem com a chave de serviço
   ▼
-findBookingNotificationData             src/lib/repositories/bookingRepository.ts
+findBookingNotificationData             src/lib/repositories/repositorio-de-reservas.ts
   ▼
 avisarSobreReserva                      src/lib/email/enviar.tsx
   │  confere a chave, o destinatário e monta a mensagem

@@ -1,5 +1,6 @@
 "use client";
 
+import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { startTransition, useActionState, useEffect } from "react";
 
@@ -13,6 +14,7 @@ const ESTADO_INICIAL: LoginState = { status: "idle" };
 
 export function FormularioDeLogin({ proximo }: { proximo?: string }) {
   const [state, formAction, entrando] = useActionState(entrar, ESTADO_INICIAL);
+  const aguardando = entrando || state.status === "success";
 
   useEffect(() => {
     if (state.status !== "success") return;
@@ -20,8 +22,6 @@ export function FormularioDeLogin({ proximo }: { proximo?: string }) {
     window.location.assign(state.destino);
   }, [state]);
 
-  // Envio manual em vez de <form action>: o action do React 19 limpa o
-  // formulário ao responder, e o e-mail digitado se perderia a cada erro.
   function enviar(evento: React.FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     const dados = new FormData(evento.currentTarget);
@@ -67,12 +67,9 @@ export function FormularioDeLogin({ proximo }: { proximo?: string }) {
         </p>
       )}
 
-      <Button
-        type="submit"
-        className="w-full"
-        disabled={entrando}
-      >
-        {entrando ? "Entrando..." : "Entrar"}
+      <Button type="submit" className="w-full" disabled={aguardando}>
+        {aguardando && <Loader2 className="animate-spin" aria-hidden />}
+        {aguardando ? "Entrando..." : "Entrar"}
       </Button>
     </form>
   );

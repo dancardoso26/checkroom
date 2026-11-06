@@ -11,7 +11,6 @@ import {
   type LinhaReserva,
 } from "./helpers/banco";
 
-/** A reserva do seed contra a qual os conflitos são testados. */
 const RESERVA_BASE = "Aula de Engenharia de Software";
 
 test.describe("constraints de sobreposição", () => {
@@ -132,7 +131,6 @@ test.describe("constraints de sobreposição", () => {
     });
 
     expect(resultado.aceitou).toBe(false);
-    // 23514 é violação de check constraint, e não de exclusão.
     expect(resultado.codigo).toBe("23514");
     expect(resultado.mensagem).toContain("bookings_period_valid");
   });

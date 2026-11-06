@@ -1,5 +1,3 @@
-    -- A administração troca o papel de outro usuário. Pela função, e não por uma
-    -- política de update: a regra depende do papel atual e do novo, juntos.
     create or replace function public.alterar_papel(p_alvo uuid, p_papel public.user_role)
     returns void
     language plpgsql
@@ -19,8 +17,6 @@
         raise exception 'Usuário não encontrado.';
       end if;
 
-      -- O administrador é único: nem ele perde o papel por aqui, nem outro o ganha.
-      -- A troca de administrador é feita à parte, rebaixando antes de promover.
       if v_atual = 'admin' or p_papel = 'admin' then
         raise exception 'O papel de administrador não é alterado por esta tela.';
       end if;
@@ -29,8 +25,6 @@
         return;
       end if;
 
-      -- Só professor tem vínculo docente. Mantê-lo em outro papel deixaria a conta
-      -- reservando em nome do docente, porque a regra olha o vínculo.
       update public.profiles
         set role = p_papel,
             professor_id = case when p_papel = 'professor' then professor_id else null end

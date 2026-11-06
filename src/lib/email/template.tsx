@@ -44,44 +44,35 @@ function Linha({ termo, children }: { termo: string; children: string }) {
   );
 }
 
-// Um template para os dois avisos: o que muda entre criar e cancelar é o
-// título e uma frase, não a estrutura.
-export function EmailDeReserva({
-  cancelada,
-  dados,
+function EmailDoCheckRoom({
+  assunto,
+  frase,
+  linhas,
 }: {
-  cancelada: boolean;
-  dados: DadosDaReserva;
+  assunto: string;
+  frase: string;
+  linhas: [string, string | null | undefined][];
 }) {
-  const assunto = cancelada
-    ? "Sua reserva foi cancelada"
-    : "Nova reserva registrada em seu nome";
-
   return (
     <Html lang="pt-BR">
       <Head />
-      <Preview>{`${assunto}: ${dados.finalidade}`}</Preview>
+      <Preview>{assunto}</Preview>
       <Body style={corpo}>
         <Container style={caixa}>
           <Heading style={titulo}>{assunto}</Heading>
 
-          <Text style={texto}>
-            {cancelada
-              ? `${dados.professorNome}, a reserva abaixo foi cancelada e o horário voltou a ficar livre.`
-              : `${dados.professorNome}, uma reserva foi registrada em seu nome no CheckRoom.`}
-          </Text>
+          <Text style={texto}>{frase}</Text>
 
           <Hr style={{ borderColor: "#e4e7eb", margin: "20px 0" }} />
 
           <Section>
-            <Linha termo="Atividade">{dados.finalidade}</Linha>
-            <Linha termo="Espaço">{dados.espaco}</Linha>
-            <Linha termo="Data e horário">{dados.periodo}</Linha>
-            <Linha termo="Turma">{dados.turma}</Linha>
-            <Linha termo="Registrada por">{dados.registradoPor}</Linha>
-            {cancelada && dados.motivo && (
-              <Linha termo="Motivo do cancelamento">{dados.motivo}</Linha>
-            )}
+            {linhas
+              .filter((linha): linha is [string, string] => Boolean(linha[1]))
+              .map(([termo, conteudo]) => (
+                <Linha key={termo} termo={termo}>
+                  {conteudo}
+                </Linha>
+              ))}
           </Section>
 
           <Hr style={{ borderColor: "#e4e7eb", margin: "20px 0" }} />
@@ -93,5 +84,91 @@ export function EmailDeReserva({
         </Container>
       </Body>
     </Html>
+  );
+}
+
+export function EmailDeReserva({
+  cancelada,
+  dados,
+}: {
+  cancelada: boolean;
+  dados: DadosDaReserva;
+}) {
+  return (
+    <EmailDoCheckRoom
+      assunto={
+        cancelada
+          ? "Sua reserva foi cancelada"
+          : "Nova reserva registrada em seu nome"
+      }
+      frase={
+        cancelada
+          ? `${dados.professorNome}, a reserva abaixo foi cancelada e o horário voltou a ficar livre.`
+          : `${dados.professorNome}, uma reserva foi registrada em seu nome no CheckRoom.`
+      }
+      linhas={[
+        ["Atividade", dados.finalidade],
+        ["Espaço", dados.espaco],
+        ["Data e horário", dados.periodo],
+        ["Turma", dados.turma],
+        ["Registrada por", dados.registradoPor],
+        ["Motivo do cancelamento", cancelada ? dados.motivo : null],
+      ]}
+    />
+  );
+}
+
+export type DadosDoChamadoResolvido = {
+  solicitanteNome: string;
+  espaco: string;
+  descricao: string;
+  nota: string;
+  resolvidoPor: string;
+  abertoEm: string;
+};
+
+export function EmailDeChamadoResolvido({
+  dados,
+}: {
+  dados: DadosDoChamadoResolvido;
+}) {
+  return (
+    <EmailDoCheckRoom
+      assunto="Seu chamado foi resolvido"
+      frase={`${dados.solicitanteNome}, a equipe de TI concluiu o atendimento do chamado abaixo.`}
+      linhas={[
+        ["Espaço", dados.espaco],
+        ["Problema relatado", dados.descricao],
+        ["Criado em", dados.abertoEm],
+        ["Solução", dados.nota],
+        ["Resolvido por", dados.resolvidoPor],
+      ]}
+    />
+  );
+}
+
+export type DadosDaNovaPalestra = {
+  titulo: string;
+  palestrante: string;
+  espaco: string;
+  periodo: string;
+  vagas: string;
+  cursos: string;
+};
+
+export function EmailDeNovaPalestra({ dados }: { dados: DadosDaNovaPalestra }) {
+  return (
+    <EmailDoCheckRoom
+      assunto={`Nova palestra: ${dados.titulo}`}
+      frase="Uma palestra foi cadastrada para o seu curso. A inscrição é feita no CheckRoom, enquanto houver vagas."
+      linhas={[
+        ["Palestra", dados.titulo],
+        ["Palestrante", dados.palestrante],
+        ["Data e horário", dados.periodo],
+        ["Espaço", dados.espaco],
+        ["Vagas", dados.vagas],
+        ["Cursos", dados.cursos],
+      ]}
+    />
   );
 }

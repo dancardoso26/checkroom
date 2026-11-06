@@ -16,10 +16,9 @@ import {
   numeroDoDia,
   periodoVizinho,
   tituloDoPeriodo,
-} from "@/lib/calendario";
+} from "@/domain/agenda/navegacao-da-agenda";
 import { cn } from "@/lib/utils";
 
-// A semana começa na segunda, como na agenda.
 const CABECALHO = ["S", "T", "Q", "Q", "S", "S", "D"];
 
 const porExtenso = new Intl.DateTimeFormat("pt-BR", {
@@ -43,20 +42,15 @@ export function SeletorDeData({
   hoje,
 }: {
   id: string;
-  /** "AAAA-MM-DD" */
   value: string;
   onChange: (chave: string) => void;
-  /** Dias anteriores a este ficam desabilitados. */
   minimo?: string;
-  /** O dia de hoje, marcado na grade. Vem do servidor, no fuso de Brasília. */
   hoje: string;
 }) {
   const [aberto, setAberto] = useState(false);
   const [mes, setMes] = useState(value || hoje);
 
   function alternar(abrir: boolean) {
-    // Reabrir volta ao mês do valor: navegar por outros meses não deve deixar
-    // o balão preso onde parou da última vez.
     if (abrir) setMes(ehChaveValida(value) ? value : hoje);
     setAberto(abrir);
   }
@@ -76,7 +70,6 @@ export function SeletorDeData({
           id={id}
           type="button"
           variant="outline"
-          // Anuncia como controle de seleção, e não como botão comum.
           role="combobox"
           aria-expanded={aberto}
           className={cn(

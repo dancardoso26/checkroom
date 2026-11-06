@@ -1,9 +1,5 @@
 import { cn } from "@/lib/utils";
 
-// Sem "use client": renderiza no servidor, e o índice lateral, que é de
-// cliente, recebe a tabela já pronta.
-// Tabelas dos documentos: cabeçalho destacado, bordas e rolagem própria no
-// celular, em vez de alargar a página inteira.
 export function TabelaDoDocumento({
   colunas,
   linhas,
