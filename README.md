@@ -214,7 +214,7 @@ passo da publicação, o DNS e as variáveis de ambiente estão em
 
 ```bash
 npm install
-cp .env.example .env.local   # preencha com as chaves do seu projeto Supabase
+cp .env.example .env.local   # troque cada ${YOUR_...} pelo valor do seu projeto
 npm run dev
 ```
 
