@@ -40,7 +40,7 @@ pasta `CheckRoom/`.
 | RF19 | Atender chamado | `src/domain/chamados/chamado.ts` | `src/app/(sistema)/chamados/` | `src/domain/chamados/chamado.test.ts`, `tests/e2e/chamados.spec.ts` |
 | RF20 | Notificar o solicitante do chamado | `src/app/(sistema)/chamados/acoes.ts`, `src/lib/email/` | sem tela (e-mail) | sem teste dedicado |
 | RF21 | Cadastrar palestra | `src/domain/palestras/palestra.ts`, `supabase/migrations/20261012000400_palestras.sql` | `src/app/(sistema)/palestras/` | `src/domain/palestras/palestra.test.ts`, `tests/e2e/palestras.spec.ts` |
-| RF22 | Notificar os alunos sobre nova palestra | `src/app/(sistema)/palestras/acoes.ts`, `src/lib/email/` | sem tela (e-mail) | sem teste dedicado |
+| RF22 | Notificar os alunos sobre nova palestra e o palestrante, quando escolhido da lista de professores | `src/app/(sistema)/palestras/acoes.ts`, `src/domain/palestras/palestrante.ts`, `src/lib/email/` | sem tela (e-mail) | `palestrante.test.ts` cobre o reconhecimento do professor; o envio não tem teste dedicado |
 | RF23 | Inscrever-se em palestra | `src/domain/palestras/palestra.ts`, `supabase/migrations/20261106000100_conflito_de_horario_na_inscricao.sql` | `src/app/(sistema)/palestras/` | `src/domain/palestras/palestra.test.ts`, `tests/e2e/palestras.spec.ts` |
 | RF24 | Consultar o painel de métricas | `src/domain/painel/` (`periodo.ts`, `ocupacao.ts`, `indicadores.ts`, `serie-temporal.ts`, `comparacao.ts`) | `src/app/(sistema)/dashboard/` | `src/domain/painel/indicadores.test.ts`, `src/domain/painel/ocupacao.test.ts`, `tests/e2e/painel.spec.ts` |
 

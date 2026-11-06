@@ -14,7 +14,8 @@ import {
 } from "@/domain/palestras/palestra";
 import { semErros } from "@/domain/formulario/validacao";
 import { combineDateTime, formatPeriod } from "@/lib/datetime";
-import { avisarSobreNovaPalestra } from "@/lib/email/enviar";
+import { mesmoNome } from "@/domain/palestras/palestrante";
+import { avisarPalestrante, avisarSobreNovaPalestra } from "@/lib/email/enviar";
 import { enderecoDoSite } from "@/lib/endereco-do-site";
 import {
   falha,
@@ -25,6 +26,7 @@ import {
   type ResultadoDaAcao,
 } from "@/lib/formulario";
 import { listarCursos } from "@/lib/repositories/repositorio-de-cursos";
+import { findProfessorContact } from "@/lib/repositories/repositorio-de-professores";
 import {
   cadastrarPalestra as cadastrarNoBanco,
   cancelarInscricao as cancelarNoBanco,
@@ -44,6 +46,7 @@ const PREFIXO_DE_TESTE = "[e2e]";
 const schema = z.object({
   titulo: z.string().trim().max(150, "Use no máximo 150 caracteres."),
   palestrante: z.string().trim().max(120, "Use no máximo 120 caracteres."),
+  palestranteProfessorId: z.union([z.uuid(), z.literal("")]),
   espacoId: z.union([z.uuid(), z.literal("")]),
   data: z.iso.date("Informe a data."),
   inicio: z.iso.time("Informe o horário de início."),
@@ -64,6 +67,7 @@ export async function cadastrarPalestra(
   const parsed = schema.safeParse({
     titulo: texto(formData.get("titulo")),
     palestrante: texto(formData.get("palestrante")),
+    palestranteProfessorId: texto(formData.get("palestranteProfessorId")),
     espacoId: texto(formData.get("espacoId")),
     data: texto(formData.get("data")),
     inicio: texto(formData.get("inicio")),
@@ -128,7 +132,7 @@ export async function cadastrarPalestra(
 
   if (espaco && !dados.titulo.startsWith(PREFIXO_DE_TESTE)) {
     const cursos = await listarCursos();
-    await avisarSobreNovaPalestra(await emailsDosAlunos(dados.cursoIds), {
+    const aviso = {
       titulo: dados.titulo,
       palestrante: dados.palestrante,
       espaco: espaco.name,
@@ -139,7 +143,18 @@ export async function cadastrarPalestra(
         .map((c) => c.nome)
         .join(", "),
       link: `${enderecoDoSite()}/palestras`,
-    });
+    };
+
+    await avisarSobreNovaPalestra(await emailsDosAlunos(dados.cursoIds), aviso);
+
+    if (entrada.palestranteProfessorId) {
+      const professor = await findProfessorContact(
+        entrada.palestranteProfessorId,
+      );
+      if (professor && mesmoNome(professor.name, dados.palestrante)) {
+        await avisarPalestrante(professor.email, aviso);
+      }
+    }
   }
 
   revalidatePath("/palestras");

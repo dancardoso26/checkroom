@@ -4,6 +4,10 @@ import { CampoComSugestoes } from "@/components/campo-com-sugestoes";
 import { SelecaoComPesquisa } from "@/components/selecao-com-pesquisa";
 import { SelecaoMultipla } from "@/components/selecao-multipla";
 import { Input } from "@/components/ui/input";
+import {
+  professorDoPalestrante,
+  type ProfessorDaLista,
+} from "@/domain/palestras/palestrante";
 
 import { LinhaDoFormulario } from "./linha-do-formulario";
 import type { CamposDaPalestra } from "./use-formulario-de-reserva";
@@ -19,9 +23,14 @@ export function CamposDaPalestraNoPainel({
     campo: C,
     valor: CamposDaPalestra[C]
   ) => void;
-  professores: string[];
+  professores: ProfessorDaLista[];
   cursos: { id: string; nome: string }[];
 }) {
+  const professorEscolhido = professorDoPalestrante(
+    palestra.palestrante,
+    professores
+  );
+
   return (
     <>
       <LinhaDoFormulario rotulo="Palestrante" htmlFor="palestranteField">
@@ -30,10 +39,22 @@ export function CamposDaPalestraNoPainel({
           name="palestrante"
           valorInicial={palestra.palestrante}
           onChange={(v) => alterarPalestra("palestrante", v)}
-          sugestoes={professores}
+          sugestoes={professores.map((p) => p.name)}
           placeholder="Palestrante (digite ou escolha um professor)"
           rotuloDasSugestoes="Professores da instituição"
         />
+        {professorEscolhido && (
+          <>
+            <input
+              type="hidden"
+              name="palestranteProfessorId"
+              value={professorEscolhido.id}
+            />
+            <p className="text-muted-foreground text-xs">
+              Este professor receberá um aviso por e-mail.
+            </p>
+          </>
+        )}
       </LinhaDoFormulario>
 
       <LinhaDoFormulario rotulo="Cursos"

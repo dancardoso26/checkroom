@@ -188,7 +188,7 @@ export function DetalhesDaAtividade({
         <CamposDaPalestraNoPainel
           palestra={palestra}
           alterarPalestra={alterarPalestra}
-          professores={professors.map((p) => p.name)}
+          professores={professors.map((p) => ({ id: p.id, name: p.name }))}
           cursos={catalogos.cursos}
         />
       ) : (
