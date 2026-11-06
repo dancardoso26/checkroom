@@ -7,6 +7,7 @@ import { lerRemetente } from "./remetente";
 import {
   EmailDeChamadoResolvido,
   EmailDeNovaPalestra,
+  EmailDePalestrante,
   EmailDeReserva,
   type DadosDaNovaPalestra,
   type DadosDaReserva,
@@ -73,6 +74,19 @@ export async function avisarSobreChamadoResolvido(
       to: destinatario,
       subject: `Chamado resolvido: ${dados.espaco}`,
       react: <EmailDeChamadoResolvido dados={dados} />,
+    },
+  ]);
+}
+
+export async function avisarPalestrante(
+  destinatario: string,
+  dados: DadosDaNovaPalestra
+): Promise<void> {
+  await enviar([
+    {
+      to: destinatario,
+      subject: `Você é o palestrante: ${dados.titulo}`,
+      react: <EmailDePalestrante dados={dados} />,
     },
   ]);
 }

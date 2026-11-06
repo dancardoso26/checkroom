@@ -186,6 +186,23 @@ export type DadosDaNovaPalestra = {
   link: string;
 };
 
+export function EmailDePalestrante({ dados }: { dados: DadosDaNovaPalestra }) {
+  return (
+    <EmailDoCheckRoom
+      assunto={`Você é o palestrante: ${dados.titulo}`}
+      frase="Uma palestra foi cadastrada no CheckRoom com você como palestrante."
+      linhas={[
+        ["Palestra", dados.titulo],
+        ["Data e horário", dados.periodo],
+        ["Espaço", dados.espaco],
+        ["Vagas", dados.vagas],
+        ["Cursos", dados.cursos],
+      ]}
+      acao={{ rotulo: "Ver palestra", href: dados.link }}
+    />
+  );
+}
+
 export function EmailDeNovaPalestra({ dados }: { dados: DadosDaNovaPalestra }) {
   return (
     <EmailDoCheckRoom
