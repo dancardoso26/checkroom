@@ -112,6 +112,28 @@ export async function inserirReservaDireto(linha: {
   };
 }
 
+export async function inserirPalestraDireta(linha: {
+  room_id: string;
+  title: string;
+  starts_at: string;
+  ends_at: string;
+}) {
+  const { ok, corpo } = await pedir("lectures", {
+    method: "POST",
+    body: JSON.stringify({
+      ...linha,
+      speaker: "Convidado de teste",
+      seats: 1,
+      created_by: await algumPerfil(),
+    }),
+  });
+
+  return {
+    aceitou: ok,
+    mensagem: ok ? null : (corpo.message as string),
+  };
+}
+
 export async function apagarReserva(id: string) {
   await pedir(`bookings?id=eq.${id}`, { method: "DELETE" });
 }
@@ -152,6 +174,9 @@ export const PREDIO_DE_TESTE = 99;
 
 export async function limparReservasDeTeste() {
   await pedir(`bookings?purpose=like.${encodeURIComponent(PREFIXO_TESTE)}*`, {
+    method: "DELETE",
+  });
+  await pedir(`lectures?title=like.${encodeURIComponent(PREFIXO_TESTE)}*`, {
     method: "DELETE",
   });
 }
