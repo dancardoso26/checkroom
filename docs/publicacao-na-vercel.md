@@ -5,14 +5,35 @@ está configurado (banco, Auth e SMTP do Resend). Só o site passa a ter um
 endereço público. O build de produção (`next build`) foi testado em 06/11 e
 passa.
 
+## Situação atual (06/11/2026)
+
+O site está publicado em [https://checkroom.com.br](https://checkroom.com.br)
+(o endereço `checkroom-alpha.vercel.app` continua válido). Cada merge na `main`
+publica sozinho. O projeto da Vercel fica na conta ligada ao GitHub
+`dancardoso26`, dono do repositório: no plano Hobby, o deploy automático exige
+que o importador seja o dono, e um colaborador não consegue importar.
+
+| Item | Estado |
+|---|---|
+| Produção | `main`, com deploy automático |
+| Domínio | `checkroom.com.br` na Vercel; o `www` redireciona (308) para o domínio sem `www` |
+| DNS (Hostinger) | `A` do `@` em `76.76.21.21` e `CNAME` do `www` em `cname.vercel-dns.com`, TTL 300 |
+| E-mail | Registros do Resend (`resend._domainkey`, `send`, `rsend`) intactos |
+| Supabase | Site URL e Redirect URLs com `https://checkroom.com.br`; o `localhost` e o `vercel.app` ficam na lista |
+| `SITE_URL` | `https://checkroom.com.br` |
+
+Se o navegador ainda abrir a página de domínio estacionado da Hostinger depois
+de uma troca de DNS, é cache local do IP antigo: limpe em
+`chrome://net-internals/#dns` ou rode `ipconfig /flushdns` como administrador.
+
 ## 0. Decisões antes de começar
 
 | Decisão | Escolha |
 |---|---|
 | Banco | O mesmo projeto Supabase do desenvolvimento |
-| Branch de produção | `main`. O que está na `main` é o que vai ao ar, então a `entrega0911` precisa ser commitada, enviada e mesclada na `main` antes do primeiro deploy (`CLAUDE.md`: nada é commitado direto na `main`) |
+| Branch de produção | `main`. O que está na `main` é o que vai ao ar, então o trabalho da `entrega0911` entra por pull request (`CLAUDE.md`: nada é commitado direto na `main`) |
 | Plano | Hobby (gratuito) |
-| Domínio | Começar com `*.vercel.app`; domínio próprio é opcional |
+| Domínio | `checkroom.com.br`, o mesmo do remetente dos e-mails |
 
 ### O que muda por usar o mesmo banco
 
@@ -33,8 +54,8 @@ passa.
 ## 1. Pré-requisitos no repositório
 
 1. Tudo o que deve ir ao ar precisa estar **commitado e enviado** ao GitHub
-   (`dancardoso26/checkroom`). Hoje há mudanças sem commit na `entrega0911`; o
-   commit e o push só acontecem quando você pedir.
+   (`dancardoso26/checkroom`) e mesclado na `main` por pull request. O commit e
+   o push só acontecem quando você pedir.
 2. Confirme que `.env.local` não está versionado (já coberto pelo `.gitignore`).
 3. Rode localmente, antes de publicar:
 
@@ -116,10 +137,12 @@ senha quebram.
 
 1. Atualize `SITE_URL` na Vercel com o endereço real e dispare um **Redeploy**
    (Deployments, menu do último deploy, Redeploy).
-2. Domínio próprio (opcional): **Settings > Domains > Add**, siga as instruções
-   de DNS. Depois, repita o passo anterior e o 6 com o novo endereço. Os
-   registros do Resend (e-mail) ficam no mesmo DNS e não conflitam com os da
-   Vercel.
+2. Domínio próprio: **Settings > Domains > Add**, adicionando o domínio e o
+   `www` (marque o `www` para redirecionar ao domínio sem `www`). Depois, no
+   DNS, troque só o `A` do `@` e o `CNAME` do `www` pelos valores que a Vercel
+   mostrar, e repita o passo anterior e o 6 com o novo endereço. Os registros do
+   Resend (e-mail) ficam no mesmo DNS e não conflitam com os da Vercel: não
+   apague nem edite nenhum deles. Algumas hospedagens recusam TTL abaixo de 60.
 
 ## 8. Teste de fumaça no ar
 

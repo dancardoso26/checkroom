@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { ADMIN, entrarComo } from "./helpers/autenticacao";
 import {
+  inserirPalestraDireta,
   inserirReservaDireto,
   limparReservasDeTeste,
   listarEspacos,
@@ -139,20 +140,56 @@ test("explica por que nenhum espaço serve quando não há disponível", async (
   );
   const outrasTurmas = turmas.filter((t) => t.id !== turmaDoTeste.id);
 
-  let tentativa = 0;
+  let proximoProfessor = 0;
+  let proximaTurma = 0;
   for (const sala of salasQueCabem) {
     let ocupou = false;
-    while (!ocupou && tentativa < professores.length) {
+    while (!ocupou) {
+      const faltaProfessorOuTurma =
+        proximoProfessor >= professores.length ||
+        proximaTurma >= outrasTurmas.length;
+
+      if (faltaProfessorOuTurma) {
+        const palestra = await inserirPalestraDireta({
+          room_id: sala.id,
+          title: `${PREFIXO_TESTE} ocupa ${sala.name}`,
+          starts_at: new Date(`${SEGUNDA}T09:00:00-03:00`).toISOString(),
+          ends_at: new Date(`${SEGUNDA}T10:40:00-03:00`).toISOString(),
+        });
+        ocupou =
+          palestra.aceitou ||
+          palestra.mensagem?.includes("lectures_no_room_overlap") === true;
+        if (!ocupou) {
+          throw new Error(
+            `Recusa inesperada ao ocupar ${sala.name}: ${palestra.mensagem}`,
+          );
+        }
+        continue;
+      }
+
       const resultado = await inserirReservaDireto({
         room_id: sala.id,
-        professor_id: professores[tentativa % professores.length].id,
-        class_id: outrasTurmas[tentativa % outrasTurmas.length].id,
+        professor_id: professores[proximoProfessor].id,
+        class_id: outrasTurmas[proximaTurma].id,
         purpose: `${PREFIXO_TESTE} ocupa ${sala.name}`,
         starts_at: new Date(`${SEGUNDA}T09:00:00-03:00`).toISOString(),
         ends_at: new Date(`${SEGUNDA}T10:40:00-03:00`).toISOString(),
       });
-      ocupou = resultado.aceitou;
-      tentativa++;
+
+      const motivo = resultado.mensagem ?? "";
+      if (resultado.aceitou) {
+        ocupou = true;
+        proximoProfessor++;
+        proximaTurma++;
+      } else if (motivo.includes("bookings_no_room_overlap")) {
+        ocupou = true;
+      } else if (motivo.includes("bookings_no_professor_overlap")) {
+        proximoProfessor++;
+      } else if (motivo.includes("bookings_no_class_overlap")) {
+        proximaTurma++;
+      } else {
+        throw new Error(`Recusa inesperada ao ocupar ${sala.name}: ${motivo}`);
+      }
     }
     expect(ocupou, `não foi possível ocupar ${sala.name}`).toBe(true);
   }

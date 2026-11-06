@@ -203,6 +203,13 @@ com uma fotografia dele, e a terceira é a única dentro da transação.
 | Dados     | Supabase (PostgreSQL), com tipos gerados a partir do esquema real |
 | Testes    | Vitest para o domínio, Playwright para ponta a ponta              |
 
+## Endereço publicado
+
+O sistema está no ar em [https://checkroom.com.br](https://checkroom.com.br),
+hospedado na Vercel, com deploy automático a cada merge na `main`. O passo a
+passo da publicação, o DNS e as variáveis de ambiente estão em
+[`docs/publicacao-na-vercel.md`](docs/publicacao-na-vercel.md).
+
 ## Como executar
 
 ```bash

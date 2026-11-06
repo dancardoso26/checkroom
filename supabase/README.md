@@ -44,7 +44,14 @@ dependem da extensão.
 | 27 | `migrations/20261012000400_palestras.sql` | Cria palestras, cursos de destino e inscrições; trava comum com a reserva |
 | 28 | `migrations/20261012000500_calendario_letivo.sql` | Cria períodos letivos e bloqueios do calendário |
 | 29 | `migrations/20261012000600_codigo_dos_espacos.sql` | Espaços por prédio, andar e sala, com o código (3T-12) calculado |
-| 30 | `seed.sql` | Popula o mundo acadêmico (opcional, só em desenvolvimento) |
+| 30 | `migrations/20261105000000_master_atende_chamados.sql` | O master também assume e resolve chamados de TI (`eh_master`) |
+| 31 | `migrations/20261105000100_master_exclui_chamados.sql` | Cria `excluir_chamado`, exclusiva do master |
+| 32 | `migrations/20261106000000_turma_do_aluno.sql` | Turma do aluno em `profiles`, com o curso alinhado pela turma; `alterar_papel` passa a receber a turma |
+| 33 | `migrations/20261106000100_conflito_de_horario_na_inscricao.sql` | Inscrição em palestra recusada quando choca com outra do mesmo aluno |
+| 34 | `migrations/20261106000200_alunos_da_turma_pela_contagem.sql` | Remove `classes.student_count`; a contagem passa a vir dos alunos vinculados |
+| 35 | `migrations/20261106000300_professor_no_lugar_de_docente.sql` | Troca "Docente" por "Professor" nas mensagens, na anonimização e nos registros existentes |
+| 36 | `migrations/20261106000400_palestrante_professor.sql` | Guarda o professor palestrante em `lectures` e recria `cadastrar_palestra` com ele |
+| 37 | `seed.sql` | Popula o mundo acadêmico (opcional, só em desenvolvimento) |
 
 Depois do `seed.sql`, rode no terminal:
 
