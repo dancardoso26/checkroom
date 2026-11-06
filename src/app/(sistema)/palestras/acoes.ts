@@ -15,6 +15,7 @@ import {
 import { semErros } from "@/domain/formulario/validacao";
 import { combineDateTime, formatPeriod } from "@/lib/datetime";
 import { avisarSobreNovaPalestra } from "@/lib/email/enviar";
+import { enderecoDoSite } from "@/lib/endereco-do-site";
 import {
   falha,
   falhaDeValidacao,
@@ -137,6 +138,7 @@ export async function cadastrarPalestra(
         .filter((c) => dados.cursoIds.includes(c.id))
         .map((c) => c.nome)
         .join(", "),
+      link: `${enderecoDoSite()}/palestras`,
     });
   }
 

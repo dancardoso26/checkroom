@@ -132,25 +132,6 @@ const OPCOES_DE_CONFIGURACAO: Item[] = [
   },
 ];
 
-const CHAVE_DO_RETORNO = "checkroom:retorno-das-configuracoes";
-
-function guardarRetorno() {
-  try {
-    sessionStorage.setItem(
-      CHAVE_DO_RETORNO,
-      location.pathname + location.search,
-    );
-  } catch {}
-}
-
-function lerRetorno(): string {
-  try {
-    return sessionStorage.getItem(CHAVE_DO_RETORNO) ?? "/reservas";
-  } catch {
-    return "/reservas";
-  }
-}
-
 function iniciais(nome: string): string {
   return nome
     .split(" ")
@@ -201,7 +182,7 @@ export function BarraLateral({
                   tooltip="Voltar"
                   aria-label="Voltar"
                   className="relative cursor-pointer"
-                  onClick={() => router.push(lerRetorno())}
+                  onClick={() => router.push("/reservas")}
                 >
                   <ArrowLeft />
                   <span className="absolute inset-x-0 text-center group-data-[collapsible=icon]:hidden">
@@ -268,7 +249,7 @@ export function BarraLateral({
                 </DropdownMenuItem>
                 {ehAdmin && (
                   <DropdownMenuItem asChild>
-                    <Link href="/configuracoes" onClick={guardarRetorno}>
+                    <Link href="/configuracoes">
                       <Settings aria-hidden className="size-4" />
                       Configurações
                     </Link>
