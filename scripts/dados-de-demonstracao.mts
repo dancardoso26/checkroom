@@ -333,7 +333,7 @@ export function montarContas(emailDemo: string): Conta[] {
     },
     {
       email: REGISTRADOR,
-      nome: "Rafael Teixeira",
+      nome: "Administrador",
       papel: "admin",
       termosAceitos: true,
       master: true,

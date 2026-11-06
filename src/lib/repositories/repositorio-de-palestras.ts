@@ -172,12 +172,14 @@ export type ResultadoDoCadastro =
 
 export async function cadastrarPalestra(
   dados: DadosDaPalestra,
+  palestranteProfessorId: string | null = null,
 ): Promise<ResultadoDoCadastro> {
   const supabase = await createSupabaseServerClient();
 
   const { data, error } = await supabase.rpc("cadastrar_palestra", {
     p_titulo: dados.titulo,
     p_palestrante: dados.palestrante,
+    p_palestrante_professor_id: palestranteProfessorId,
     p_room_id: dados.espacoId,
     p_inicio: dados.inicio.toISOString(),
     p_fim: dados.fim.toISOString(),
@@ -277,10 +279,11 @@ export async function palestrasNaAgenda(
   inicio: Date,
   fim: Date,
   escopo: { cursoId: string | null } | null = null,
+  professorIds: string[] = [],
 ): Promise<BookingListItem[]> {
   const supabase = await createSupabaseServerClient();
 
-  const { data, error } = await supabase
+  let consulta = supabase
     .from("lectures")
     .select(
       "id, title, speaker, room_id, starts_at, ends_at, rooms(name, building), lecture_courses(course_id, courses(name))",
@@ -288,6 +291,12 @@ export async function palestrasNaAgenda(
     .lt("starts_at", fim.toISOString())
     .gt("ends_at", inicio.toISOString())
     .order("starts_at");
+
+  if (professorIds.length > 0) {
+    consulta = consulta.in("speaker_professor_id", professorIds);
+  }
+
+  const { data, error } = await consulta;
 
   if (error) throw new Error(`Falha ao listar as palestras: ${error.message}`);
 

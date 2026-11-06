@@ -357,6 +357,7 @@ export type Database = {
           room_id: string
           seats: number
           speaker: string
+          speaker_professor_id: string | null
           starts_at: string
           title: string
         }
@@ -368,6 +369,7 @@ export type Database = {
           room_id: string
           seats: number
           speaker: string
+          speaker_professor_id?: string | null
           starts_at: string
           title: string
         }
@@ -379,6 +381,7 @@ export type Database = {
           room_id?: string
           seats?: number
           speaker?: string
+          speaker_professor_id?: string | null
           starts_at?: string
           title?: string
         }
@@ -395,6 +398,13 @@ export type Database = {
             columns: ["room_id"]
             isOneToOne: false
             referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lectures_speaker_professor_id_fkey"
+            columns: ["speaker_professor_id"]
+            isOneToOne: false
+            referencedRelation: "professors"
             referencedColumns: ["id"]
           },
         ]
@@ -731,6 +741,7 @@ export type Database = {
           p_fim: string
           p_inicio: string
           p_palestrante: string
+          p_palestrante_professor_id?: string | null
           p_room_id: string
           p_titulo: string
           p_vagas: number
