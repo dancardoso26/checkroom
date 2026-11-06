@@ -1,5 +1,6 @@
 import {
   Body,
+  Button,
   Container,
   Head,
   Heading,
@@ -18,7 +19,10 @@ export type DadosDaReserva = {
   turma: string;
   registradoPor: string;
   motivo?: string | null;
+  link?: string;
 };
+
+type Acao = { rotulo: string; href: string };
 
 const corpo = { backgroundColor: "#f6f8fa", fontFamily: "system-ui, sans-serif" };
 const caixa = {
@@ -34,6 +38,16 @@ const texto = { color: "#3f4a56", fontSize: "14px", lineHeight: "22px", margin: 
 const rotulo = { color: "#6b7785", fontSize: "12px", margin: "0 0 2px" };
 const valor = { fontSize: "14px", fontWeight: 500, margin: "0 0 12px" };
 const rodape = { color: "#8a95a1", fontSize: "12px", margin: 0 };
+const botao = {
+  backgroundColor: "#2b5973",
+  borderRadius: "6px",
+  color: "#ffffff",
+  display: "inline-block",
+  fontSize: "14px",
+  fontWeight: 600,
+  padding: "10px 20px",
+  textDecoration: "none",
+};
 
 function Linha({ termo, children }: { termo: string; children: string }) {
   return (
@@ -48,10 +62,12 @@ function EmailDoCheckRoom({
   assunto,
   frase,
   linhas,
+  acao,
 }: {
   assunto: string;
   frase: string;
   linhas: [string, string | null | undefined][];
+  acao?: Acao;
 }) {
   return (
     <Html lang="pt-BR">
@@ -74,6 +90,14 @@ function EmailDoCheckRoom({
                 </Linha>
               ))}
           </Section>
+
+          {acao && (
+            <Section style={{ margin: "8px 0 0" }}>
+              <Button href={acao.href} style={botao}>
+                {acao.rotulo}
+              </Button>
+            </Section>
+          )}
 
           <Hr style={{ borderColor: "#e4e7eb", margin: "20px 0" }} />
 
@@ -114,6 +138,11 @@ export function EmailDeReserva({
         ["Registrada por", dados.registradoPor],
         ["Motivo do cancelamento", cancelada ? dados.motivo : null],
       ]}
+      acao={
+        !cancelada && dados.link
+          ? { rotulo: "Ver reserva", href: dados.link }
+          : undefined
+      }
     />
   );
 }
@@ -154,6 +183,7 @@ export type DadosDaNovaPalestra = {
   periodo: string;
   vagas: string;
   cursos: string;
+  link: string;
 };
 
 export function EmailDeNovaPalestra({ dados }: { dados: DadosDaNovaPalestra }) {
@@ -169,6 +199,7 @@ export function EmailDeNovaPalestra({ dados }: { dados: DadosDaNovaPalestra }) {
         ["Vagas", dados.vagas],
         ["Cursos", dados.cursos],
       ]}
+      acao={{ rotulo: "Ver palestra", href: dados.link }}
     />
   );
 }

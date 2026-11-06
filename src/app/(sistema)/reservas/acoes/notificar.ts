@@ -1,6 +1,7 @@
 import "server-only";
 
-import { formatPeriod } from "@/lib/datetime";
+import { formatPeriod, localDayKey } from "@/lib/datetime";
+import { enderecoDoSite } from "@/lib/endereco-do-site";
 import { avisarSobreReserva } from "@/lib/email/enviar";
 import { findBookingNotificationData } from "@/lib/repositories/repositorio-de-reservas";
 
@@ -23,5 +24,6 @@ export async function notificarProfessor(
     turma: dados.turma,
     registradoPor,
     motivo: dados.motivo,
+    link: `${enderecoDoSite()}/reservas?data=${localDayKey(dados.startsAt)}&destaque=${bookingId}`,
   });
 }
