@@ -110,6 +110,10 @@ export async function assumirChamado(id: string): Promise<ResultadoDaAcao> {
   return transicionar(id, "assumir");
 }
 
+export async function devolverChamado(id: string): Promise<ResultadoDaAcao> {
+  return transicionar(id, "devolver");
+}
+
 export async function cancelarChamado(id: string): Promise<ResultadoDaAcao> {
   return transicionar(id, "cancelar");
 }

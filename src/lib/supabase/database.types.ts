@@ -750,6 +750,7 @@ export type Database = {
       }
       cancelar_chamado: { Args: { p_chamado: string }; Returns: string }
       excluir_chamado: { Args: { p_chamado: string }; Returns: string }
+      devolver_chamado: { Args: { p_chamado: string }; Returns: string }
       cancelar_inscricao: { Args: { p_palestra: string }; Returns: string }
       cancel_booking: {
         Args: { p_booking_id: string; p_reason?: string }

@@ -2,6 +2,7 @@ import "server-only";
 
 import type {
   AcaoDoChamado,
+  ChamadoParaTransicao,
   DadosDaAbertura,
   Prioridade,
   SituacaoDoChamado,
@@ -22,6 +23,7 @@ export type ChamadoItem = {
   situacao: SituacaoDoChamado;
   solicitanteId: string;
   solicitanteNome: string;
+  responsavelId: string | null;
   responsavelNome: string | null;
   nota: string | null;
   abertoEm: Date;
@@ -74,6 +76,7 @@ export async function listarChamados(): Promise<ChamadoItem[]> {
     situacao: c.status,
     solicitanteId: c.requested_by,
     solicitanteNome: nomes.get(c.requested_by) ?? "Usuário removido",
+    responsavelId: c.assigned_to,
     responsavelNome: c.assigned_to ? (nomes.get(c.assigned_to) ?? null) : null,
     nota: c.resolution_note,
     abertoEm: new Date(c.created_at),
@@ -85,19 +88,23 @@ export async function listarChamados(): Promise<ChamadoItem[]> {
 
 export async function buscarChamadoParaTransicao(
   id: string,
-): Promise<{ situacao: SituacaoDoChamado; solicitanteId: string } | null> {
+): Promise<ChamadoParaTransicao | null> {
   const supabase = await createSupabaseServerClient();
 
   const { data, error } = await supabase
     .from("tickets")
-    .select("status, requested_by")
+    .select("status, requested_by, assigned_to")
     .eq("id", id)
     .maybeSingle();
 
   if (error) throw new Error(`Falha ao carregar o chamado: ${error.message}`);
   if (!data) return null;
 
-  return { situacao: data.status, solicitanteId: data.requested_by };
+  return {
+    situacao: data.status,
+    solicitanteId: data.requested_by,
+    responsavelId: data.assigned_to,
+  };
 }
 
 export async function abrirChamado(
@@ -127,6 +134,7 @@ export async function abrirChamado(
 
 const FUNCAO_DA_ACAO = {
   assumir: "assumir_chamado",
+  devolver: "devolver_chamado",
   resolver: "resolver_chamado",
   cancelar: "cancelar_chamado",
 } as const;

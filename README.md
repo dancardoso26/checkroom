@@ -40,7 +40,7 @@ em `src/components/atualizacao-ao-vivo.tsx`.
 | Módulo        | Quem usa                                   | O que faz                                                                                                                        |
 | ------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
 | Reservas      | professor, administração                   | agenda e reserva com as regras abaixo                                                                                            |
-| Chamados      | professor e administração abrem; TI atende | aberto, em atendimento, resolvido (com nota) ou cancelado pelo solicitante; pipeline por situação ou tabela; aviso por e-mail na resolução |
+| Chamados      | professor e administração abrem; TI atende | aberto, em atendimento, resolvido (com nota) ou cancelado pelo solicitante; quem assumiu pode devolver à fila; pipeline por situação ou tabela; aviso por e-mail na resolução |
 | Palestras     | administração cadastra; aluno se inscreve  | curso de destino, espaço livre, vagas até a capacidade; aviso aos alunos dos cursos e ao palestrante; inscrição única, antes do início e com vaga; aviso de cancelamento aos inscritos |
 | Painel        | administração                              | ocupação por espaço, chamados por situação e prioridade, inscritos por palestra, num período                                     |
 | Configurações | administração                              | usuários, espaços e recursos, cadastro acadêmico e calendário letivo (períodos e bloqueios)                                      |

@@ -69,6 +69,13 @@ export function podeCancelarChamado(ator: Ator, chamado: ChamadoAlvo): boolean {
   return chamado.solicitanteId === ator.profileId || ator.ehMaster === true;
 }
 
+export function podeDevolverChamado(
+  ator: Ator,
+  chamado: { responsavelId: string | null },
+): boolean {
+  return chamado.responsavelId === ator.profileId || ator.ehMaster === true;
+}
+
 export function podeExcluirChamado(ator: Ator): boolean {
   return ator.ehMaster === true;
 }

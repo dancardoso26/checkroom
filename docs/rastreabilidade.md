@@ -62,7 +62,7 @@ pasta `CheckRoom/`.
 | RN12 | Alterações e acessos vão para a auditoria | `supabase/migrations/20260922000200_audit_log.sql`, `src/domain/auditoria/descricao.ts` | `src/domain/auditoria/descricao.test.ts`, `tests/e2e/excluir-reserva.spec.ts` |
 | RN13 | Falha de e-mail não desfaz a operação | `src/app/(sistema)/reservas/acoes/notificar.ts`, `src/lib/email/enviar.tsx` | sem teste dedicado |
 | RN14 | Cadastro em uso não é excluído; reserva respeita período letivo e bloqueios | `src/domain/espacos/espaco.ts`, `src/domain/academico/academico.ts`, `src/domain/calendario/calendario.ts` | `tests/e2e/espacos.spec.ts`, `tests/e2e/cadastro-academico.spec.ts`, `tests/e2e/calendario-letivo.spec.ts` |
-| RN15 | Fluxo do chamado e papéis | `src/domain/chamados/chamado.ts`, `supabase/migrations/20261012000300_chamados.sql` | `src/domain/chamados/chamado.test.ts`, `tests/e2e/chamados.spec.ts` |
+| RN15 | Fluxo do chamado e papéis | `src/domain/chamados/chamado.ts`, `supabase/migrations/20261012000300_chamados.sql`, `supabase/migrations/20261107000200_devolver_chamado.sql` | `src/domain/chamados/chamado.test.ts`, `tests/e2e/chamados.spec.ts` |
 | RN16 | Regras da palestra e da inscrição | `src/domain/palestras/palestra.ts`, `supabase/migrations/20261012000400_palestras.sql` | `src/domain/palestras/palestra.test.ts`, `tests/e2e/palestras.spec.ts` |
 | RN17 | Painel exclusivo do administrador | `src/domain/auth/permissoes.ts` (`podeVerPainel`) | `tests/e2e/painel.spec.ts` |
 

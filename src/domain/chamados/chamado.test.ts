@@ -14,11 +14,25 @@ import {
 const professor: Ator = { profileId: "prof", papel: "professor", professorId: "p1" };
 const outroProfessor: Ator = { profileId: "outro", papel: "professor", professorId: "p2" };
 const ti: Ator = { profileId: "ti", papel: "it_support", professorId: null };
+const outraTi: Ator = { profileId: "ti2", papel: "it_support", professorId: null };
 const admin: Ator = { profileId: "admin", papel: "admin", professorId: null };
+const master: Ator = { profileId: "master", papel: "admin", professorId: null, ehMaster: true };
 
-const aberto: ChamadoParaTransicao = { situacao: "open", solicitanteId: "prof" };
-const emAtendimento: ChamadoParaTransicao = { situacao: "in_progress", solicitanteId: "prof" };
-const resolvido: ChamadoParaTransicao = { situacao: "resolved", solicitanteId: "prof" };
+const aberto: ChamadoParaTransicao = {
+  situacao: "open",
+  solicitanteId: "prof",
+  responsavelId: null,
+};
+const emAtendimento: ChamadoParaTransicao = {
+  situacao: "in_progress",
+  solicitanteId: "prof",
+  responsavelId: "ti",
+};
+const resolvido: ChamadoParaTransicao = {
+  situacao: "resolved",
+  solicitanteId: "prof",
+  responsavelId: "ti",
+};
 
 describe("validarTransicao", () => {
   it("a TI assume um chamado aberto, que passa a em atendimento", () => {
@@ -74,8 +88,33 @@ describe("validarTransicao", () => {
     });
   });
 
+  it("quem assumiu devolve o chamado à fila, que volta a aberto", () => {
+    expect(validarTransicao(emAtendimento, "devolver", ti)).toEqual({
+      ok: true,
+      novaSituacao: "open",
+    });
+  });
+
+  it("outra pessoa da TI não devolve o chamado de um colega; o master devolve", () => {
+    expect(validarTransicao(emAtendimento, "devolver", outraTi)).toMatchObject({
+      recusa: "SEM_PERMISSAO",
+    });
+    expect(validarTransicao(emAtendimento, "devolver", master)).toMatchObject({
+      ok: true,
+    });
+  });
+
+  it("não devolve o que ninguém assumiu nem o que já foi resolvido", () => {
+    expect(validarTransicao(aberto, "devolver", master)).toMatchObject({
+      recusa: "TRANSICAO_INVALIDA",
+    });
+    expect(validarTransicao(resolvido, "devolver", ti)).toMatchObject({
+      recusa: "TRANSICAO_INVALIDA",
+    });
+  });
+
   it("chamado resolvido não muda mais", () => {
-    for (const acao of ["assumir", "resolver", "cancelar"] as const) {
+    for (const acao of ["assumir", "devolver", "resolver", "cancelar"] as const) {
       expect(validarTransicao(resolvido, acao, acao === "cancelar" ? professor : ti, "x").ok).toBe(
         false
       );
@@ -84,9 +123,13 @@ describe("validarTransicao", () => {
 });
 
 describe("acoesDisponiveis", () => {
-  it("oferece à TI assumir o aberto e resolver o em atendimento", () => {
+  it("oferece à TI assumir o aberto, e devolver ou resolver o que ela assumiu", () => {
     expect(acoesDisponiveis(aberto, ti)).toEqual(["assumir"]);
-    expect(acoesDisponiveis(emAtendimento, ti)).toEqual(["resolver"]);
+    expect(acoesDisponiveis(emAtendimento, ti)).toEqual(["devolver", "resolver"]);
+  });
+
+  it("não oferece devolver o chamado assumido por um colega", () => {
+    expect(acoesDisponiveis(emAtendimento, outraTi)).toEqual(["resolver"]);
   });
 
   it("oferece ao solicitante só cancelar, e só enquanto aberto", () => {

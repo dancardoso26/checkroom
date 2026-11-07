@@ -2,10 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { CheckCircle2, Hand, Trash2, X } from "lucide-react";
+import { CheckCircle2, Hand, Trash2, Undo2, X } from "lucide-react";
 
 import {
-  BarraDeFerramentas,
   BarraDeSelecao,
   CabecalhoDaSelecao,
   CelulaDaSelecao,
@@ -13,7 +12,6 @@ import {
   MenuDeAcoes,
 } from "@/components/cadastro";
 import { CabecalhoOrdenavel } from "@/components/cabecalho-ordenavel";
-import { FiltroMultiplo, passaNoFiltro } from "@/components/filtro-multiplo";
 import { ConfirmarExclusao } from "@/components/formulario";
 import { RodapeDaTabela } from "@/components/paginacao";
 import { StatusBadge } from "@/components/status-badge";
@@ -26,15 +24,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  PRIORIDADES,
-  ROTULO_DA_PRIORIDADE,
-  ROTULO_DA_SITUACAO,
   SITUACOES,
   STATUS_DA_PRIORIDADE,
   STATUS_DA_SITUACAO,
 } from "@/domain/chamados/chamado";
 import { formatDateTime } from "@/lib/datetime";
-import { usePesquisa } from "@/hooks/use-pesquisa";
 import { useOrdenacao } from "@/hooks/use-ordenacao";
 import { executarEmLote, usePaginacao, useSelecao } from "@/hooks/use-tabela";
 
@@ -44,54 +38,39 @@ import { PESO_DA_PRIORIDADE, type Linha } from "./tipos";
 
 export function TabelaDeChamados({
   chamados,
+  total,
   veTodos,
   podeExcluir,
   pendente,
   onErro,
   onDetalhe,
   onAssumir,
+  onDevolver,
   onResolver,
   onCancelar,
   onExcluir,
 }: {
   chamados: Linha[];
+  total: number;
   veTodos: boolean;
   podeExcluir: boolean;
   pendente: boolean;
   onErro: (mensagem: string | null) => void;
   onDetalhe: (chamado: Linha) => void;
   onAssumir: (chamado: Linha) => void;
+  onDevolver: (chamado: Linha) => void;
   onResolver: (chamado: Linha) => void;
   onCancelar: (chamado: Linha) => void;
   onExcluir: (chamado: Linha) => void;
 }) {
   const colunas = veTodos ? 8 : 7;
 
-  const [situacoes, setSituacoes] = useState<string[]>([]);
-  const [prioridades, setPrioridades] = useState<string[]>([]);
   const [pendenteEmLote, iniciarEmLote] = useTransition();
   const [resolvendoEmLote, setResolvendoEmLote] = useState(false);
   const [excluindoEmLote, setExcluindoEmLote] = useState(false);
   const [cancelandoEmLote, setCancelandoEmLote] = useState(false);
 
-  const doFiltro = chamados.filter(
-    (c) =>
-      passaNoFiltro(situacoes, c.situacao) &&
-      passaNoFiltro(prioridades, c.prioridade),
-  );
-
-  const { filtrados, pesquisa } = usePesquisa(
-    doFiltro,
-    (chamado) => [
-      chamado.espaco,
-      chamado.descricao,
-      ROTULO_DA_PRIORIDADE[chamado.prioridade],
-      ROTULO_DA_SITUACAO[chamado.situacao],
-      veTodos ? chamado.solicitanteNome : null,
-      formatDateTime(chamado.abertoEm),
-    ],
-    "Pesquisar chamados",
-  );
+  const filtrados = chamados;
 
   const emLote = (chamado: Linha) =>
     podeExcluir ||
@@ -133,32 +112,6 @@ export function TabelaDeChamados({
 
   return (
     <>
-      <BarraDeFerramentas
-        pesquisa={pesquisa}
-        filtros={
-          <div className="flex flex-wrap gap-2">
-            <FiltroMultiplo
-              rotulo="Status"
-              opcoes={SITUACOES.map((s) => ({
-                id: s,
-                nome: ROTULO_DA_SITUACAO[s],
-              }))}
-              valor={situacoes}
-              onChange={setSituacoes}
-            />
-            <FiltroMultiplo
-              rotulo="Prioridade"
-              opcoes={PRIORIDADES.map((p) => ({
-                id: p,
-                nome: ROTULO_DA_PRIORIDADE[p],
-              }))}
-              valor={prioridades}
-              onChange={setPrioridades}
-            />
-          </div>
-        }
-      />
-
       <div className="bg-card rounded-lg border">
         <BarraDeSelecao
           quantidade={marcados.length}
@@ -257,7 +210,7 @@ export function TabelaDeChamados({
           <TableBody>
             {filtrados.length === 0 && (
               <LinhaVazia colunas={colunas}>
-                {chamados.length === 0
+                {total === 0
                   ? "Nenhum chamado encontrado."
                   : "Nenhum chamado corresponde à pesquisa."}
               </LinhaVazia>
@@ -312,6 +265,16 @@ export function TabelaDeChamados({
                               icone: Hand,
                               desabilitada: pendente,
                               onSelect: () => onAssumir(chamado),
+                            },
+                          ]
+                        : []),
+                      ...(chamado.acoes.includes("devolver")
+                        ? [
+                            {
+                              rotulo: "Devolver à fila",
+                              icone: Undo2,
+                              desabilitada: pendente,
+                              onSelect: () => onDevolver(chamado),
                             },
                           ]
                         : []),

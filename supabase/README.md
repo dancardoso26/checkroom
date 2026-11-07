@@ -53,7 +53,8 @@ dependem da extensão.
 | 36 | `migrations/20261106000400_palestrante_professor.sql` | Guarda o professor palestrante em `lectures` e recria `cadastrar_palestra` com ele |
 | 37 | `migrations/20261107000000_tempo_real.sql` | Liga o Realtime em `bookings`, `lectures`, `lecture_enrollments` e `tickets`, para as telas se atualizarem sozinhas |
 | 38 | `migrations/20261107000100_ti_sem_agenda.sql` | A equipe de TI deixa de ler reservas e palestras: só atende chamados |
-| 39 | `seed.sql` | Popula o mundo acadêmico (opcional, só em desenvolvimento) |
+| 39 | `migrations/20261107000200_devolver_chamado.sql` | Cria `devolver_chamado`: quem assumiu (ou o master) devolve o chamado à fila |
+| 40 | `seed.sql` | Popula o mundo acadêmico (opcional, só em desenvolvimento) |
 
 Depois do `seed.sql`, rode no terminal:
 
