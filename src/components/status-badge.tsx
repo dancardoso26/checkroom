@@ -10,6 +10,33 @@ const CLASSES: Record<Tom, string> = {
   neutro: "border-border bg-muted text-muted-foreground",
 };
 
+const COR_DO_PONTO: Record<Tom, string> = {
+  sucesso: "bg-success",
+  informacao: "bg-primary",
+  perigo: "bg-destructive",
+  atencao: "bg-warning",
+  neutro: "bg-muted-foreground",
+};
+
+export function PontoDeStatus({
+  status,
+  className,
+}: {
+  status: Status;
+  className?: string;
+}) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "inline-block size-2 shrink-0 rounded-full",
+        COR_DO_PONTO[STATUS[status].tom],
+        className,
+      )}
+    />
+  );
+}
+
 export function StatusBadge({
   status,
   className,
