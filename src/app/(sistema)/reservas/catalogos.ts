@@ -2,7 +2,10 @@ import "server-only";
 
 import { PERIODO_LETIVO_VIGENTE } from "@/domain/booking/businessHours";
 import { codigoDoPeriodoDe } from "@/lib/repositories/repositorio-do-calendario";
-import { listClasses } from "@/lib/repositories/repositorio-de-turmas";
+import {
+  listClasses,
+  type ClassOption,
+} from "@/lib/repositories/repositorio-de-turmas";
 import { listarCursos } from "@/lib/repositories/repositorio-de-cursos";
 import { listProfessors } from "@/lib/repositories/repositorio-de-professores";
 import { listResources } from "@/lib/repositories/repositorio-de-recursos";
@@ -16,13 +19,16 @@ import type { Catalogos } from "./formulario/painel-de-reserva";
 
 export async function carregarCatalogos(
   hoje: string,
-  { comCursos }: { comCursos: boolean }
+  {
+    comCursos,
+    turmas,
+  }: { comCursos: boolean; turmas?: Promise<ClassOption[]> }
 ): Promise<Catalogos> {
   const [rooms, professors, classes, resources, subjects, assignments, cursos] =
     await Promise.all([
       listRooms(),
       listProfessors(),
-      listClasses(),
+      turmas ?? listClasses(),
       listResources(),
       listSubjects(),
       codigoDoPeriodoDe(hoje).then((periodo) =>

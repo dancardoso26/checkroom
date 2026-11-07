@@ -204,6 +204,63 @@ export async function cadastrarPalestra(
   return { ok: true, id: data };
 }
 
+export type AvisoDePalestraExcluida = {
+  titulo: string;
+  palestrante: string;
+  palestranteProfessorId: string | null;
+  espaco: string;
+  inicio: Date;
+  fim: Date;
+  emailsDosInscritos: string[];
+};
+
+export async function avisoDePalestraExcluida(
+  id: string,
+): Promise<AvisoDePalestraExcluida | null> {
+  const [palestra, inscricoes] = await Promise.all([
+    supabaseAdmin
+      .from("lectures")
+      .select(
+        "title, speaker, speaker_professor_id, starts_at, ends_at, rooms(name)",
+      )
+      .eq("id", id)
+      .maybeSingle(),
+    supabaseAdmin
+      .from("lecture_enrollments")
+      .select("profile_id")
+      .eq("lecture_id", id),
+  ]);
+
+  if (palestra.error || !palestra.data || inscricoes.error) return null;
+
+  const inscritos = new Set(inscricoes.data.map((i) => i.profile_id));
+  let emailsDosInscritos: string[] = [];
+
+  if (inscritos.size > 0) {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({
+      perPage: 1000,
+    });
+
+    if (error) {
+      console.error("Falha ao listar os inscritos para o aviso:", error);
+    } else {
+      emailsDosInscritos = data.users
+        .filter((u) => inscritos.has(u.id))
+        .flatMap((u) => (u.email ? [u.email] : []));
+    }
+  }
+
+  return {
+    titulo: palestra.data.title,
+    palestrante: palestra.data.speaker,
+    palestranteProfessorId: palestra.data.speaker_professor_id,
+    espaco: palestra.data.rooms.name,
+    inicio: new Date(palestra.data.starts_at),
+    fim: new Date(palestra.data.ends_at),
+    emailsDosInscritos,
+  };
+}
+
 export async function excluirPalestra(
   id: string,
 ): Promise<ResultadoDaExclusao> {

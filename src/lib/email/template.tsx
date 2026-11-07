@@ -111,35 +111,53 @@ function EmailDoCheckRoom({
   );
 }
 
+export type SituacaoDaReserva = "nova" | "cancelada" | "excluida";
+
+const TEXTOS_DA_RESERVA: Record<
+  SituacaoDaReserva,
+  { assunto: string; frase: string; autor: string }
+> = {
+  nova: {
+    assunto: "Nova reserva registrada em seu nome",
+    frase: "uma reserva foi registrada em seu nome no CheckRoom.",
+    autor: "Registrada por",
+  },
+  cancelada: {
+    assunto: "Sua reserva foi cancelada",
+    frase: "a reserva abaixo foi cancelada e o horário voltou a ficar livre.",
+    autor: "Cancelada por",
+  },
+  excluida: {
+    assunto: "Sua reserva foi removida",
+    frase:
+      "a reserva abaixo foi removida do CheckRoom e o horário voltou a ficar livre.",
+    autor: "Removida por",
+  },
+};
+
 export function EmailDeReserva({
-  cancelada,
+  situacao,
   dados,
 }: {
-  cancelada: boolean;
+  situacao: SituacaoDaReserva;
   dados: DadosDaReserva;
 }) {
+  const textos = TEXTOS_DA_RESERVA[situacao];
+
   return (
     <EmailDoCheckRoom
-      assunto={
-        cancelada
-          ? "Sua reserva foi cancelada"
-          : "Nova reserva registrada em seu nome"
-      }
-      frase={
-        cancelada
-          ? `${dados.professorNome}, a reserva abaixo foi cancelada e o horário voltou a ficar livre.`
-          : `${dados.professorNome}, uma reserva foi registrada em seu nome no CheckRoom.`
-      }
+      assunto={textos.assunto}
+      frase={`${dados.professorNome}, ${textos.frase}`}
       linhas={[
         ["Atividade", dados.finalidade],
         ["Espaço", dados.espaco],
         ["Data e horário", dados.periodo],
         ["Turma", dados.turma],
-        ["Registrada por", dados.registradoPor],
-        ["Motivo do cancelamento", cancelada ? dados.motivo : null],
+        [textos.autor, dados.registradoPor],
+        ["Motivo do cancelamento", situacao === "cancelada" ? dados.motivo : null],
       ]}
       acao={
-        !cancelada && dados.link
+        situacao === "nova" && dados.link
           ? { rotulo: "Ver reserva", href: dados.link }
           : undefined
       }
@@ -217,6 +235,40 @@ export function EmailDeNovaPalestra({ dados }: { dados: DadosDaNovaPalestra }) {
         ["Cursos", dados.cursos],
       ]}
       acao={{ rotulo: "Ver palestra", href: dados.link }}
+    />
+  );
+}
+
+export type DadosDaPalestraCancelada = {
+  titulo: string;
+  palestrante: string;
+  espaco: string;
+  periodo: string;
+  canceladaPor: string;
+};
+
+export function EmailDePalestraCancelada({
+  dados,
+  paraPalestrante,
+}: {
+  dados: DadosDaPalestraCancelada;
+  paraPalestrante: boolean;
+}) {
+  return (
+    <EmailDoCheckRoom
+      assunto={`Palestra cancelada: ${dados.titulo}`}
+      frase={
+        paraPalestrante
+          ? "A palestra abaixo, em que você seria o palestrante, foi cancelada."
+          : "A palestra abaixo, em que você estava inscrito, foi cancelada. A sua inscrição foi desfeita."
+      }
+      linhas={[
+        ["Palestra", dados.titulo],
+        ["Palestrante", paraPalestrante ? null : dados.palestrante],
+        ["Data e horário", dados.periodo],
+        ["Espaço", dados.espaco],
+        ["Cancelada por", dados.canceladaPor],
+      ]}
     />
   );
 }

@@ -5,10 +5,12 @@ import { revalidatePath } from "next/cache";
 
 import {
   deleteBooking,
+  findBookingNotificationData,
   findBookingOwnership,
 } from "@/lib/repositories/repositorio-de-reservas";
 import { exigirSessao } from "@/lib/sessao";
 import { podeGerenciarReserva } from "@/domain/auth/permissoes";
+import { notificarProfessor } from "./notificar";
 
 const schema = z.object({ bookingId: z.uuid() });
 
@@ -42,10 +44,20 @@ export async function excluirReserva(
     };
   }
 
+  const aviso = await findBookingNotificationData(parsed.data.bookingId);
   const resultado = await deleteBooking(parsed.data.bookingId);
 
   if (resultado === "not_found") {
     return { status: "error", message: "Esta reserva não existe mais." };
+  }
+
+  if (aviso?.ativa && aviso.startsAt > new Date()) {
+    await notificarProfessor(
+      parsed.data.bookingId,
+      "excluida",
+      sessao.nome,
+      aviso,
+    );
   }
 
   revalidatePath("/reservas");

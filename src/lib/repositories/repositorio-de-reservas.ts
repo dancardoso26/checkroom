@@ -138,6 +138,7 @@ export type DadosParaNotificacao = {
   startsAt: Date;
   endsAt: Date;
   motivo: string | null;
+  ativa: boolean;
 };
 
 export async function findBookingNotificationData(
@@ -148,7 +149,7 @@ export async function findBookingNotificationData(
   const { data, error } = await supabase
     .from("bookings")
     .select(
-      `purpose, starts_at, ends_at, cancellation_reason,
+      `purpose, starts_at, ends_at, cancellation_reason, status,
        rooms(name, building),
        professors(name, email),
        classes(name)`,
@@ -167,6 +168,7 @@ export async function findBookingNotificationData(
     startsAt: new Date(data.starts_at),
     endsAt: new Date(data.ends_at),
     motivo: data.cancellation_reason,
+    ativa: data.status === "active",
   };
 }
 
