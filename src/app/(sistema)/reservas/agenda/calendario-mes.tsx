@@ -43,8 +43,8 @@ export function CalendarioMes({
   }
 
   return (
-    <div className="bg-card overflow-hidden rounded-lg border">
-      <div className="grid grid-cols-7 border-b">
+    <div className="bg-card flex h-[calc(100svh-11rem)] min-h-96 flex-col overflow-hidden rounded-lg border md:h-[calc(100svh-8rem)]">
+      <div className="grid shrink-0 grid-cols-7 border-b">
         {dias.slice(0, 7).map((dia) => (
           <p
             key={dia}
@@ -55,7 +55,12 @@ export function CalendarioMes({
         ))}
       </div>
 
-      <div className="grid grid-cols-7">
+      <div
+        className="grid min-h-0 flex-1 grid-cols-7 overflow-y-auto"
+        style={{
+          gridTemplateRows: `repeat(${Math.ceil(dias.length / 7)}, minmax(min-content, 1fr))`,
+        }}
+      >
         {dias.map((dia) => {
           const doDia = porDia.get(dia) ?? [];
           const foraDoMes = !mesmoMes(dia, referencia);
@@ -66,7 +71,7 @@ export function CalendarioMes({
               key={dia}
               data-dia={dia}
               className={cn(
-                "group relative min-h-28 border-t border-l p-1.5 [&:nth-child(7n+1)]:border-l-0",
+                "group relative min-h-28 border-t border-l p-1.5 [&:nth-child(-n+7)]:border-t-0 [&:nth-child(7n+1)]:border-l-0",
                 foraDoMes && "bg-muted/40",
               )}
             >
