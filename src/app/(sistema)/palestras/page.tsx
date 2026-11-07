@@ -12,6 +12,7 @@ import {
   minhasInscricoes,
 } from "@/lib/repositories/repositorio-de-palestras";
 import { exigirSessao } from "@/lib/sessao";
+import { AtualizacaoAoVivo } from "@/components/atualizacao-ao-vivo";
 
 import { carregarCatalogos } from "../reservas/catalogos";
 import { ListaDePalestras } from "./lista-de-palestras";
@@ -67,16 +68,28 @@ export default async function PalestrasPage() {
       : null,
   }));
 
+  const aoVivo = (
+    <AtualizacaoAoVivo tabelas={["lectures", "lecture_enrollments"]} />
+  );
+
   if (inscreve) {
-    return <PalestrasDoAluno palestras={itens} semCurso={!sessao.cursoId} />;
+    return (
+      <>
+        {aoVivo}
+        <PalestrasDoAluno palestras={itens} semCurso={!sessao.cursoId} />
+      </>
+    );
   }
 
   return (
-    <ListaDePalestras
-      palestras={itens}
-      catalogos={catalogos}
-      hoje={hoje}
-      semCurso={false}
-    />
+    <>
+      {aoVivo}
+      <ListaDePalestras
+        palestras={itens}
+        catalogos={catalogos}
+        hoje={hoje}
+        semCurso={false}
+      />
+    </>
   );
 }

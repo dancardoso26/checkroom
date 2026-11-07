@@ -11,6 +11,7 @@ import {
   podeGerenciarCadastros,
   podeInscreverEmPalestra,
   podeVerPainel,
+  podeVerAgenda,
   podeVerPalestras,
   podeVerTodosOsChamados,
   podeGerenciarUsuarios,
@@ -193,6 +194,15 @@ describe("palestras", () => {
       expect(podeVerPalestras(ator)).toBe(true);
     }
     expect(podeVerPalestras(ti)).toBe(false);
+  });
+});
+
+describe("agenda", () => {
+  it("a equipe de TI não vê a agenda de reservas; os demais papéis veem", () => {
+    for (const ator of [ana, aluno, admin]) {
+      expect(podeVerAgenda(ator)).toBe(true);
+    }
+    expect(podeVerAgenda(ti)).toBe(false);
   });
 });
 

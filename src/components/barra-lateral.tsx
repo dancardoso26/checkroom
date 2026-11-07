@@ -30,6 +30,7 @@ import {
   podeAbrirChamado,
   podeGerenciarCadastros,
   podeVerPainel,
+  podeVerAgenda,
   podeVerPalestras,
   podeVerTodosOsChamados,
   type Ator,
@@ -83,7 +84,7 @@ function itensDoPapel(papel: Papel): Item[] {
       href: "/reservas",
       rotulo: papel === "student" ? "Minha agenda" : "Reservas",
       icone: CalendarDays,
-      ver: true,
+      ver: podeVerAgenda(ator),
     },
     {
       href: "/chamados",

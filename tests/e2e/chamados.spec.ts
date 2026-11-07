@@ -28,8 +28,18 @@ function cartao(page: Page, descricao: string): Locator {
   return page.locator(`[data-cartao-chamado="${descricao}"]`);
 }
 
+function naColuna(
+  page: Page,
+  coluna: "abertos" | "andamento" | "concluidos",
+  descricao: string,
+): Locator {
+  return page
+    .locator(`[data-coluna="${coluna}"]`)
+    .locator(`[data-cartao-chamado="${descricao}"]`);
+}
+
 async function irParaTodos(page: Page) {
-  await page.getByRole("tab", { name: /^Todos/ }).click();
+  await page.getByRole("radio", { name: "Tabela" }).click();
 }
 
 test("o professor abre um chamado, que nasce aberto", async ({ page }) => {
@@ -47,7 +57,7 @@ test("o professor abre um chamado, que nasce aberto", async ({ page }) => {
   await modal.getByRole("button", { name: "Abrir chamado" }).click();
   await expect(modal).toBeHidden();
 
-  const card = cartao(page, `${PREFIXO_TESTE} Projetor não liga`);
+  const card = naColuna(page, "abertos", `${PREFIXO_TESTE} Projetor não liga`);
   await expect(card.getByText("Aberto")).toBeVisible();
   await expect(card.getByRole("button", { name: "Cancelar" })).toBeVisible();
 
@@ -65,12 +75,12 @@ test("a TI assume e resolve, com nota de solução", async ({ page }) => {
   await page.context().clearCookies();
   await entrarComo(page, TI);
   await page.goto("/chamados");
-  const card = cartao(page, descricao);
+  await naColuna(page, "abertos", descricao)
+    .getByRole("button", { name: "Assumir" })
+    .click();
+  await expect(naColuna(page, "abertos", descricao)).toHaveCount(0);
 
-  await card.getByRole("button", { name: "Assumir" }).click();
-  await expect(card).toHaveCount(0);
-
-  await page.getByRole("tab", { name: /^Em andamento/ }).click();
+  const card = naColuna(page, "andamento", descricao);
   await expect(card.getByText("Em atendimento")).toBeVisible();
 
   await card.getByRole("button", { name: "Resolver" }).click();
@@ -82,6 +92,9 @@ test("a TI assume e resolve, com nota de solução", async ({ page }) => {
   await modal.getByRole("button", { name: "Resolver" }).click();
   await expect(modal).toBeHidden();
   await expect(card).toHaveCount(0);
+  await expect(
+    naColuna(page, "concluidos", descricao).getByText("Resolvido"),
+  ).toBeVisible();
 
   await irParaTodos(page);
   const linha = page.locator(`[data-chamado="${descricao}"]`);

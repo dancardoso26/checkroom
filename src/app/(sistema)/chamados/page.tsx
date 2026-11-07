@@ -9,6 +9,7 @@ import { acoesDisponiveis, ordenarFila } from "@/domain/chamados/chamado";
 import { listRooms } from "@/lib/repositories/repositorio-de-espacos";
 import { listarChamados } from "@/lib/repositories/repositorio-de-chamados";
 import { exigirSessao } from "@/lib/sessao";
+import { AtualizacaoAoVivo } from "@/components/atualizacao-ao-vivo";
 
 import { ListaDeChamados } from "./lista-de-chamados";
 
@@ -33,16 +34,20 @@ export default async function ChamadosPage({
   ]);
 
   return (
-    <ListaDeChamados
-      chamadoEmFoco={chamadoEmFoco ?? null}
-      chamados={ordenarFila(chamados).map((c) => ({
-        ...c,
-        acoes: acoesDisponiveis(c, sessao),
-      }))}
-      espacos={espacos.map((e) => ({ id: e.id, nome: e.name }))}
-      podeAbrir={abre}
-      podeExcluir={podeExcluirChamado(sessao)}
-      veTodos={veTodos}
-    />
+    <>
+      <AtualizacaoAoVivo tabelas={["tickets"]} />
+      <ListaDeChamados
+        chamadoEmFoco={chamadoEmFoco ?? null}
+        chamados={ordenarFila(chamados).map((c) => ({
+          ...c,
+          acoes: acoesDisponiveis(c, sessao),
+        }))}
+        espacos={espacos.map((e) => ({ id: e.id, nome: e.name }))}
+        podeAbrir={abre}
+        podeExcluir={podeExcluirChamado(sessao)}
+        veTodos={veTodos}
+        agora={new Date()}
+      />
+    </>
   );
 }

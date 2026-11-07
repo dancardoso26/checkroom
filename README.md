@@ -29,12 +29,18 @@ reserva. Não valem enquanto o foco está num campo de texto.
 A regra de negócio não mudou com a nova jornada: o painel chama as mesmas
 funções que o formulário anterior chamava.
 
+A agenda, as palestras, os chamados e o dashboard se atualizam em tempo real:
+quando alguém cria, cancela ou exclui um registro, as outras telas abertas
+mudam sozinhas, sem recarregar a página. O Supabase Realtime avisa o navegador,
+e o navegador refaz a consulta normal, que continua passando pela RLS. Detalhes
+em `src/components/atualizacao-ao-vivo.tsx`.
+
 ## Módulos
 
 | Módulo        | Quem usa                                   | O que faz                                                                                                                        |
 | ------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
 | Reservas      | professor, administração                   | agenda e reserva com as regras abaixo                                                                                            |
-| Chamados      | professor e administração abrem; TI atende | aberto, em atendimento, resolvido (com nota) ou cancelado pelo solicitante; aviso por e-mail na resolução                        |
+| Chamados      | professor e administração abrem; TI atende | aberto, em atendimento, resolvido (com nota) ou cancelado pelo solicitante; pipeline por situação ou tabela; aviso por e-mail na resolução |
 | Palestras     | administração cadastra; aluno se inscreve  | curso de destino, espaço livre, vagas até a capacidade; aviso aos alunos dos cursos e ao palestrante; inscrição única, antes do início e com vaga; aviso de cancelamento aos inscritos |
 | Painel        | administração                              | ocupação por espaço, chamados por situação e prioridade, inscritos por palestra, num período                                     |
 | Configurações | administração                              | usuários, espaços e recursos, cadastro acadêmico e calendário letivo (períodos e bloqueios)                                      |
@@ -164,6 +170,9 @@ com uma fotografia dele, e a terceira é a única dentro da transação.
 - Quatro papéis (aluno, professor, equipe de TI e administrador) e um
   **administrador master**, dono do sistema, que não pode ser removido,
   desativado nem rebaixado.
+- Cada papel vê só o que usa: o aluno, as reservas da própria turma; a equipe
+  de TI, só os chamados, sem agenda de reservas nem palestras. As duas
+  restrições valem também no banco, pelas políticas de leitura.
 - Duas camadas independentes: as regras em `src/domain/auth/permissoes.ts`, que
   dão a mensagem, e as políticas de **Row Level Security** do PostgreSQL, que
   dão a garantia. Uma ação chamada direto, sem passar pela tela, é recusada

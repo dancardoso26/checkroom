@@ -77,6 +77,10 @@ export function podeVerPalestras(ator: Ator): boolean {
   return ator.papel !== "it_support";
 }
 
+export function podeVerAgenda(ator: Ator): boolean {
+  return ator.papel !== "it_support";
+}
+
 export function podeCadastrarPalestra(ator: Ator): boolean {
   return ator.papel === "admin";
 }

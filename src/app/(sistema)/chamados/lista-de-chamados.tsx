@@ -1,11 +1,12 @@
 "use client";
 
+import { SquareKanban, Table2 } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { CabecalhoDoCadastro } from "@/components/cadastro";
 import { ConfirmarExclusao } from "@/components/formulario";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 import { assumirChamado, cancelarChamado, excluirChamado } from "./acoes";
 import { CartaoDoChamado } from "./cartao-do-chamado";
@@ -16,10 +17,11 @@ import {
 } from "./dialogos-de-chamado";
 import { TabelaDeChamados } from "./tabela-de-chamados";
 import {
-  ABAS_DE_CARDS,
-  abaDoChamado,
-  type AbaDeChamados,
+  chamadosDaColuna,
+  COLUNAS_DO_PIPELINE,
+  visaoDoChamado,
   type Linha,
+  type VisaoDosChamados,
 } from "./tipos";
 
 export function ListaDeChamados({
@@ -29,6 +31,7 @@ export function ListaDeChamados({
   podeAbrir,
   podeExcluir,
   veTodos,
+  agora,
 }: {
   chamadoEmFoco: string | null;
   chamados: Linha[];
@@ -36,9 +39,10 @@ export function ListaDeChamados({
   podeAbrir: boolean;
   podeExcluir: boolean;
   veTodos: boolean;
+  agora: Date;
 }) {
-  const [aba, setAba] = useState<AbaDeChamados>(() =>
-    abaDoChamado(chamados.find((c) => c.id === chamadoEmFoco)?.situacao)
+  const [visao, setVisao] = useState<VisaoDosChamados>(() =>
+    visaoDoChamado(chamados.find((c) => c.id === chamadoEmFoco)?.situacao)
   );
   const [abrindo, setAbrindo] = useState(false);
   const [detalhe, setDetalhe] = useState<Linha | null>(null);
@@ -72,42 +76,55 @@ export function ListaDeChamados({
         onNovo={podeAbrir ? () => setAbrindo(true) : undefined}
       />
 
+      <div className="flex justify-end">
+        <ToggleGroup
+          type="single"
+          variant="outline"
+          size="sm"
+          value={visao}
+          onValueChange={(v) => v && setVisao(v as VisaoDosChamados)}
+          aria-label="Visualização"
+        >
+          <ToggleGroupItem value="pipeline" aria-label="Pipeline" title="Pipeline">
+            <SquareKanban />
+          </ToggleGroupItem>
+          <ToggleGroupItem value="tabela" aria-label="Tabela" title="Tabela">
+            <Table2 />
+          </ToggleGroupItem>
+        </ToggleGroup>
+      </div>
+
       {erro && (
         <p className="text-destructive text-sm" role="alert">
           {erro}
         </p>
       )}
 
-      <Tabs value={aba} onValueChange={(valor) => setAba(valor as AbaDeChamados)}>
-        <TabsList>
-          {ABAS_DE_CARDS.map(({ id, rotulo, situacao }) => (
-            <TabsTrigger key={id} value={id}>
-              {rotulo}
-              <span className="text-muted-foreground text-xs">
-                {chamados.filter((c) => c.situacao === situacao).length}
-              </span>
-            </TabsTrigger>
-          ))}
-          <TabsTrigger value="todos">
-            Todos
-            <span className="text-muted-foreground text-xs">
-              {chamados.length}
-            </span>
-          </TabsTrigger>
-        </TabsList>
+      {visao === "pipeline" ? (
+        <div className="grid items-start gap-4 lg:grid-cols-3">
+          {COLUNAS_DO_PIPELINE.map(({ id, rotulo, situacao, vazio }) => {
+            const daColuna = chamadosDaColuna(chamados, situacao, agora);
 
-        {ABAS_DE_CARDS.map(({ id, situacao, vazio }) => {
-          const daAba = chamados.filter((c) => c.situacao === situacao);
+            return (
+              <section
+                key={id}
+                data-coluna={id}
+                aria-label={rotulo}
+                className="bg-muted/40 space-y-3 rounded-lg border p-3"
+              >
+                <header className="flex items-center justify-between px-1">
+                  <h2 className="text-sm font-semibold">{rotulo}</h2>
+                  <span className="text-muted-foreground bg-background rounded-full border px-2 text-xs">
+                    {daColuna.length}
+                  </span>
+                </header>
 
-          return (
-            <TabsContent key={id} value={id}>
-              {daAba.length === 0 ? (
-                <p className="text-muted-foreground rounded-lg border border-dashed p-8 text-center text-sm">
-                  {vazio}
-                </p>
-              ) : (
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                  {daAba.map((chamado) => (
+                {daColuna.length === 0 ? (
+                  <p className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
+                    {vazio}
+                  </p>
+                ) : (
+                  daColuna.map((chamado) => (
                     <CartaoDoChamado
                       key={chamado.id}
                       chamado={chamado}
@@ -119,28 +136,26 @@ export function ListaDeChamados({
                       onResolver={() => setResolvendo(chamado)}
                       onCancelar={() => setCancelando(chamado)}
                     />
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-          );
-        })}
-
-        <TabsContent value="todos" className="space-y-4">
-          <TabelaDeChamados
-            chamados={chamados}
-            veTodos={veTodos}
-            podeExcluir={podeExcluir}
-            pendente={pendente}
-            onErro={setErro}
-            onDetalhe={setDetalhe}
-            onAssumir={assumir}
-            onResolver={setResolvendo}
-            onCancelar={setCancelando}
-            onExcluir={setExcluindo}
-          />
-        </TabsContent>
-      </Tabs>
+                  ))
+                )}
+              </section>
+            );
+          })}
+        </div>
+      ) : (
+        <TabelaDeChamados
+          chamados={chamados}
+          veTodos={veTodos}
+          podeExcluir={podeExcluir}
+          pendente={pendente}
+          onErro={setErro}
+          onDetalhe={setDetalhe}
+          onAssumir={assumir}
+          onResolver={setResolvendo}
+          onCancelar={setCancelando}
+          onExcluir={setExcluindo}
+        />
+      )}
 
       {excluindo && (
         <ConfirmarExclusao

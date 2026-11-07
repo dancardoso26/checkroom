@@ -39,7 +39,7 @@ export async function entrarComo(page: Page, email: string) {
   await page.fill("#senha", SENHA);
   await page.getByRole("button", { name: "Entrar" }).click();
 
-  await page.waitForURL(/\/(verificacao|reservas|aceitar-termos)/);
+  await page.waitForURL(/\/(verificacao|reservas|chamados|aceitar-termos)/);
 
   if (page.url().includes("/verificacao")) {
     const revelar = page.getByText("Não consigo escanear");
@@ -71,11 +71,11 @@ export async function entrarComo(page: Page, email: string) {
       await informarCodigo(page, segredo);
     }
 
-    await page.waitForURL(/\/(reservas|aceitar-termos)/);
+    await page.waitForURL(/\/(reservas|chamados|aceitar-termos)/);
   }
 
   await page.goto("/reservas").catch(() => undefined);
-  await page.waitForURL(/\/(reservas|aceitar-termos)/);
+  await page.waitForURL(/\/(reservas|chamados|aceitar-termos)/);
   await page.waitForLoadState("networkidle");
 
   if (page.url().includes("/aceitar-termos")) {
@@ -85,8 +85,8 @@ export async function entrarComo(page: Page, email: string) {
 
     await expect(continuar).toBeEnabled();
     await continuar.click();
-    await page.waitForURL(/\/reservas/);
+    await page.waitForURL(/\/(reservas|chamados)/);
   }
 
-  await expect(page).toHaveURL(/\/reservas/);
+  await expect(page).toHaveURL(/\/(reservas|chamados)/);
 }

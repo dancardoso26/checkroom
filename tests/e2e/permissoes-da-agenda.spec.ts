@@ -27,10 +27,7 @@ test.afterAll(async () => {
   await apagarReserva(aulaDeReferencia);
 });
 
-for (const [papel, conta] of [
-  ["o aluno", ALUNO],
-  ["a equipe de TI", TI],
-] as const) {
+for (const [papel, conta] of [["o aluno", ALUNO]] as const) {
   test(`${papel} vê a agenda, mas não abre uma reserva nova`, async ({ page }) => {
     await entrarComo(page, conta);
     await page.goto(semanaDoDia(`${SEGUNDA}T12:00:00-03:00`));
@@ -69,12 +66,17 @@ test("o professor só tem ações nas reservas que são dele", async ({ page }) 
   await expect(dele.getByRole("button", { name: "Cancelar reserva" })).toBeVisible();
 });
 
-test("a equipe de TI não acessa as palestras", async ({ page }) => {
+test("a equipe de TI só acessa os chamados", async ({ page }) => {
   await entrarComo(page, TI);
+  await expect(page).toHaveURL(/\/chamados/);
 
   await expect(page.getByRole("link", { name: "Chamados" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Reservas" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Palestras" })).toHaveCount(0);
 
+  await page.goto(semanaDoDia(`${SEGUNDA}T12:00:00-03:00`));
+  await expect(page).toHaveURL(/\/chamados/);
+
   await page.goto("/palestras");
-  await expect(page).toHaveURL(/\/reservas/);
+  await expect(page).toHaveURL(/\/chamados/);
 });
