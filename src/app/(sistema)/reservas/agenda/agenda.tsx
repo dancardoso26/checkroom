@@ -2,7 +2,9 @@
 
 import type { ActivityType } from "@/domain/booking/types";
 import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useTransition } from "react";
+
+import { cn } from "@/lib/utils";
 
 import {
   periodoVizinho,
@@ -121,11 +123,15 @@ export function Agenda({
     [],
   );
 
+  const [navegando, iniciarNavegacao] = useTransition();
+
   const ir = useCallback(
     (mudancas: Partial<EstadoDaAgenda>, extras = {}) =>
-      router.push(hrefDaAgenda({ ...estado, ...mudancas }, extras), {
-        scroll: false,
-      }),
+      iniciarNavegacao(() =>
+        router.push(hrefDaAgenda({ ...estado, ...mudancas }, extras), {
+          scroll: false,
+        }),
+      ),
     [router, estado],
   );
 
@@ -242,6 +248,13 @@ export function Agenda({
             docencia={docencia}
           />
 
+          <div
+            aria-busy={navegando}
+            className={cn(
+              "space-y-3 transition-opacity",
+              navegando && "opacity-50 delay-150 duration-200",
+            )}
+          >
           {estado.visao === "calendario" && estado.escala !== "mes" && (
             <CalendarioGrade
               dias={dias}
@@ -283,6 +296,7 @@ export function Agenda({
               onOrdenar={onOrdenar}
             />
           )}
+          </div>
         </div>
       </div>
 

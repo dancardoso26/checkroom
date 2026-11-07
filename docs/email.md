@@ -5,7 +5,9 @@ São Paulo), com o remetente `CheckRoom <nao-responda@checkroom.com.br>`.
 
 | Mensagem | Quem envia | Onde se configura |
 |---|---|---|
-| Nova reserva e reserva cancelada | A aplicação, pela API do Resend | `RESEND_API_KEY` e `RESEND_FROM` no `.env.local` e na Vercel |
+| Nova reserva, reserva cancelada e reserva removida (ao professor) | A aplicação, pela API do Resend | `RESEND_API_KEY` e `RESEND_FROM` no `.env.local` e na Vercel |
+| Nova palestra (aos alunos dos cursos e ao palestrante da lista) e palestra cancelada (aos inscritos e ao palestrante) | A aplicação, pela API do Resend | Os mesmos |
+| Chamado resolvido (a quem abriu) | A aplicação, pela API do Resend | Os mesmos |
 | Recuperação de senha | O Supabase Auth, pelo SMTP do Resend | Painel do Supabase, passo a passo abaixo |
 | Convite de usuário | O Supabase Auth, pelo SMTP do Resend | Painel do Supabase, template **Invite user** |
 
@@ -14,8 +16,10 @@ São Paulo), com o remetente `CheckRoom <nao-responda@checkroom.com.br>`.
 - `src/lib/email/destinatario.ts` recusa domínios fictícios (`exemplo.edu.br`,
   `example.com`) e reservados (`.invalid`, `.test`). Enviar para eles gera
   devolução, e devoluções seguidas derrubam a reputação do domínio.
-- Reservas cuja finalidade começa com `[e2e]` não notificam: é o prefixo das
-  reservas criadas pela suíte de testes.
+- Reservas e palestras cujo título começa com `[e2e]` não notificam: é o
+  prefixo dos registros criados pela suíte de testes.
+- Remover uma reserva ou palestra que já aconteceu não gera aviso: só avisa o
+  que ainda ia acontecer.
 - Os professores de demonstração recebem no endereço de `SEED_DEMO_EMAIL`:
   Ana no endereço puro, Carlos e Marina com `+carlos` e `+marina`. Quem aplica
   é `npm run seed:usuarios`.

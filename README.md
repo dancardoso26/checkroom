@@ -35,7 +35,7 @@ funções que o formulário anterior chamava.
 | ------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
 | Reservas      | professor, administração                   | agenda e reserva com as regras abaixo                                                                                            |
 | Chamados      | professor e administração abrem; TI atende | aberto, em atendimento, resolvido (com nota) ou cancelado pelo solicitante; aviso por e-mail na resolução                        |
-| Palestras     | administração cadastra; aluno se inscreve  | curso de destino, espaço livre, vagas até a capacidade; aviso aos alunos dos cursos; inscrição única, antes do início e com vaga |
+| Palestras     | administração cadastra; aluno se inscreve  | curso de destino, espaço livre, vagas até a capacidade; aviso aos alunos dos cursos e ao palestrante; inscrição única, antes do início e com vaga; aviso de cancelamento aos inscritos |
 | Painel        | administração                              | ocupação por espaço, chamados por situação e prioridade, inscritos por palestra, num período                                     |
 | Configurações | administração                              | usuários, espaços e recursos, cadastro acadêmico e calendário letivo (períodos e bloqueios)                                      |
 
@@ -104,6 +104,12 @@ Cancelar é fato acadêmico e sustenta a entrega de registros de auditoria, porq
 "quem cancelou a aula de sexta, quando e por quê" precisa ter resposta. Excluir é
 correção de erro: engano de digitação, duplicata, dado de teste. A confirmação de
 exclusão sugere cancelar a quem só quer desmarcar a aula.
+
+Nos dois casos o professor da reserva recebe um e-mail: "reserva cancelada", com
+o motivo, ou "reserva removida". A remoção só avisa quando a reserva ainda não
+aconteceu e estava ativa; apagar um registro antigo ou já cancelado não gera
+mensagem. Os dados do aviso são lidos antes de apagar, porque depois a linha não
+existe mais.
 
 Reservas canceladas somem da agenda, mas continuam alcançáveis pelo filtro "Ver
 canceladas" da listagem. Sem ele, o histórico existiria só no banco e a reserva

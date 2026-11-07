@@ -16,6 +16,7 @@ que o importador seja o dono, e um colaborador não consegue importar.
 | Item | Estado |
 |---|---|
 | Produção | `main`, com deploy automático |
+| Região das funções | São Paulo (`gru1`), a mesma do Supabase. Com a padrão (`iad1`, EUA), cada consulta atravessava o continente e a agenda demorava a trocar de semana |
 | Domínio | `checkroom.com.br` na Vercel; o `www` redireciona (308) para o domínio sem `www` |
 | DNS (Hostinger) | `A` do `@` em `76.76.21.21` e `CNAME` do `www` em `cname.vercel-dns.com`, TTL 300 |
 | E-mail | Registros do Resend (`resend._domainkey`, `send`, `rsend`) intactos |

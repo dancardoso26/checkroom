@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { ALUNO, PROFESSOR, TI, entrarComo } from "./helpers/autenticacao";
+import { apagarReserva, criarAulaDeReferencia } from "./helpers/banco";
 import { abrirDetalhe, semanaDoDia } from "./helpers/painel";
 
 function proximaSegunda(): string {
@@ -14,6 +15,17 @@ function proximaSegunda(): string {
 }
 
 const SEGUNDA = proximaSegunda();
+const AULA = "Aula de referência";
+
+let aulaDeReferencia: string;
+
+test.beforeAll(async () => {
+  aulaDeReferencia = await criarAulaDeReferencia(SEGUNDA);
+});
+
+test.afterAll(async () => {
+  await apagarReserva(aulaDeReferencia);
+});
 
 for (const [papel, conta] of [
   ["o aluno", ALUNO],
@@ -24,7 +36,7 @@ for (const [papel, conta] of [
     await page.goto(semanaDoDia(`${SEGUNDA}T12:00:00-03:00`));
 
     await expect(
-      page.locator("[data-reserva]").filter({ hasText: "Aula de Engenharia de Software" })
+      page.locator("[data-reserva]").filter({ hasText: AULA })
     ).toBeVisible();
     await expect(page.getByRole("button", { name: "Nova reserva" })).toHaveCount(0);
 
@@ -35,7 +47,7 @@ for (const [papel, conta] of [
     await expect(page.getByRole("dialog", { name: "Nova reserva" })).toHaveCount(0);
 
     await page.goto(semanaDoDia(`${SEGUNDA}T12:00:00-03:00`));
-    const detalhe = await abrirDetalhe(page, "Aula de Engenharia de Software");
+    const detalhe = await abrirDetalhe(page, AULA);
     await expect(detalhe.getByRole("button", { name: "Cancelar reserva" })).toHaveCount(0);
     await expect(detalhe.getByRole("button", { name: "Excluir" })).toHaveCount(0);
   });
@@ -47,8 +59,10 @@ test("o professor só tem ações nas reservas que são dele", async ({ page }) 
 
   await expect(page.getByRole("button", { name: "Nova reserva" })).toBeVisible();
 
-  const daAna = await abrirDetalhe(page, "Aula de Engenharia de Software");
-  await expect(daAna.getByRole("button", { name: "Cancelar reserva" })).toHaveCount(0);
+  const deOutroProfessor = await abrirDetalhe(page, AULA);
+  await expect(
+    deOutroProfessor.getByRole("button", { name: "Cancelar reserva" })
+  ).toHaveCount(0);
   await page.keyboard.press("Escape");
 
   const dele = await abrirDetalhe(page, "Laboratório de Materiais");

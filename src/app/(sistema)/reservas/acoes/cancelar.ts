@@ -69,7 +69,7 @@ export async function cancelarReserva(
     return { status: "error", message: MENSAGEM[resultado] };
   }
 
-  await notificarProfessor(parsed.data.bookingId, true, sessao.nome);
+  await notificarProfessor(parsed.data.bookingId, "cancelada", sessao.nome);
 
   revalidatePath("/reservas");
 

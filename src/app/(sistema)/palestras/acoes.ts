@@ -15,7 +15,11 @@ import {
 import { semErros } from "@/domain/formulario/validacao";
 import { combineDateTime, formatPeriod } from "@/lib/datetime";
 import { mesmoNome } from "@/domain/palestras/palestrante";
-import { avisarPalestrante, avisarSobreNovaPalestra } from "@/lib/email/enviar";
+import {
+  avisarPalestrante,
+  avisarSobreNovaPalestra,
+  avisarSobrePalestraCancelada,
+} from "@/lib/email/enviar";
 import { enderecoDoSite } from "@/lib/endereco-do-site";
 import {
   falha,
@@ -28,6 +32,7 @@ import {
 import { listarCursos } from "@/lib/repositories/repositorio-de-cursos";
 import { findProfessorContact } from "@/lib/repositories/repositorio-de-professores";
 import {
+  avisoDePalestraExcluida,
   cadastrarPalestra as cadastrarNoBanco,
   cancelarInscricao as cancelarNoBanco,
   emailsDosAlunos,
@@ -193,6 +198,7 @@ export async function excluirPalestra(id: string): Promise<ResultadoDaAcao> {
     return { ok: false, mensagem: "Apenas a administração exclui palestras." };
   }
 
+  const aviso = await avisoDePalestraExcluida(id);
   const resultado = await excluirNoBanco(id);
 
   if (!resultado.ok) {
@@ -203,6 +209,31 @@ export async function excluirPalestra(id: string): Promise<ResultadoDaAcao> {
           ? "Esta palestra não existe mais. Atualize a página."
           : "Não foi possível excluir a palestra agora.",
     };
+  }
+
+  if (
+    aviso &&
+    aviso.inicio > new Date() &&
+    !aviso.titulo.startsWith(PREFIXO_DE_TESTE)
+  ) {
+    const dados = {
+      titulo: aviso.titulo,
+      palestrante: aviso.palestrante,
+      espaco: aviso.espaco,
+      periodo: formatPeriod(aviso.inicio, aviso.fim),
+      canceladaPor: sessao.nome,
+    };
+
+    await avisarSobrePalestraCancelada(aviso.emailsDosInscritos, dados);
+
+    if (aviso.palestranteProfessorId) {
+      const professor = await findProfessorContact(
+        aviso.palestranteProfessorId,
+      );
+      if (professor) {
+        await avisarSobrePalestraCancelada([professor.email], dados, true);
+      }
+    }
   }
 
   revalidatePath("/palestras");

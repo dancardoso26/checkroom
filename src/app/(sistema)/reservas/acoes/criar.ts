@@ -201,7 +201,7 @@ export async function criarReserva(
     return erro(values, [resultado.message]);
   }
 
-  await notificarProfessor(resultado.bookingId, false, sessao.nome);
+  await notificarProfessor(resultado.bookingId, "nova", sessao.nome);
 
   revalidatePath("/reservas");
 

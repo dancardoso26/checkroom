@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { ADMIN, entrarComo } from "./helpers/autenticacao";
 import {
+  criarAulaDeReferencia,
   inserirPalestraDireta,
   inserirReservaDireto,
   limparReservasDeTeste,
@@ -86,13 +87,15 @@ test("cria uma reserva válida do início ao fim", async ({ page }) => {
 test("impede confirmar quando o professor e a turma já têm compromisso", async ({
   page,
 }) => {
+  await criarAulaDeReferencia(SEGUNDA, "19:00", "20:40");
+
   await abrirPainel(page, { dia: SEGUNDA, inicio: "19:00" });
 
   await preencherAtividade(page, {
     finalidade: `${PREFIXO_TESTE} conflito`,
-    professor: "Ana",
+    professor: "Juliana",
     turma: "SI 8",
-    disciplina: "Engenharia de Software",
+    disciplina: "Inteligência Artificial",
   });
 
   await expect(page.getByText("Conflito de agenda")).toBeVisible({

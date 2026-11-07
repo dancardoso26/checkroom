@@ -87,7 +87,7 @@ export default async function ReservasPage({
   const agora = new Date();
   const hoje = localDayKey(agora);
 
-  const todasAsTurmas = await listClasses();
+  const turmasCarregando = listClasses();
 
   const escopo: EscopoDoAluno | null =
     sessao.papel === "student"
@@ -116,6 +116,7 @@ export default async function ReservasPage({
     proximos,
     espacos,
     docencia,
+    todasAsTurmas,
   ] = await Promise.all([
     estado.visao === "calendario"
       ? carregarPeriodo(
@@ -130,7 +131,10 @@ export default async function ReservasPage({
       ? carregarTabela(estado.tabela, filtrosEfetivos, estado.busca, escopo)
       : Promise.resolve(null),
     podeReservar
-      ? carregarCatalogos(hoje, { comCursos: podeCadastrarPalestra(sessao) })
+      ? carregarCatalogos(hoje, {
+          comCursos: podeCadastrarPalestra(sessao),
+          turmas: turmasCarregando,
+        })
       : Promise.resolve(null),
     listProfessors(),
     estado.visao === "calendario"
@@ -138,6 +142,7 @@ export default async function ReservasPage({
       : Promise.resolve([]),
     listRooms(),
     listarParesDeDocencia(),
+    turmasCarregando,
   ]);
 
   const painel: Painel | null = catalogos && {

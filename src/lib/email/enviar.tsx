@@ -7,11 +7,14 @@ import { lerRemetente } from "./remetente";
 import {
   EmailDeChamadoResolvido,
   EmailDeNovaPalestra,
+  EmailDePalestraCancelada,
   EmailDePalestrante,
   EmailDeReserva,
   type DadosDaNovaPalestra,
+  type DadosDaPalestraCancelada,
   type DadosDaReserva,
   type DadosDoChamadoResolvido,
+  type SituacaoDaReserva,
 } from "./template";
 
 const chave = process.env.RESEND_API_KEY?.trim();
@@ -49,18 +52,22 @@ async function enviar(mensagens: Mensagem[]): Promise<void> {
   }
 }
 
+const ASSUNTO_DA_RESERVA: Record<SituacaoDaReserva, string> = {
+  nova: "Nova reserva",
+  cancelada: "Reserva cancelada",
+  excluida: "Reserva removida",
+};
+
 export async function avisarSobreReserva(
   destinatario: string,
-  cancelada: boolean,
+  situacao: SituacaoDaReserva,
   dados: DadosDaReserva
 ): Promise<void> {
   await enviar([
     {
       to: destinatario,
-      subject: cancelada
-        ? `Reserva cancelada: ${dados.finalidade}`
-        : `Nova reserva: ${dados.finalidade}`,
-      react: <EmailDeReserva cancelada={cancelada} dados={dados} />,
+      subject: `${ASSUNTO_DA_RESERVA[situacao]}: ${dados.finalidade}`,
+      react: <EmailDeReserva situacao={situacao} dados={dados} />,
     },
   ]);
 }
@@ -89,6 +96,22 @@ export async function avisarPalestrante(
       react: <EmailDePalestrante dados={dados} />,
     },
   ]);
+}
+
+export async function avisarSobrePalestraCancelada(
+  destinatarios: string[],
+  dados: DadosDaPalestraCancelada,
+  paraPalestrante = false
+): Promise<void> {
+  await enviar(
+    destinatarios.map((to) => ({
+      to,
+      subject: `Palestra cancelada: ${dados.titulo}`,
+      react: (
+        <EmailDePalestraCancelada dados={dados} paraPalestrante={paraPalestrante} />
+      ),
+    }))
+  );
 }
 
 export async function avisarSobreNovaPalestra(
