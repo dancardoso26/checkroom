@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+
 import {
   diasDoPeriodo,
   ehChaveValida,
@@ -23,10 +25,12 @@ import {
   podeCadastrarPalestra,
   podeCriarReserva,
   podeGerenciarReserva,
+  podeVerAgenda,
   podeVerPalestras,
 } from "@/domain/auth/permissoes";
 import type { BookingListItem } from "@/lib/repositories/repositorio-de-reservas";
 import { exigirSessao } from "@/lib/sessao";
+import { AtualizacaoAoVivo } from "@/components/atualizacao-ao-vivo";
 import {
   aplicarMinhas,
   FILTROS_PADRAO,
@@ -75,6 +79,8 @@ export default async function ReservasPage({
   searchParams: Promise<Parametros>;
 }) {
   const sessao = await exigirSessao();
+  if (!podeVerAgenda(sessao)) redirect("/chamados");
+
   const parametros = await searchParams;
 
   const podeReservar = podeCriarReserva(sessao);
@@ -152,33 +158,40 @@ export default async function ReservasPage({
   };
 
   return (
-    <Agenda
-      estado={estado}
-      titulo={tituloDoPeriodo(estado.escala, estado.data)}
-      dias={diasDoPeriodo(estado.escala, estado.data)}
-      hoje={hoje}
-      agora={agora}
-      reservas={comPermissao(reservas)}
-      proximos={comPermissao(proximos)}
-      tabela={tabela && { ...tabela, reservas: comPermissao(tabela.reservas) }}
-      destaque={parametros.destaque}
-      painel={painel}
-      novaInicial={
-        parametros.nova === "1" && podeReservar
-          ? lerNovaReserva(parametros, hoje)
-          : null
-      }
-      podeReservar={podeReservar}
-      vePalestras={podeVerPalestras(sessao)}
-      tituloDaPagina={sessao.papel === "student" ? "Minha agenda" : "Reservas"}
-      professores={professores.map(({ id, name }) => ({ id, nome: name }))}
-      turmas={(escopo
-        ? todasAsTurmas.filter((turma) => escopo.turmaIds.includes(turma.id))
-        : todasAsTurmas
-      ).map(({ id, name }) => ({ id, nome: name }))}
-      espacos={espacos.map(({ id, name }) => ({ id, nome: name }))}
-      docencia={docencia}
-    />
+    <>
+      <AtualizacaoAoVivo tabelas={["bookings", "lectures"]} />
+      <Agenda
+        estado={estado}
+        titulo={tituloDoPeriodo(estado.escala, estado.data)}
+        dias={diasDoPeriodo(estado.escala, estado.data)}
+        hoje={hoje}
+        agora={agora}
+        reservas={comPermissao(reservas)}
+        proximos={comPermissao(proximos)}
+        tabela={
+          tabela && { ...tabela, reservas: comPermissao(tabela.reservas) }
+        }
+        destaque={parametros.destaque}
+        painel={painel}
+        novaInicial={
+          parametros.nova === "1" && podeReservar
+            ? lerNovaReserva(parametros, hoje)
+            : null
+        }
+        podeReservar={podeReservar}
+        vePalestras={podeVerPalestras(sessao)}
+        tituloDaPagina={
+          sessao.papel === "student" ? "Minha agenda" : "Reservas"
+        }
+        professores={professores.map(({ id, name }) => ({ id, nome: name }))}
+        turmas={(escopo
+          ? todasAsTurmas.filter((turma) => escopo.turmaIds.includes(turma.id))
+          : todasAsTurmas
+        ).map(({ id, name }) => ({ id, nome: name }))}
+        espacos={espacos.map(({ id, name }) => ({ id, nome: name }))}
+        docencia={docencia}
+      />
+    </>
   );
 }
 

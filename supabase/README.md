@@ -51,7 +51,9 @@ dependem da extensão.
 | 34 | `migrations/20261106000200_alunos_da_turma_pela_contagem.sql` | Remove `classes.student_count`; a contagem passa a vir dos alunos vinculados |
 | 35 | `migrations/20261106000300_professor_no_lugar_de_docente.sql` | Troca "Docente" por "Professor" nas mensagens, na anonimização e nos registros existentes |
 | 36 | `migrations/20261106000400_palestrante_professor.sql` | Guarda o professor palestrante em `lectures` e recria `cadastrar_palestra` com ele |
-| 37 | `seed.sql` | Popula o mundo acadêmico (opcional, só em desenvolvimento) |
+| 37 | `migrations/20261107000000_tempo_real.sql` | Liga o Realtime em `bookings`, `lectures`, `lecture_enrollments` e `tickets`, para as telas se atualizarem sozinhas |
+| 38 | `migrations/20261107000100_ti_sem_agenda.sql` | A equipe de TI deixa de ler reservas e palestras: só atende chamados |
+| 39 | `seed.sql` | Popula o mundo acadêmico (opcional, só em desenvolvimento) |
 
 Depois do `seed.sql`, rode no terminal:
 
