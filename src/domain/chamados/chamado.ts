@@ -1,6 +1,7 @@
 import {
   podeAtenderChamado,
   podeCancelarChamado,
+  podeDevolverChamado,
   type Ator,
 } from "@/domain/auth/permissoes";
 import type { Status } from "@/domain/status/status";
@@ -8,7 +9,7 @@ import type { ErrosPorCampo } from "@/domain/formulario/validacao";
 
 export type SituacaoDoChamado = "open" | "in_progress" | "resolved" | "cancelled";
 export type Prioridade = "low" | "medium" | "high";
-export type AcaoDoChamado = "assumir" | "resolver" | "cancelar";
+export type AcaoDoChamado = "assumir" | "devolver" | "resolver" | "cancelar";
 
 export const SITUACOES: SituacaoDoChamado[] = [
   "open",
@@ -49,19 +50,24 @@ export const TAMANHO_MAXIMO_DA_DESCRICAO = 2000;
 
 const ORIGEM: Record<AcaoDoChamado, SituacaoDoChamado> = {
   assumir: "open",
+  devolver: "in_progress",
   resolver: "in_progress",
   cancelar: "open",
 };
 
 const DESTINO: Record<AcaoDoChamado, SituacaoDoChamado> = {
   assumir: "in_progress",
+  devolver: "open",
   resolver: "resolved",
   cancelar: "cancelled",
 };
 
+const ACOES: AcaoDoChamado[] = ["assumir", "devolver", "resolver", "cancelar"];
+
 export type ChamadoParaTransicao = {
   situacao: SituacaoDoChamado;
   solicitanteId: string;
+  responsavelId: string | null;
 };
 
 export type RecusaDaTransicao =
@@ -74,9 +80,13 @@ export type ResultadoDaTransicao =
   | { ok: false; recusa: RecusaDaTransicao };
 
 function permitido(acao: AcaoDoChamado, ator: Ator, chamado: ChamadoParaTransicao) {
-  return acao === "cancelar"
-    ? podeCancelarChamado(ator, { solicitanteId: chamado.solicitanteId })
-    : podeAtenderChamado(ator);
+  if (acao === "cancelar") {
+    return podeCancelarChamado(ator, { solicitanteId: chamado.solicitanteId });
+  }
+  if (acao === "devolver") {
+    return podeDevolverChamado(ator, { responsavelId: chamado.responsavelId });
+  }
+  return podeAtenderChamado(ator);
 }
 
 export function validarTransicao(
@@ -104,7 +114,7 @@ export function acoesDisponiveis(
   chamado: ChamadoParaTransicao,
   ator: Ator
 ): AcaoDoChamado[] {
-  return (["assumir", "resolver", "cancelar"] as const).filter(
+  return ACOES.filter(
     (acao) => permitido(acao, ator, chamado) && chamado.situacao === ORIGEM[acao]
   );
 }

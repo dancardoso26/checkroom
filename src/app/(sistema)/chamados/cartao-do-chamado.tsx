@@ -1,17 +1,16 @@
 "use client";
 
-import { CheckCircle2, Hand, X } from "lucide-react";
+import { CheckCircle2, Hand, Undo2, X } from "lucide-react";
 
-import { RotuloDeCampo } from "@/components/rotulo-de-campo";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
-import {
-  STATUS_DA_PRIORIDADE,
-  STATUS_DA_SITUACAO,
-} from "@/domain/chamados/chamado";
+import { STATUS_DA_PRIORIDADE } from "@/domain/chamados/chamado";
 import { formatDateTime } from "@/lib/datetime";
+import { cn } from "@/lib/utils";
 
 import type { Linha } from "./tipos";
+
+const BOTAO = "h-7 px-2.5 text-xs";
 
 export function CartaoDoChamado({
   chamado,
@@ -20,6 +19,7 @@ export function CartaoDoChamado({
   pendente,
   onDetalhe,
   onAssumir,
+  onDevolver,
   onResolver,
   onCancelar,
 }: {
@@ -29,69 +29,89 @@ export function CartaoDoChamado({
   pendente: boolean;
   onDetalhe: () => void;
   onAssumir: () => void;
+  onDevolver: () => void;
   onResolver: () => void;
   onCancelar: () => void;
 }) {
+  const pessoas = [
+    veTodos ? `Por ${chamado.solicitanteNome}` : null,
+    chamado.responsavelNome ? `Com ${chamado.responsavelNome}` : null,
+  ].filter(Boolean);
+
   return (
     <article
       id={`chamado-${chamado.id}`}
       data-cartao-chamado={chamado.descricao}
-      className={`bg-card flex flex-col gap-4 rounded-lg border p-4 ${emFoco ? "ring-primary ring-2" : ""}`}
+      className={cn(
+        "bg-card space-y-2 rounded-md border p-3 shadow-xs",
+        emFoco && "ring-primary ring-2",
+      )}
     >
-      <header className="flex flex-wrap items-start justify-between gap-2">
-        <div className="space-y-0.5">
-          <h2 className="font-semibold">{chamado.espaco}</h2>
+      <header className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h3 className="text-sm leading-tight font-semibold">
+            {chamado.espaco}
+          </h3>
           <p className="text-muted-foreground text-xs">
             {formatDateTime(chamado.abertoEm)}
           </p>
         </div>
-        <div className="flex flex-wrap gap-1">
-          <StatusBadge status={STATUS_DA_SITUACAO[chamado.situacao]} />
-          <StatusBadge status={STATUS_DA_PRIORIDADE[chamado.prioridade]} />
-        </div>
+        <StatusBadge status={STATUS_DA_PRIORIDADE[chamado.prioridade]} />
       </header>
 
-      <p className="line-clamp-3 text-sm">{chamado.descricao}</p>
+      <p className="line-clamp-2 text-sm">{chamado.descricao}</p>
 
-      {(veTodos || chamado.responsavelNome) && (
-        <dl className="grid gap-4 text-sm sm:grid-cols-2">
-          {veTodos && (
-            <div className="space-y-1">
-              <dt className="text-muted-foreground text-xs">
-                <RotuloDeCampo rotulo="Solicitante" />
-              </dt>
-              <dd>{chamado.solicitanteNome}</dd>
-            </div>
-          )}
-          {chamado.responsavelNome && (
-            <div className="space-y-1">
-              <dt className="text-muted-foreground text-xs">
-                <RotuloDeCampo rotulo="Responsável" />
-              </dt>
-              <dd>{chamado.responsavelNome}</dd>
-            </div>
-          )}
-        </dl>
+      {pessoas.length > 0 && (
+        <p className="text-muted-foreground truncate text-xs">
+          {pessoas.join(" · ")}
+        </p>
       )}
 
-      <footer className="mt-auto flex flex-wrap justify-end gap-2">
-        <Button size="sm" variant="ghost" onClick={onDetalhe}>
+      <footer className="flex flex-wrap items-center gap-1">
+        <Button
+          size="sm"
+          variant="ghost"
+          className={cn(BOTAO, "-ml-2.5 mr-auto")}
+          onClick={onDetalhe}
+        >
           Detalhes
         </Button>
         {chamado.acoes.includes("cancelar") && (
-          <Button size="sm" variant="outline" onClick={onCancelar}>
+          <Button
+            size="sm"
+            variant="outline"
+            className={BOTAO}
+            onClick={onCancelar}
+          >
             <X />
             Cancelar
           </Button>
         )}
         {chamado.acoes.includes("assumir") && (
-          <Button size="sm" disabled={pendente} onClick={onAssumir}>
+          <Button
+            size="sm"
+            className={BOTAO}
+            disabled={pendente}
+            onClick={onAssumir}
+          >
             <Hand />
             Assumir
           </Button>
         )}
+        {chamado.acoes.includes("devolver") && (
+          <Button
+            size="sm"
+            variant="outline"
+            className={BOTAO}
+            disabled={pendente}
+            onClick={onDevolver}
+          >
+            <Undo2 />
+            Devolver
+          </Button>
+        )}
         {chamado.acoes.includes("resolver") && (
-          <Button size="sm" onClick={onResolver}>
+          <Button size="sm" className={BOTAO} onClick={onResolver}>
             <CheckCircle2 />
             Resolver
           </Button>
