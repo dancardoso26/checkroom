@@ -5,6 +5,7 @@ import { lerPeriodo, periodoAnterior } from "@/domain/painel/periodo";
 import { toDateInputValue } from "@/lib/datetime";
 import { carregarDadosDoPainel } from "@/lib/repositories/repositorio-do-painel";
 import { exigirSessao } from "@/lib/sessao";
+import { AtualizacaoAoVivo } from "@/components/atualizacao-ao-vivo";
 
 import { AbaDeChamados } from "./aba-de-chamados";
 import { AbaDePalestras } from "./aba-de-palestras";
@@ -38,6 +39,9 @@ export default async function PainelPage({
 
   return (
     <div className="space-y-4">
+      <AtualizacaoAoVivo
+        tabelas={["bookings", "lectures", "lecture_enrollments", "tickets"]}
+      />
       <div className="flex flex-wrap items-end justify-between gap-3">
         <h1 className="text-lg font-semibold tracking-tight sm:text-xl">Dashboard</h1>
         <FiltroDoPeriodo aba={aba} de={de} ate={ate} hoje={hoje} />
