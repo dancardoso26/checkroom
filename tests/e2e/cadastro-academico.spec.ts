@@ -41,9 +41,9 @@ test("vínculo de professor idêntico é recusado", async ({ page }) => {
   await modal.getByLabel("Curso", { exact: true }).click();
   await page.getByRole("option", { name: "Sistemas de Informação" }).click();
   await modal.getByLabel("Professor").click();
-  await page.getByRole("option", { name: "Ana Beatriz Moura" }).click();
+  await page.getByRole("option", { name: "Juliana Castro" }).click();
   await modal.getByLabel("Disciplina").click();
-  await page.getByRole("option", { name: /^Engenharia de Software/ }).click();
+  await page.getByRole("option", { name: /^Inteligência Artificial/ }).click();
   await modal.getByLabel("Turma").click();
   await page
     .getByRole("option", { name: "SI 8º semestre A", exact: true })

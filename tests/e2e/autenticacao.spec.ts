@@ -81,7 +81,7 @@ test("a administração reserva em nome de qualquer professor", async ({
   await page.click("#professorField");
 
   await expect(
-    page.getByRole("option", { name: "Ana Beatriz Moura" })
+    page.getByRole("option", { name: "Juliana Castro" })
   ).toBeVisible();
   await expect(
     page.getByRole("option", { name: "Marina Alves Prado" })

@@ -103,20 +103,39 @@ test("convidar recusa e-mail já cadastrado", async ({ page }) => {
 test("o master tem selo e nenhuma ação; outro admin pode ser gerenciado", async ({
   page,
 }) => {
-  await entrarComo(page, ADMIN);
-  await page.goto("/configuracoes/usuarios");
+  const { supabase } = clienteAdmin();
+  const email = `outro-admin-${Date.now()}@exemplo.edu.br`;
 
-  const master = page.locator(`[data-usuario="${ADMIN}"]`);
-  await expect(master.getByText("Master")).toBeVisible();
-  await expect(master.getByRole("button")).toHaveCount(0);
+  const { data: conta, error: falhaConta } =
+    await supabase.auth.admin.createUser({
+      email,
+      password: SENHA,
+      email_confirm: true,
+      user_metadata: { full_name: "Coordenação de teste" },
+    });
+  if (falhaConta) throw falhaConta;
 
-  const coordenacao = page.locator(
-    '[data-usuario="coordenacao@exemplo.edu.br"]',
-  );
-  await expect(coordenacao.getByText("Administrador")).toBeVisible();
-  await expect(
-    coordenacao.getByRole("button", { name: /Ações do usuário/ }),
-  ).toBeVisible();
+  try {
+    await supabase
+      .from("profiles")
+      .update({ role: "admin" })
+      .eq("id", conta.user.id);
+
+    await entrarComo(page, ADMIN);
+    await page.goto("/configuracoes/usuarios");
+
+    const master = page.locator(`[data-usuario="${ADMIN}"]`);
+    await expect(master.getByText("Master")).toBeVisible();
+    await expect(master.getByRole("button")).toHaveCount(0);
+
+    const outroAdmin = page.locator(`[data-usuario="${email}"]`);
+    await expect(outroAdmin.getByText("Administrador")).toBeVisible();
+    await expect(
+      outroAdmin.getByRole("button", { name: /Ações do usuário/ }),
+    ).toBeVisible();
+  } finally {
+    await supabase.auth.admin.deleteUser(conta.user.id);
+  }
 });
 
 test("excluir um usuário apaga o que o identificava", async ({ page }) => {

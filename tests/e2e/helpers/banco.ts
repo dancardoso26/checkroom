@@ -172,6 +172,60 @@ export async function listarRecursos() {
 export const PREFIXO_TESTE = "[e2e]";
 export const PREDIO_DE_TESTE = 99;
 
+export const AULA_DE_REFERENCIA = {
+  titulo: `${PREFIXO_TESTE} Aula de referência`,
+  professor: "Juliana Castro",
+  turma: "SI 8º semestre A",
+  disciplina: "Inteligência Artificial",
+};
+
+async function idPeloNome(tabela: string, nome: string): Promise<string> {
+  const { corpo } = await pedir(
+    `${tabela}?name=eq.${encodeURIComponent(nome)}&select=id`
+  );
+
+  if (corpo.length !== 1) {
+    throw new Error(`Esperava um único "${nome}" em ${tabela}; achei ${corpo.length}.`);
+  }
+  return corpo[0].id as string;
+}
+
+export async function criarAulaDeReferencia(
+  dia: string,
+  inicio = "13:00",
+  fim = "14:00"
+): Promise<string> {
+  const [professor, turma, disciplina, salas] = await Promise.all([
+    idPeloNome("professors", AULA_DE_REFERENCIA.professor),
+    idPeloNome("classes", AULA_DE_REFERENCIA.turma),
+    idPeloNome("subjects", AULA_DE_REFERENCIA.disciplina),
+    listarEspacos(),
+  ]);
+
+  for (const sala of salas) {
+    const { ok, corpo } = await pedir("bookings", {
+      method: "POST",
+      body: JSON.stringify({
+        room_id: sala.id,
+        professor_id: professor,
+        class_id: turma,
+        subject_id: disciplina,
+        purpose: AULA_DE_REFERENCIA.titulo,
+        starts_at: new Date(`${dia}T${inicio}:00-03:00`).toISOString(),
+        ends_at: new Date(`${dia}T${fim}:00-03:00`).toISOString(),
+        created_by: await algumPerfil(),
+      }),
+    });
+
+    if (ok) return corpo[0].id as string;
+    if (!String(corpo?.message).includes("bookings_no_room_overlap")) {
+      throw new Error(`Não foi possível criar a aula de referência: ${corpo?.message}`);
+    }
+  }
+
+  throw new Error(`Nenhum espaço livre em ${dia} das ${inicio} às ${fim}.`);
+}
+
 export async function limparReservasDeTeste() {
   await pedir(`bookings?purpose=like.${encodeURIComponent(PREFIXO_TESTE)}*`, {
     method: "DELETE",

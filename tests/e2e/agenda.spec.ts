@@ -1,5 +1,10 @@
 import { test, expect } from "@playwright/test";
 import { ADMIN, entrarComo } from "./helpers/autenticacao";
+import {
+  apagarReserva,
+  AULA_DE_REFERENCIA,
+  criarAulaDeReferencia,
+} from "./helpers/banco";
 
 function proximaSegunda(): string {
   const hoje = new Date();
@@ -14,6 +19,17 @@ function proximaSegunda(): string {
 
 const SEGUNDA = proximaSegunda();
 const SEMANA = `/reservas?visao=calendario&escala=semana&data=${SEGUNDA}`;
+const AULA = "Aula de referência";
+
+let aulaDeReferencia: string;
+
+test.beforeAll(async () => {
+  aulaDeReferencia = await criarAulaDeReferencia(SEGUNDA);
+});
+
+test.afterAll(async () => {
+  await apagarReserva(aulaDeReferencia);
+});
 
 test.beforeEach(async ({ page }) => {
   await entrarComo(page, ADMIN);
@@ -67,13 +83,13 @@ test("o botão de criar fica na linha do título, e a pesquisa com os filtros ab
   expect(pesquisa - titulo).toBeGreaterThan(20);
 });
 
-test("mostra a reserva do seed no dia e no horário dela", async ({ page }) => {
+test("mostra a reserva no dia e no horário dela", async ({ page }) => {
   await page.goto(SEMANA);
 
   await expect(
     page
       .locator(`[data-dia="${SEGUNDA}"] [data-reserva]`)
-      .filter({ hasText: "Aula de Engenharia de Software" })
+      .filter({ hasText: AULA })
   ).toBeVisible();
 });
 
@@ -155,17 +171,12 @@ test("clicar numa reserva abre o detalhe com as ações", async ({ page }) => {
   await page.goto(SEMANA);
   await page.waitForLoadState("networkidle");
 
-  await page
-    .locator("[data-reserva]")
-    .filter({ hasText: "Aula de Engenharia de Software" })
-    .click();
+  await page.locator("[data-reserva]").filter({ hasText: AULA }).click();
 
-  const detalhe = page.getByRole("dialog", {
-    name: "Aula de Engenharia de Software",
-  });
+  const detalhe = page.getByRole("dialog", { name: AULA });
 
   await expect(detalhe).toBeVisible();
-  await expect(detalhe.getByText("Ana Beatriz Moura")).toBeVisible();
+  await expect(detalhe.getByText(AULA_DE_REFERENCIA.professor)).toBeVisible();
   await expect(
     detalhe.getByRole("button", { name: "Cancelar reserva" })
   ).toBeVisible();
@@ -174,15 +185,13 @@ test("clicar numa reserva abre o detalhe com as ações", async ({ page }) => {
 
 test("a tabela mostra reservas de qualquer período", async ({ page }) => {
   await page.goto(
-    "/reservas?visao=tabela&escala=semana&data=2025-01-06&ordenar=data&sentido=asc"
+    `/reservas?visao=tabela&escala=semana&data=2025-01-06&q=${encodeURIComponent(AULA)}`
   );
 
   await expect(
     page.getByRole("heading", { name: "Reservas", exact: true })
   ).toBeVisible();
-  await expect(
-    page.getByRole("row").filter({ hasText: "Aula de Engenharia de Software" })
-  ).toBeVisible();
+  await expect(page.getByRole("row").filter({ hasText: AULA })).toBeVisible();
 });
 
 test("clicar no cabeçalho inverte a ordenação", async ({ page }) => {
@@ -267,7 +276,7 @@ test("o mês mostra a reserva e leva ao dia", async ({ page }) => {
   await expect(
     page
       .locator(`[data-dia="${SEGUNDA}"] [data-reserva]`)
-      .filter({ hasText: "Aula de Engenharia de Software" })
+      .filter({ hasText: AULA })
   ).toBeVisible();
 
   await page.getByRole("button", { name: `Ver o dia ${SEGUNDA}` }).click();
