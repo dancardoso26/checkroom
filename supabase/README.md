@@ -7,6 +7,35 @@ define o banco vive aqui, versionado, e não apenas dentro do painel do Supabase
 Quem clonar este repositório consegue reconstruir o banco inteiro do zero
 executando os arquivos abaixo na ordem.
 
+## Duas pastas, dois propósitos
+
+| Pasta | Para quê |
+|---|---|
+| `migrations/` | **Executar.** O histórico de todas as mudanças, em ordem. Uma função alterada três vezes aparece em três arquivos, e vale a do mais recente |
+| `estado-atual/` | **Ler.** A foto do banco hoje, um arquivo por assunto, já na versão final. Não é executada |
+
+Para entender uma regra do banco, abra `estado-atual/`. Cada arquivo junta a
+tabela, as constraints, as funções, as políticas de RLS e os gatilhos do
+assunto:
+
+| Arquivo | Conteúdo |
+|---|---|
+| `reservas.sql` | `bookings` e recursos da reserva, sobreposição, `travar_espaco`, `create_booking`, `cancel_booking` |
+| `palestras.sql` | palestras, cursos de destino, inscrições, `cadastrar_palestra`, `inscrever_em_palestra` |
+| `chamados.sql` | `tickets` e as transições assumir, devolver, resolver, cancelar e excluir |
+| `usuarios-e-permissoes.sql` | `profiles`, papéis, funções de permissão (`eh_admin`, `papel_atual`...), troca de papel e anonimização |
+| `cadastros.sql` | cursos, professores, turmas, disciplinas, vínculos, espaços e recursos |
+| `calendario.sql` | períodos letivos e bloqueios do calendário |
+| `auditoria.sql` | `audit_logs` e a função `log_audit_event` usada pelos gatilhos |
+| `tempo-real.sql` | tabelas publicadas no Realtime |
+
+O nome do arquivo segue o assunto do código: `app/(sistema)/chamados/acoes.ts`,
+`domain/chamados/`, `lib/repositories/repositorio-de-chamados.ts` e
+`supabase/estado-atual/chamados.sql`.
+
+Toda migration nova precisa refletir aqui: o objeto alterado é atualizado no
+arquivo do assunto correspondente.
+
 ## Ordem de aplicação
 
 Abra o **SQL Editor** do projeto no Supabase e execute um arquivo por vez, na

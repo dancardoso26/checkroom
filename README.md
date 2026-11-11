@@ -317,7 +317,8 @@ src/
   app/reservas/formulario/ o painel de nova reserva e suas seções
   app/reservas/acoes/      criar, cancelar, excluir e notificar (Server Actions)
   app/reservas/            a página da agenda
-supabase/migrations/  o esquema do banco, versionado
+supabase/migrations/  o esquema do banco, versionado (o que é executado)
+supabase/estado-atual/ a versão atual do banco, um arquivo por assunto (para leitura)
 tests/e2e/            navegador e banco reais
 ```
 
