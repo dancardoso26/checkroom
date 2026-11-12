@@ -46,9 +46,19 @@ alter table public.lecture_enrollments enable row level security;
 grant select, delete on public.lectures to authenticated;
 grant select on public.lecture_courses, public.lecture_enrollments to authenticated;
 
-create policy "palestra visivel fora da TI" on public.lectures
+create policy "palestra visivel conforme o papel" on public.lectures
   for select to authenticated
-  using (public.papel_atual() is distinct from 'it_support');
+  using (
+    public.papel_atual() is distinct from 'it_support'
+    and (
+      not public.eh_aluno()
+      or exists (
+        select 1 from public.lecture_courses lc
+         where lc.lecture_id = lectures.id
+           and lc.course_id = public.curso_atual()
+      )
+    )
+  );
 
 create policy "admin exclui palestra" on public.lectures
   for delete to authenticated using (public.eh_admin());

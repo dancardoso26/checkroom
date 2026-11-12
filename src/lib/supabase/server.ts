@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./database.types";
+import { OPCOES_DO_COOKIE_DE_SESSAO } from "./opcoes-de-cookie";
 
 function exigirVariavel(nome: string): string {
   const valor = process.env[nome];
@@ -22,6 +23,7 @@ export async function createSupabaseServerClient() {
   const cookieStore = await cookies();
 
   return createServerClient<Database>(url, publishableKey, {
+    cookieOptions: OPCOES_DO_COOKIE_DE_SESSAO,
     cookies: {
       getAll: () => cookieStore.getAll(),
       setAll: (cookiesToSet) => {

@@ -88,19 +88,20 @@ const SECOES: Secao[] = [
             ],
             [
               "Aluno",
-              "Consultar a agenda e as palestras do seu curso, inscrever-se nelas enquanto houver vagas e cancelar a inscrição antes do início.",
+              "Consultar a agenda da sua turma e as palestras do seu curso, inscrever-se nelas enquanto houver vagas e cancelar a inscrição antes do início.",
             ],
             [
               "Equipe de TI",
-              "Consultar a agenda e atender os chamados de suporte: assumir, registrar a solução e resolver.",
+              "Atender os chamados de suporte: assumir, devolver à fila, registrar a solução e resolver. A equipe de TI não consulta a agenda nem as palestras.",
             ],
           ]}
         />
         <p>
           Um dos administradores é o <strong>administrador master</strong>,
-          responsável pelo sistema. A conta dele não pode ser cancelada,
-          desativada nem ter o perfil alterado, para que o sistema nunca fique
-          sem quem o administre.
+          responsável pelo sistema. Além do que os demais administradores
+          fazem, ele também atende e exclui chamados de suporte. A conta dele
+          não pode ser cancelada, desativada nem ter o perfil alterado, para
+          que o sistema nunca fique sem quem o administre.
         </p>
         <p>
           Essas permissões são aplicadas pelo servidor e pelo banco de dados, e

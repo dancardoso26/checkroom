@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
 import { dispensaSegundoFator } from "@/domain/auth/segundo-fator";
+import { OPCOES_DO_COOKIE_DE_SESSAO } from "@/lib/supabase/opcoes-de-cookie";
 
 const ROTAS_LIVRES = [
   "/termos",
@@ -27,6 +28,7 @@ export async function proxy(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
+      cookieOptions: OPCOES_DO_COOKIE_DE_SESSAO,
       cookies: {
         getAll: () => request.cookies.getAll(),
         setAll: (cookiesToSet) => {

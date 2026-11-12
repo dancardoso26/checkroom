@@ -68,8 +68,8 @@ const SECOES: Secao[] = [
               "Execução de contrato (inciso V)",
             ],
             [
-              "Curso (alunos)",
-              "Mostrar ao aluno as palestras do seu curso, permitir a inscrição nelas e enviar o aviso de palestra nova.",
+              "Curso e turma (alunos)",
+              "Mostrar ao aluno a agenda da sua turma e as palestras do seu curso, permitir a inscrição nelas, enviar o aviso de palestra nova e contar quantos alunos tem cada turma, para conferir se o espaço comporta a turma.",
               "Execução de contrato (inciso V)",
             ],
             [
@@ -103,9 +103,8 @@ const SECOES: Secao[] = [
           <strong>O que o sistema não coleta.</strong> Não há dados pessoais
           sensíveis (LGPD, art. 5º, II), nem CPF, data de nascimento, endereço,
           telefone, fotografia ou documentos. Dos alunos com conta, o sistema
-          guarda apenas nome, e-mail e curso; o tamanho de cada turma continua
-          sendo só um número, usado para conferir se o espaço comporta a
-          turma.
+          guarda apenas nome, e-mail, curso e turma. Notas, frequência e
+          desempenho não existem no sistema.
         </p>
         <p>
           <strong>Cookies.</strong> O sistema usa apenas os cookies que mantêm a
@@ -139,7 +138,7 @@ const SECOES: Secao[] = [
             ],
             [
               "Vercel",
-              "Hospedagem da aplicação, quando ela for publicada.",
+              "Hospedagem da aplicação, na região de São Paulo.",
               "Os dados que trafegam nas requisições.",
             ],
           ]}
@@ -152,12 +151,11 @@ const SECOES: Secao[] = [
     titulo: "Transferência internacional",
     conteudo: (
       <p>
-        O banco de dados e o envio de e-mail funcionam em servidores no Brasil.
-        As três empresas, porém, têm sede nos Estados Unidos, e a hospedagem da
-        aplicação poderá processar requisições fora do país, conforme a região
-        escolhida na publicação. Nesses casos, a transferência se apoia nas
-        cláusulas contratuais de proteção de dados oferecidas por essas
-        empresas.
+        O banco de dados, o envio de e-mail e a hospedagem da aplicação
+        funcionam em servidores em São Paulo. As três empresas, porém, têm sede
+        nos Estados Unidos, e suas equipes podem acessar os dados para suporte
+        e manutenção. Nesses casos, a transferência se apoia nas cláusulas
+        contratuais de proteção de dados oferecidas por essas empresas.
       </p>
     ),
   },
@@ -222,7 +220,7 @@ const SECOES: Secao[] = [
             ],
             [
               "Correção",
-              "Pedindo à administração do sistema, porque nome, curso e vínculo de professor são dados institucionais.",
+              "Pedindo à administração do sistema, porque nome, curso, turma e vínculo de professor são dados institucionais.",
             ],
             [
               "Eliminação",
@@ -237,6 +235,7 @@ const SECOES: Secao[] = [
         <p>
           <strong>O que o cancelamento apaga.</strong> O nome é substituído em
           todo o sistema, o cadastro de professor ligado à conta é anonimizado, o
+          curso e a turma do aluno são desvinculados, o
           e-mail é apagado da trilha de auditoria, as reservas futuras são
           canceladas, as inscrições em palestras futuras são removidas, os
           chamados ainda abertos são cancelados e o acesso é encerrado. As reservas já realizadas e os
