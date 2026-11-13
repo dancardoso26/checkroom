@@ -81,7 +81,7 @@ guarda, e a [matriz de perfis](matriz-de-perfis.md), o que cada papel lê.
 
 O CheckRoom não trata dados sensíveis (LGPD, art. 5º, II), nem dados
 financeiros, de crianças ou de documentos. O risco de um vazamento é,
-principalmente, de exposição de nome, e-mail institucional e rotina de aulas.
+principalmente, de exposição de nome, e-mail e rotina de aulas.
 Fica mais alto quando:
 
 - envolve senhas ou segredos de segundo fator, o que permitiria usar a conta;

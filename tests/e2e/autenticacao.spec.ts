@@ -12,7 +12,7 @@ test("exige login para chegar à agenda", async ({ page }) => {
   await page.goto("/reservas");
 
   await expect(page).toHaveURL(/\/login/);
-  await expect(page.getByLabel("E-mail institucional")).toBeVisible();
+  await expect(page.getByLabel("E-mail", { exact: true })).toBeVisible();
 });
 
 test("guarda o destino pedido antes do login", async ({ page }) => {

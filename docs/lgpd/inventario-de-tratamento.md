@@ -10,7 +10,7 @@ Versão 1.1: alunos como titulares (palestras) e chamados de suporte.
 
 ## Dados tratados
 
-### Nome e e-mail institucional
+### Nome e e-mail
 
 - **De quem**: professores, pessoal da administração, equipe de TI e alunos.
 - **Onde é coletado**: não há coleta pelo titular nem cadastro aberto. A
@@ -163,7 +163,7 @@ documento digitalizado, dado de saúde, dado financeiro nem biometria. Não há
 dados de crianças e adolescentes: os titulares são professores, pessoal
 administrativo e alunos de ensino superior. Não há uso de inteligência artificial sobre dados pessoais.
 
-Dos alunos, o sistema guarda apenas nome, e-mail institucional, curso e
+Dos alunos, o sistema guarda apenas nome, e-mail, curso e
 turma, o mínimo para mostrar a agenda da turma, liberar a inscrição em
 palestras e enviar o aviso de palestra nova. Notas, frequência e desempenho não
 existem no sistema.

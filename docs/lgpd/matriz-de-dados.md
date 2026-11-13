@@ -7,7 +7,7 @@ Política de Privacidade publicada em `/privacidade`.
 | Dado | Finalidade | Hipótese legal | Quem acessa | Compartilhado com | Retenção | Destino |
 |---|---|---|---|---|---|---|
 | Nome | Identificar o responsável pela atividade e por cada operação | Execução de contrato (art. 7º, V) | Titular e administração; professores veem o nome do responsável na agenda | Supabase, Resend | Enquanto a conta existir | Anonimização |
-| E-mail institucional | Autenticar, convidar, recuperar a senha e enviar os avisos | Execução de contrato (art. 7º, V) | Titular e administração | Supabase, Resend | Enquanto a conta existir | Trocado por endereço sem correspondência real |
+| E-mail | Autenticar, convidar, recuperar a senha e enviar os avisos | Execução de contrato (art. 7º, V) | Titular e administração | Supabase, Resend | Enquanto a conta existir | Trocado por endereço sem correspondência real |
 | Senha | Autenticar o acesso | Execução de contrato (art. 7º, V) | Ninguém: armazenada como resumo criptográfico | Supabase | Enquanto a conta existir | Conta bloqueada |
 | Segundo fator | Confirmar identidade a cada acesso | Legítimo interesse em segurança (art. 7º, IX) | Ninguém: o segredo não é exibido após o cadastro | Supabase | Enquanto a conta existir | Conta bloqueada |
 | Papel no sistema | Decidir o que cada pessoa pode fazer | Execução de contrato (art. 7º, V) | Titular e administração | Supabase | Enquanto a conta existir | Mantido, sem nome |

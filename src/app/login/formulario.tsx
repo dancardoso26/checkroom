@@ -33,7 +33,7 @@ export function FormularioDeLogin({ proximo }: { proximo?: string }) {
       <input type="hidden" name="proximo" value={proximo ?? ""} />
 
       <div className="space-y-2">
-        <Label htmlFor="email">E-mail institucional</Label>
+        <Label htmlFor="email">E-mail</Label>
         <Input
           id="email"
           name="email"
