@@ -88,7 +88,8 @@ dependem da extensão.
 | 42 | `migrations/20261116000000_agenda_do_professor_restrita.sql` | Cria `leciona_na_turma()`; o professor só lê as reservas dele, as que registrou e as das turmas em que leciona no período |
 | 43 | `migrations/20261116000100_segundo_fator_no_banco.sql` | Exige o segundo fator (`aal2`) no banco: gancho `exigir_segundo_fator` antes de toda chamada à API de dados e política restritiva em todas as tabelas, que vale também para o Realtime |
 | 44 | `migrations/20261116000200_resposta_403_do_segundo_fator.sql` | Corrige o erro do gancho para responder 403 em vez de 500 |
-| 45 | `seed.sql` | Popula o mundo acadêmico (opcional, só em desenvolvimento) |
+| 45 | `migrations/20261116000300_professor_reserva_para_suas_turmas.sql` | O professor só grava reserva, de qualquer atividade, para as turmas em que leciona no período |
+| 46 | `seed.sql` | Popula o mundo acadêmico (opcional, só em desenvolvimento) |
 
 Depois do `seed.sql`, rode no terminal:
 

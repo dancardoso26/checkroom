@@ -53,6 +53,9 @@ export function descreverViolacao(
             violacao.conflito.finalidade
           }", em ${periodoDe(violacao.conflito)}.`;
 
+    case "TURMA_SEM_VINCULO":
+      return "O professor só pode reservar para as turmas em que leciona neste período.";
+
     case "DISCIPLINA_OBRIGATORIA":
       return "Informe a disciplina da aula.";
 

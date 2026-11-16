@@ -116,8 +116,14 @@ create policy "agenda visivel conforme o papel" on public.bookings
 create policy "cria a propria reserva" on public.bookings
   for insert to authenticated
   with check (
-    created_by = auth.uid()
-    and (public.eh_admin() or professor_id = public.professor_atual())
+    created_by = (select auth.uid())
+    and (
+      public.eh_admin()
+      or (
+        professor_id = public.professor_atual()
+        and public.leciona_na_turma(class_id, starts_at)
+      )
+    )
   );
 
 create policy "altera a propria reserva" on public.bookings

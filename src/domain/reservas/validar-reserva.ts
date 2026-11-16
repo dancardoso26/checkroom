@@ -141,6 +141,14 @@ export function validarReserva(
     violacoes.push({ codigo: "CONFLITO_DE_TURMA", conflito: conflitoDeTurma });
   }
 
+  if (
+    pedido.tipoDeAtividade !== "class" &&
+    contexto.turmasDoProfessor &&
+    !contexto.turmasDoProfessor.includes(pedido.turmaId)
+  ) {
+    violacoes.push({ codigo: "TURMA_SEM_VINCULO" });
+  }
+
   if (pedido.tipoDeAtividade === "class") {
     if (pedido.disciplinaId === null) {
       violacoes.push({ codigo: "DISCIPLINA_OBRIGATORIA" });

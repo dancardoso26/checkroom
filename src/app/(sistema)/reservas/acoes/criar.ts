@@ -19,7 +19,10 @@ import {
   gravarReserva,
   buscarCandidatosAConflito,
 } from "@/lib/repositories/repositorio-de-reservas";
-import { buscarVinculoDocente } from "@/lib/repositories/repositorio-de-disciplinas";
+import {
+  buscarVinculoDocente,
+  listarTurmasDoProfessor,
+} from "@/lib/repositories/repositorio-de-disciplinas";
 import { PERIODO_LETIVO_VIGENTE } from "@/domain/reservas/expediente";
 import { carregarCalendarioDoDia } from "@/lib/repositories/repositorio-do-calendario";
 import { exigirSessao } from "@/lib/sessao";
@@ -125,20 +128,30 @@ export async function criarReserva(
   };
 
   const calendario = await carregarCalendarioDoDia(entrada.data);
+  const periodo = calendario.periodo?.codigo ?? PERIODO_LETIVO_VIGENTE;
 
-  const [espaco, turma, ocupacoesEmConflito, recursos, vinculo] =
-    await Promise.all([
-      buscarEspacoParaReserva(pedido.espacoId),
-      buscarTurmaParaReserva(pedido.turmaId),
-      buscarCandidatosAConflito(pedido),
-      listarRecursos(),
-      buscarVinculoDocente({
-        professorId: pedido.professorId,
-        disciplinaId: pedido.disciplinaId,
-        turmaId: pedido.turmaId,
-        periodo: calendario.periodo?.codigo ?? PERIODO_LETIVO_VIGENTE,
-      }),
-    ]);
+  const [
+    espaco,
+    turma,
+    ocupacoesEmConflito,
+    recursos,
+    vinculo,
+    turmasDoProfessor,
+  ] = await Promise.all([
+    buscarEspacoParaReserva(pedido.espacoId),
+    buscarTurmaParaReserva(pedido.turmaId),
+    buscarCandidatosAConflito(pedido),
+    listarRecursos(),
+    buscarVinculoDocente({
+      professorId: pedido.professorId,
+      disciplinaId: pedido.disciplinaId,
+      turmaId: pedido.turmaId,
+      periodo,
+    }),
+    sessao.papel === "professor"
+      ? listarTurmasDoProfessor(pedido.professorId, periodo)
+      : Promise.resolve(null),
+  ]);
 
   const nomesDosRecursos = mapaDeNomesDosRecursos(recursos);
 
@@ -151,6 +164,7 @@ export async function criarReserva(
     ocupacoes: ocupacoesEmConflito,
     agora,
     calendario,
+    turmasDoProfessor,
   });
 
   if (!veredito.valida) {
@@ -183,6 +197,7 @@ export async function criarReserva(
       ocupacoes: conflitosAtuais,
       agora,
       calendario,
+      turmasDoProfessor,
     });
 
     if (!revalidacao.valida) {
