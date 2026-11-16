@@ -1,12 +1,12 @@
 import "server-only";
 
 import type { DadosDaPalestra, Ocupacao } from "@/domain/palestras/palestra";
-import type { ExistingBooking } from "@/domain/booking/types";
-import type { BookingListItem } from "./repositorio-de-reservas";
+import type { OcupacaoExistente } from "@/domain/reservas/tipos";
+import type { ReservaDaLista } from "./repositorio-de-reservas";
 import {
-  createSupabaseServerClient,
-  supabaseAdmin,
-} from "@/lib/supabase/server";
+  criarClienteDoServidor,
+  clienteAdministrativo,
+} from "@/lib/supabase/servidor";
 
 import { classificarErro, type ResultadoDaExclusao } from "./erros";
 
@@ -27,7 +27,7 @@ export type PalestraItem = {
 async function contarInscritos(ids: string[]): Promise<Map<string, number>> {
   if (ids.length === 0) return new Map();
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = await criarClienteDoServidor();
   const { data, error } = await supabase.rpc("inscritos_por_palestra", {
     p_palestras: ids,
   });
@@ -40,7 +40,7 @@ async function contarInscritos(ids: string[]): Promise<Map<string, number>> {
 export async function listarPalestras(filtro: {
   aPartirDe: Date | null;
 }): Promise<PalestraItem[]> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await criarClienteDoServidor();
 
   let consulta = supabase
     .from("lectures")
@@ -79,7 +79,7 @@ export async function listarPalestras(filtro: {
 export async function minhasInscricoes(
   profileId: string,
 ): Promise<Set<string>> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await criarClienteDoServidor();
 
   const { data, error } = await supabase
     .from("lecture_enrollments")
@@ -96,7 +96,7 @@ export async function ocupacoesDoEspaco(
   inicio: Date,
   fim: Date,
 ): Promise<Ocupacao[]> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await criarClienteDoServidor();
 
   const [reservas, palestras] = await Promise.all([
     supabase
@@ -132,20 +132,21 @@ export async function ocupacoesDoEspaco(
   ];
 }
 
-export async function palestrasComoOcupacao(params: {
+export async function palestrasComoOcupacao(parametros: {
   inicio: Date;
   fim: Date;
   espacoId?: string;
-}): Promise<ExistingBooking[]> {
-  const supabase = await createSupabaseServerClient();
+}): Promise<OcupacaoExistente[]> {
+  const supabase = await criarClienteDoServidor();
 
   let consulta = supabase
     .from("lectures")
     .select("id, room_id, title, starts_at, ends_at")
-    .lt("starts_at", params.fim.toISOString())
-    .gt("ends_at", params.inicio.toISOString());
+    .lt("starts_at", parametros.fim.toISOString())
+    .gt("ends_at", parametros.inicio.toISOString());
 
-  if (params.espacoId) consulta = consulta.eq("room_id", params.espacoId);
+  if (parametros.espacoId)
+    consulta = consulta.eq("room_id", parametros.espacoId);
 
   const { data, error } = await consulta;
 
@@ -154,12 +155,12 @@ export async function palestrasComoOcupacao(params: {
 
   return data.map((p) => ({
     id: `palestra:${p.id}`,
-    roomId: p.room_id,
+    espacoId: p.room_id,
     professorId: "",
-    classId: "",
-    purpose: `Palestra: ${p.title}`,
-    startsAt: new Date(p.starts_at),
-    endsAt: new Date(p.ends_at),
+    turmaId: "",
+    finalidade: `Palestra: ${p.title}`,
+    inicio: new Date(p.starts_at),
+    fim: new Date(p.ends_at),
   }));
 }
 
@@ -174,7 +175,7 @@ export async function cadastrarPalestra(
   dados: DadosDaPalestra,
   palestranteProfessorId: string | null = null,
 ): Promise<ResultadoDoCadastro> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await criarClienteDoServidor();
 
   const { data, error } = await supabase.rpc("cadastrar_palestra", {
     p_titulo: dados.titulo,
@@ -218,14 +219,14 @@ export async function avisoDePalestraExcluida(
   id: string,
 ): Promise<AvisoDePalestraExcluida | null> {
   const [palestra, inscricoes] = await Promise.all([
-    supabaseAdmin
+    clienteAdministrativo
       .from("lectures")
       .select(
         "title, speaker, speaker_professor_id, starts_at, ends_at, rooms(name)",
       )
       .eq("id", id)
       .maybeSingle(),
-    supabaseAdmin
+    clienteAdministrativo
       .from("lecture_enrollments")
       .select("profile_id")
       .eq("lecture_id", id),
@@ -237,7 +238,7 @@ export async function avisoDePalestraExcluida(
   let emailsDosInscritos: string[] = [];
 
   if (inscritos.size > 0) {
-    const { data, error } = await supabaseAdmin.auth.admin.listUsers({
+    const { data, error } = await clienteAdministrativo.auth.admin.listUsers({
       perPage: 1000,
     });
 
@@ -264,7 +265,7 @@ export async function avisoDePalestraExcluida(
 export async function excluirPalestra(
   id: string,
 ): Promise<ResultadoDaExclusao> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await criarClienteDoServidor();
 
   const { data, error } = await supabase
     .from("lectures")
@@ -279,40 +280,40 @@ export async function excluirPalestra(
 }
 
 export async function inscrever(palestraId: string): Promise<string> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await criarClienteDoServidor();
   const { data, error } = await supabase.rpc("inscrever_em_palestra", {
     p_palestra: palestraId,
   });
 
   if (error) {
     console.error("Falha ao inscrever:", error);
-    return "error";
+    return "erro";
   }
   return data;
 }
 
 export async function cancelarInscricao(palestraId: string): Promise<string> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await criarClienteDoServidor();
   const { data, error } = await supabase.rpc("cancelar_inscricao", {
     p_palestra: palestraId,
   });
 
   if (error) {
     console.error("Falha ao cancelar a inscrição:", error);
-    return "error";
+    return "erro";
   }
   return data;
 }
 
 export async function emailsDosAlunos(cursoIds: string[]): Promise<string[]> {
   const [perfis, contas] = await Promise.all([
-    supabaseAdmin
+    clienteAdministrativo
       .from("profiles")
       .select("id")
       .eq("role", "student")
       .is("anonymized_at", null)
       .in("course_id", cursoIds),
-    supabaseAdmin.auth.admin.listUsers({ perPage: 1000 }),
+    clienteAdministrativo.auth.admin.listUsers({ perPage: 1000 }),
   ]);
 
   if (perfis.error || contas.error) {
@@ -337,8 +338,8 @@ export async function palestrasNaAgenda(
   fim: Date,
   escopo: { cursoId: string | null } | null = null,
   professorIds: string[] = [],
-): Promise<BookingListItem[]> {
-  const supabase = await createSupabaseServerClient();
+): Promise<ReservaDaLista[]> {
+  const supabase = await criarClienteDoServidor();
 
   let consulta = supabase
     .from("lectures")
@@ -385,23 +386,23 @@ export async function palestrasNaAgenda(
 
   return visiveis.map((p) => ({
     id: `palestra:${p.id}`,
-    purpose: p.title,
-    activityType: "lecture" as const,
-    startsAt: new Date(p.starts_at),
-    endsAt: new Date(p.ends_at),
-    roomId: p.room_id,
-    roomName: p.rooms.name,
-    building: p.rooms.building,
-    professorName: p.speaker,
-    className: p.lecture_courses
+    finalidade: p.title,
+    tipoDeAtividade: "lecture" as const,
+    inicio: new Date(p.starts_at),
+    fim: new Date(p.ends_at),
+    espacoId: p.room_id,
+    nomeDoEspaco: p.rooms.name,
+    predio: p.rooms.building,
+    nomeDoProfessor: p.speaker,
+    nomeDaTurma: p.lecture_courses
       .map((c) => c.courses.name)
       .sort()
       .join(", "),
-    subjectName: null,
-    resourceNames: [],
-    cancelled: false,
-    cancellationReason: null,
-    createdBy: "",
+    nomeDaDisciplina: null,
+    nomesDosRecursos: [],
+    cancelada: false,
+    motivoDoCancelamento: null,
+    criadaPor: "",
     professorId: "",
     ehPalestra: true,
     inscrito:
@@ -421,7 +422,7 @@ export type InscritoDaPalestra = {
 export async function listarInscritos(
   palestraId: string,
 ): Promise<InscritoDaPalestra[]> {
-  const { data: inscricoes, error } = await supabaseAdmin
+  const { data: inscricoes, error } = await clienteAdministrativo
     .from("lecture_enrollments")
     .select("profile_id, enrolled_at")
     .eq("lecture_id", palestraId)
@@ -433,12 +434,12 @@ export async function listarInscritos(
   const ids = inscricoes.map((i) => i.profile_id);
 
   const [perfis, cursos, contas] = await Promise.all([
-    supabaseAdmin
+    clienteAdministrativo
       .from("profiles")
       .select("id, full_name, course_id")
       .in("id", ids),
-    supabaseAdmin.from("courses").select("id, name"),
-    supabaseAdmin.auth.admin.listUsers({ perPage: 1000 }),
+    clienteAdministrativo.from("courses").select("id, name"),
+    clienteAdministrativo.auth.admin.listUsers({ perPage: 1000 }),
   ]);
 
   if (perfis.error) throw perfis.error;

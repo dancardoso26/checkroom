@@ -1,6 +1,6 @@
 import "server-only";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { RoomSnapshot } from "@/domain/booking/types";
+import { criarClienteDoServidor } from "@/lib/supabase/servidor";
+import type { EspacoParaReserva } from "@/domain/reservas/tipos";
 import type { DadosDoEspaco, TipoDeEspaco } from "@/domain/espacos/espaco";
 import {
   classificarErro,
@@ -8,42 +8,42 @@ import {
   type ResultadoDaGravacao,
 } from "./erros";
 
-export async function findRoomSnapshot(
-  roomId: string
-): Promise<RoomSnapshot | null> {
-  const supabase = await createSupabaseServerClient();
+export async function buscarEspacoParaReserva(
+  espacoId: string,
+): Promise<EspacoParaReserva | null> {
+  const supabase = await criarClienteDoServidor();
 
   const { data, error } = await supabase
     .from("rooms")
     .select("id, name, building, capacity, room_resources(resource_id)")
-    .eq("id", roomId)
+    .eq("id", espacoId)
     .maybeSingle();
 
   if (error) {
-    throw new Error(`Falha ao carregar o espaço ${roomId}: ${error.message}`);
+    throw new Error(`Falha ao carregar o espaço ${espacoId}: ${error.message}`);
   }
 
   if (!data) return null;
 
   return {
     id: data.id,
-    name: data.name,
-    building: data.building,
-    capacity: data.capacity,
-    resourceIds: data.room_resources.map((vinculo) => vinculo.resource_id),
+    nome: data.name,
+    predio: data.building,
+    capacidade: data.capacity,
+    recursoIds: data.room_resources.map((vinculo) => vinculo.resource_id),
   };
 }
 
-export type RoomOption = {
+export type OpcaoDeEspaco = {
   id: string;
-  name: string;
-  building: string;
-  capacity: number;
-  resourceIds: string[];
+  nome: string;
+  predio: string;
+  capacidade: number;
+  recursoIds: string[];
 };
 
-export async function listRooms(): Promise<RoomOption[]> {
-  const supabase = await createSupabaseServerClient();
+export async function listarEspacos(): Promise<OpcaoDeEspaco[]> {
+  const supabase = await criarClienteDoServidor();
 
   const { data, error } = await supabase
     .from("rooms")
@@ -56,12 +56,12 @@ export async function listRooms(): Promise<RoomOption[]> {
     throw new Error(`Falha ao listar os espaços: ${error.message}`);
   }
 
-  return data.map((room) => ({
-    id: room.id,
-    name: room.name,
-    building: room.building,
-    capacity: room.capacity,
-    resourceIds: room.room_resources.map((vinculo) => vinculo.resource_id),
+  return data.map((espaco) => ({
+    id: espaco.id,
+    nome: espaco.name,
+    predio: espaco.building,
+    capacidade: espaco.capacity,
+    recursoIds: espaco.room_resources.map((vinculo) => vinculo.resource_id),
   }));
 }
 
@@ -77,12 +77,12 @@ export type EspacoGerenciado = {
 };
 
 export async function listarEspacosParaGestao(): Promise<EspacoGerenciado[]> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await criarClienteDoServidor();
 
   const { data, error } = await supabase
     .from("rooms")
     .select(
-      "id, name, building_number, floor, room_number, capacity, room_type, room_resources(resource_id)"
+      "id, name, building_number, floor, room_number, capacity, room_type, room_resources(resource_id)",
     )
     .order("building_number")
     .order("floor")
@@ -90,22 +90,22 @@ export async function listarEspacosParaGestao(): Promise<EspacoGerenciado[]> {
 
   if (error) throw new Error(`Falha ao listar os espaços: ${error.message}`);
 
-  return data.map((room) => ({
-    id: room.id,
-    codigo: room.name,
-    predio: room.building_number,
-    andar: room.floor,
-    sala: room.room_number,
-    capacidade: room.capacity,
-    tipo: room.room_type,
-    recursoIds: room.room_resources.map((vinculo) => vinculo.resource_id),
+  return data.map((espaco) => ({
+    id: espaco.id,
+    codigo: espaco.name,
+    predio: espaco.building_number,
+    andar: espaco.floor,
+    sala: espaco.room_number,
+    capacidade: espaco.capacity,
+    tipo: espaco.room_type,
+    recursoIds: espaco.room_resources.map((vinculo) => vinculo.resource_id),
   }));
 }
 
 export async function salvarEspaco(
-  dados: DadosDoEspaco
+  dados: DadosDoEspaco,
 ): Promise<ResultadoDaGravacao> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await criarClienteDoServidor();
 
   const { data, error } = await supabase.rpc("salvar_espaco", {
     p_id: dados.id,
@@ -129,7 +129,7 @@ export async function salvarEspaco(
 }
 
 export async function excluirEspaco(id: string): Promise<ResultadoDaExclusao> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await criarClienteDoServidor();
 
   const { data, error } = await supabase
     .from("rooms")

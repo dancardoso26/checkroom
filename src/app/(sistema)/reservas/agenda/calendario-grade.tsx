@@ -5,11 +5,8 @@ import { useEffect, useRef, useState } from "react";
 import {
   ABERTURA_EM_MINUTOS,
   FECHAMENTO_EM_MINUTOS,
-} from "@/domain/booking/businessHours";
-import {
-  horaParaMinutos,
-  minutosParaHora,
-} from "@/domain/booking/businessHours";
+} from "@/domain/reservas/expediente";
+import { horaParaMinutos, minutosParaHora } from "@/domain/reservas/expediente";
 import {
   faixasDoExpediente,
   intervaloArrastado,
@@ -18,13 +15,13 @@ import {
   posicionarNoDia,
 } from "@/domain/agenda/navegacao-da-agenda";
 import {
-  combineDateTime,
-  formatTimeRange,
-  localDayKey,
-  localMinutesOfDay,
-} from "@/lib/datetime";
-import type { BookingListItem } from "@/lib/repositories/repositorio-de-reservas";
-import type { ActivityType } from "@/domain/booking/types";
+  combinarDataEHora,
+  formatarIntervaloDeHoras,
+  chaveDoDiaLocal,
+  minutosDoDiaLocal,
+} from "@/lib/datas";
+import type { ReservaDaLista } from "@/lib/repositories/repositorio-de-reservas";
+import type { TipoDeAtividade } from "@/domain/reservas/tipos";
 import { cn } from "@/lib/utils";
 
 import {
@@ -49,7 +46,7 @@ export type Rascunho = {
   inicio: string;
   fim: string;
   titulo: string;
-  tipo?: ActivityType;
+  tipo?: TipoDeAtividade;
 };
 
 const RECUO_DIREITO = 12;
@@ -81,7 +78,7 @@ export function CalendarioGrade({
   dias: string[];
   hoje: string;
   agora: Date;
-  reservas: BookingListItem[];
+  reservas: ReservaDaLista[];
   destaque?: string;
   rascunho?: Rascunho | null;
   onEscolherHorario?: (dia: string, inicio: string, fim?: string) => void;
@@ -98,8 +95,8 @@ export function CalendarioGrade({
 
   useEffect(() => {
     const minutos = reservas
-      .filter((r) => dias.includes(localDayKey(r.startsAt)))
-      .map((r) => localMinutesOfDay(r.startsAt));
+      .filter((r) => dias.includes(chaveDoDiaLocal(r.inicio)))
+      .map((r) => minutosDoDiaLocal(r.inicio));
     const alvo = minutos.length > 0 ? Math.min(...minutos) - 30 : 18 * 60;
 
     rolagem.current?.scrollTo({
@@ -107,7 +104,7 @@ export function CalendarioGrade({
     });
   }, [dias, reservas]);
 
-  const minutoAtual = localMinutesOfDay(agora);
+  const minutoAtual = minutosDoDiaLocal(agora);
   const agoraNoExpediente =
     minutoAtual >= ABERTURA_EM_MINUTOS && minutoAtual <= FECHAMENTO_EM_MINUTOS;
 
@@ -197,7 +194,7 @@ function ColunaDoDia({
 }: {
   dia: string;
   agora: Date;
-  reservas: BookingListItem[];
+  reservas: ReservaDaLista[];
   destaque?: string;
   mostrarAgora: boolean;
   minutoAtual: number;
@@ -217,7 +214,7 @@ function ColunaDoDia({
     return ABERTURA_EM_MINUTOS + (evento.clientY - topo) / PX_POR_MINUTO;
   }
 
-  const noPassado = (hora: string) => combineDateTime(dia, hora) < agora;
+  const noPassado = (hora: string) => combinarDataEHora(dia, hora) < agora;
 
   function aoPressionar(evento: React.PointerEvent<HTMLDivElement>) {
     if (evento.button !== 0 || !onEscolherHorario) return;
@@ -328,11 +325,11 @@ function ColunaDoDia({
           onClick={() => onAbrirReserva(item.id)}
           className={cn(
             "absolute z-10 overflow-hidden rounded-md border border-l-4 px-1.5 py-1 text-left text-xs shadow-sm transition-shadow hover:shadow-md",
-            item.cancelled
+            item.cancelada
               ? COR_DA_CANCELADA
               : [
-                  COR_DA_ATIVIDADE[item.activityType],
-                  corDaEncerrada(item.endsAt, agora),
+                  COR_DA_ATIVIDADE[item.tipoDeAtividade],
+                  corDaEncerrada(item.fim, agora),
                   item.inscricaoAberta && COR_DA_INSCRICAO_ABERTA,
                 ],
             destaque === item.id && "ring-primary ring-2 ring-offset-1",
@@ -344,12 +341,14 @@ function ColunaDoDia({
             width: `calc((100% - ${RECUO_DIREITO}px) / ${colunas} - 4px)`,
           }}
         >
-          <p className="truncate font-semibold">{item.purpose}</p>
+          <p className="truncate font-semibold">{item.finalidade}</p>
           <p className="truncate">
-            {formatTimeRange(item.startsAt, item.endsAt)}
+            {formatarIntervaloDeHoras(item.inicio, item.fim)}
           </p>
           {altura >= 60 && (
-            <p className="text-muted-foreground truncate">{item.roomName}</p>
+            <p className="text-muted-foreground truncate">
+              {item.nomeDoEspaco}
+            </p>
           )}
         </button>
       ))}
@@ -367,7 +366,7 @@ function BlocoProvisorio({
   inicio: string;
   fim: string;
   titulo?: string;
-  tipo?: ActivityType;
+  tipo?: TipoDeAtividade;
   rascunho?: boolean;
 }) {
   return (

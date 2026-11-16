@@ -7,32 +7,32 @@ de dados, código, interfaces, permissões e comportamento real do sistema".
 Lado a lado, uma mudança de permissão e a matriz que a descreve aparecem no
 mesmo commit.
 
-| Documento | O que traz |
-|---|---|
-| [inventario-de-tratamento.md](inventario-de-tratamento.md) | Que dado, de quem, onde é coletado, para quê, onde fica, quem alcança e por quanto tempo. Inclui o diagrama do fluxo |
-| [matriz-de-dados.md](matriz-de-dados.md) | Dado, finalidade, hipótese legal, acesso, compartilhamento e retenção, mais a avaliação de legítimo interesse |
-| [matriz-de-perfis.md](matriz-de-perfis.md) | O que cada papel pode fazer, e onde cada regra é aplicada |
-| [fornecedores.md](fornecedores.md) | Supabase, Resend e Vercel: o que cada um recebe e onde processa |
-| [plano-de-retencao.md](plano-de-retencao.md) | Prazos, destinos e como o descarte é executado de fato |
+Comece pelo [relatório de validação](relatorio-de-validacao.md), de 12/11/2026:
+ele confere cada documento contra o sistema publicado e lista o que ainda não
+está conforme.
 
-Os dois documentos voltados ao usuário não estão aqui: eles são páginas do
-sistema, em `/termos` e `/privacidade`, porque precisam estar onde o aceite
-acontece. O código vive em `src/app/(documentos)/`.
+| # | Entregável (Seção 6) | Documento |
+|---|---|---|
+| 1 | Política de Privacidade | Página `/privacidade`, em `src/app/(documentos)/privacidade/` |
+| 2 | Termos de Uso | Página `/termos`, em `src/app/(documentos)/termos/` |
+| 3 | Inventário e diagrama do fluxo | [inventario-de-tratamento.md](inventario-de-tratamento.md) e [fluxo-de-dados.md](fluxo-de-dados.md) |
+| 4 | Matriz de dado, finalidade, hipótese legal, acesso, compartilhamento e retenção | [matriz-de-dados.md](matriz-de-dados.md) |
+| 5 | Matriz de perfis e permissões | [matriz-de-perfis.md](matriz-de-perfis.md) |
+| 6 | Plano de retenção e descarte | [plano-de-retencao.md](plano-de-retencao.md) |
+| 7 | Plano de resposta a incidentes | [resposta-a-incidentes.md](resposta-a-incidentes.md) |
+| 8 | Fornecedores e APIs externas | [fornecedores.md](fornecedores.md) |
+| 9 | Registro das medidas técnicas de segurança | [medidas-de-seguranca.md](medidas-de-seguranca.md) |
+| 10 | Atendimento aos direitos dos titulares | [direitos-dos-titulares.md](direitos-dos-titulares.md) |
+| 11 | Avaliação de áreas específicas | Não se aplica: ver "Dados sensíveis" no relatório de validação |
+| 12 | Evidências de implementação e teste | [evidencias-dos-controles.md](evidencias-dos-controles.md) e o script [evidencias/controles-no-banco.sql](evidencias/controles-no-banco.sql) |
 
-## O que esta entrega ainda não cobre
+Os dois documentos voltados ao usuário são páginas do sistema, e não arquivos
+daqui, porque precisam estar onde o aceite acontece.
 
-A Seção 6 das orientações lista doze entregáveis. Cinco ficaram para as
-entregas seguintes, e é melhor registrar isso do que dar a lista por completa:
+## Quando atualizar
 
-- **Diagrama do fluxo de dados** em forma gráfica. O fluxo está descrito em
-  texto no inventário, e o Diagrama de Classes e o BPMN vencem em 05/10.
-- **Plano de resposta a incidentes** detalhado. O procedimento resumido está na
-  seção 8 da Política de Privacidade.
-- **Registro das medidas técnicas de segurança** como documento próprio. As
-  medidas estão descritas na seção 7 da Política.
-- **Procedimento formal de atendimento aos direitos dos titulares**. O direito
-  de eliminação já está implementado na tela de conta; acesso e correção
-  dependem de canal institucional que um protótipo não tem.
-- **Evidências de implementação e teste dos controles**. Existem testes
-  automatizados dos controles de autorização, mas o relatório consolidado faz
-  sentido quando o sistema estiver completo, em 23/11.
+Toda mudança que altere quem vê ou faz o quê, que dado é guardado ou para quem
+um e-mail vai precisa atualizar, no mesmo commit, a matriz de perfis ou de
+dados correspondente. Se a mudança alterar o que a política ou os termos dizem,
+a versão em `src/domain/documentos/documentos.ts` sobe, e todos aceitam de novo
+no próximo acesso.

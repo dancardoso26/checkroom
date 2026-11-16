@@ -5,48 +5,49 @@ import { useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-import type { RoomOption } from "@/lib/repositories/repositorio-de-espacos";
-import type { ResourceOption } from "@/lib/repositories/repositorio-de-recursos";
-import type { RoomVerdict } from "./analise";
+import type { OpcaoDeEspaco } from "@/lib/repositories/repositorio-de-espacos";
+import type { OpcaoDeRecurso } from "@/lib/repositories/repositorio-de-recursos";
+import type { VeredictoDoEspaco } from "./analise";
 
 type PropsDoSeletorDeEspaco = {
-  rooms: RoomOption[];
-  resources: ResourceOption[];
-  verdicts: RoomVerdict[];
-  selectedRoomId: string;
-  onSelect: (roomId: string) => void;
+  espacos: OpcaoDeEspaco[];
+  recursos: OpcaoDeRecurso[];
+  veredictos: VeredictoDoEspaco[];
+  espacoEscolhidoId: string;
+  aoEscolher: (espacoId: string) => void;
 };
 
 export function SeletorDeEspaco({
-  rooms,
-  resources,
-  verdicts,
-  selectedRoomId,
-  onSelect,
+  espacos,
+  recursos,
+  veredictos,
+  espacoEscolhidoId,
+  aoEscolher: onSelect,
 }: PropsDoSeletorDeEspaco) {
-  const nomeDoRecurso = new Map(resources.map((r) => [r.id, r.name]));
+  const nomeDoRecurso = new Map(recursos.map((r) => [r.id, r.nome]));
 
-  const analisados = verdicts
-    .map((verdict) => ({
-      verdict,
-      room: rooms.find((r) => r.id === verdict.roomId),
+  const analisados = veredictos
+    .map((veredicto) => ({
+      veredicto,
+      espaco: espacos.find((r) => r.id === veredicto.espacoId),
     }))
-    .filter((item): item is { verdict: RoomVerdict; room: RoomOption } =>
-      Boolean(item.room)
+    .filter(
+      (item): item is { veredicto: VeredictoDoEspaco; espaco: OpcaoDeEspaco } =>
+        Boolean(item.espaco),
     );
 
-  const itens = analisados.filter((i) => i.verdict.compatible);
-  const descartados = analisados.filter((i) => !i.verdict.compatible);
+  const itens = analisados.filter((i) => i.veredicto.compativel);
+  const descartados = analisados.filter((i) => !i.veredicto.compativel);
 
   const cartoes = useRef<(HTMLDivElement | null)[]>([]);
 
   const indiceFocalizavel = (() => {
     const selecionado = itens.findIndex(
-      (i) => i.room.id === selectedRoomId && i.verdict.compatible
+      (i) => i.espaco.id === espacoEscolhidoId && i.veredicto.compativel,
     );
     if (selecionado >= 0) return selecionado;
 
-    return itens.findIndex((i) => i.verdict.compatible);
+    return itens.findIndex((i) => i.veredicto.compativel);
   })();
 
   function navegar(deIndice: number, direcao: 1 | -1) {
@@ -56,8 +57,8 @@ export function SeletorDeEspaco({
     for (let passo = 1; passo <= total; passo++) {
       const alvo = (deIndice + direcao * passo + total * passo) % total;
 
-      if (itens[alvo].verdict.compatible) {
-        onSelect(itens[alvo].room.id);
+      if (itens[alvo].veredicto.compativel) {
+        onSelect(itens[alvo].espaco.id);
         cartoes.current[alvo]?.focus();
         return;
       }
@@ -88,18 +89,18 @@ export function SeletorDeEspaco({
         aria-label="Espaços disponíveis"
         className="space-y-3"
       >
-        {itens.map(({ room, verdict }, indice) => (
+        {itens.map(({ espaco, veredicto }, indice) => (
           <CartaoEspaco
-            key={room.id}
+            key={espaco.id}
             ref={(elemento) => {
               cartoes.current[indice] = elemento;
             }}
-            room={room}
-            verdict={verdict}
+            espaco={espaco}
+            veredicto={veredicto}
             recomendado={indice === 0}
-            selecionado={selectedRoomId === room.id}
+            selecionado={espacoEscolhidoId === espaco.id}
             focalizavel={indice === indiceFocalizavel}
-            onSelect={() => onSelect(room.id)}
+            onSelect={() => onSelect(espaco.id)}
             onNavegar={(direcao) => navegar(indice, direcao)}
             nomeDoRecurso={nomeDoRecurso}
           />
@@ -108,12 +109,12 @@ export function SeletorDeEspaco({
 
       {itens.length === 0 && descartados.length > 0 && (
         <div className="space-y-3" aria-label="Espaços descartados">
-          {descartados.map(({ room, verdict }) => (
+          {descartados.map(({ espaco, veredicto }) => (
             <CartaoEspaco
-              key={room.id}
+              key={espaco.id}
               ref={() => undefined}
-              room={room}
-              verdict={verdict}
+              espaco={espaco}
+              veredicto={veredicto}
               recomendado={false}
               selecionado={false}
               focalizavel={false}
@@ -130,18 +131,18 @@ export function SeletorDeEspaco({
 
 function CartaoEspaco({
   ref,
-  room,
-  verdict,
+  espaco,
+  veredicto,
   recomendado,
   selecionado,
   focalizavel,
-  onSelect,
+  onSelect: aoEscolher,
   onNavegar,
   nomeDoRecurso,
 }: {
   ref: (elemento: HTMLDivElement | null) => void;
-  room: RoomOption;
-  verdict: RoomVerdict;
+  espaco: OpcaoDeEspaco;
+  veredicto: VeredictoDoEspaco;
   recomendado: boolean;
   selecionado: boolean;
   focalizavel: boolean;
@@ -149,7 +150,7 @@ function CartaoEspaco({
   onNavegar: (direcao: 1 | -1) => void;
   nomeDoRecurso: Map<string, string>;
 }) {
-  const disponivel = verdict.compatible;
+  const disponivel = veredicto.compativel;
 
   return (
     <div
@@ -158,7 +159,7 @@ function CartaoEspaco({
       aria-checked={selecionado}
       aria-disabled={!disponivel}
       tabIndex={disponivel && focalizavel ? 0 : -1}
-      onClick={disponivel ? onSelect : undefined}
+      onClick={disponivel ? aoEscolher : undefined}
       onKeyDown={(evento) => {
         if (!disponivel) return;
 
@@ -176,7 +177,7 @@ function CartaoEspaco({
 
         if (evento.key === " " || evento.key === "Enter") {
           evento.preventDefault();
-          onSelect();
+          aoEscolher();
         }
       }}
       className={cn(
@@ -184,13 +185,13 @@ function CartaoEspaco({
         disponivel
           ? "bg-card hover:border-primary/40 cursor-pointer"
           : "border-destructive/25 bg-destructive-subtle/40 cursor-not-allowed",
-        selecionado && "border-primary ring-primary/25 ring-2"
+        selecionado && "border-primary ring-primary/25 ring-2",
       )}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="font-medium">{room.name}</p>
+            <p className="font-medium">{espaco.nome}</p>
             {recomendado && (
               <Badge className="bg-success-subtle text-success border-success/30 border">
                 Recomendado
@@ -199,16 +200,16 @@ function CartaoEspaco({
           </div>
 
           <p className="text-muted-foreground text-sm">
-            {room.building} · {room.capacity} lugares
+            {espaco.predio} · {espaco.capacidade} lugares
           </p>
 
           <div className="flex flex-wrap gap-1.5">
-            {room.resourceIds.map((id) => (
+            {espaco.recursoIds.map((id) => (
               <Badge key={id} variant="secondary">
                 {nomeDoRecurso.get(id) ?? id}
               </Badge>
             ))}
-            {room.resourceIds.length === 0 && (
+            {espaco.recursoIds.length === 0 && (
               <span className="text-muted-foreground text-xs">
                 Sem recursos cadastrados
               </span>
@@ -222,16 +223,16 @@ function CartaoEspaco({
             "whitespace-nowrap",
             disponivel
               ? "border-success/30 bg-success-subtle text-success"
-              : "border-destructive/30 text-destructive"
+              : "border-destructive/30 text-destructive",
           )}
         >
           {disponivel ? "Disponível" : "Incompatível"}
         </Badge>
       </div>
 
-      {verdict.motivos.length > 0 && (
+      {veredicto.motivos.length > 0 && (
         <ul className="text-destructive mt-3 space-y-1 text-sm">
-          {verdict.motivos.map((motivo) => (
+          {veredicto.motivos.map((motivo) => (
             <li key={motivo}>{motivo}</li>
           ))}
         </ul>

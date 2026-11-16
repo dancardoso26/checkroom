@@ -4,15 +4,15 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 
 import {
-  cancelBooking,
-  findBookingOwnership,
+  cancelarReservaNoBanco,
+  buscarDonoDaReserva,
 } from "@/lib/repositories/repositorio-de-reservas";
 import { exigirSessao } from "@/lib/sessao";
 import { podeGerenciarReserva } from "@/domain/auth/permissoes";
 import { notificarProfessor } from "./notificar";
 
 const schema = z.object({
-  bookingId: z.uuid(),
+  reservaId: z.uuid(),
   reason: z
     .string()
     .trim()
@@ -20,10 +20,10 @@ const schema = z.object({
     .max(200, "O motivo deve ter no máximo 200 caracteres."),
 });
 
-export type CancelamentoState =
-  | { status: "idle" }
-  | { status: "success" }
-  | { status: "error"; message: string };
+export type EstadoDoCancelamento =
+  | { status: "inicial" }
+  | { status: "sucesso" }
+  | { status: "erro"; message: string };
 
 const MENSAGEM: Record<string, string> = {
   not_found: "Esta reserva não existe mais.",
@@ -32,46 +32,46 @@ const MENSAGEM: Record<string, string> = {
 };
 
 export async function cancelarReserva(
-  _prevState: CancelamentoState,
-  formData: FormData
-): Promise<CancelamentoState> {
-  const parsed = schema.safeParse({
-    bookingId: formData.get("bookingId"),
-    reason: formData.get("reason") ?? "",
+  _estadoAnterior: EstadoDoCancelamento,
+  dadosDoFormulario: FormData,
+): Promise<EstadoDoCancelamento> {
+  const validado = schema.safeParse({
+    reservaId: dadosDoFormulario.get("reservaId"),
+    reason: dadosDoFormulario.get("reason") ?? "",
   });
 
-  if (!parsed.success) {
-    const motivo = parsed.error.issues.find((i) => i.path[0] === "reason");
-    return { status: "error", message: motivo?.message ?? "Reserva inválida." };
+  if (!validado.success) {
+    const motivo = validado.error.issues.find((i) => i.path[0] === "reason");
+    return { status: "erro", message: motivo?.message ?? "Reserva inválida." };
   }
 
   const sessao = await exigirSessao();
-  const reserva = await findBookingOwnership(parsed.data.bookingId);
+  const reserva = await buscarDonoDaReserva(validado.data.reservaId);
 
   if (!reserva) {
-    return { status: "error", message: MENSAGEM.not_found };
+    return { status: "erro", message: MENSAGEM.not_found };
   }
 
   if (!podeGerenciarReserva(sessao, reserva)) {
     return {
-      status: "error",
+      status: "erro",
       message:
         "Esta reserva é de outro professor, e só ele ou o administrador podem cancelá-la.",
     };
   }
 
-  const resultado = await cancelBooking(
-    parsed.data.bookingId,
-    parsed.data.reason
+  const resultado = await cancelarReservaNoBanco(
+    validado.data.reservaId,
+    validado.data.reason,
   );
 
   if (resultado !== "cancelled") {
-    return { status: "error", message: MENSAGEM[resultado] };
+    return { status: "erro", message: MENSAGEM[resultado] };
   }
 
-  await notificarProfessor(parsed.data.bookingId, "cancelada", sessao.nome);
+  await notificarProfessor(validado.data.reservaId, "cancelada", sessao.nome);
 
   revalidatePath("/reservas");
 
-  return { status: "success" };
+  return { status: "sucesso" };
 }

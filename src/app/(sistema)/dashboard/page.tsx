@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 
 import { podeVerPainel } from "@/domain/auth/permissoes";
 import { lerPeriodo, periodoAnterior } from "@/domain/painel/periodo";
-import { toDateInputValue } from "@/lib/datetime";
+import { valorDoCampoDeData } from "@/lib/datas";
 import { carregarDadosDoPainel } from "@/lib/repositories/repositorio-do-painel";
 import { exigirSessao } from "@/lib/sessao";
 import { AtualizacaoAoVivo } from "@/components/atualizacao-ao-vivo";
@@ -28,7 +28,7 @@ export default async function PainelPage({
 
   const parametros = await searchParams;
   const agora = new Date();
-  const hoje = toDateInputValue(agora);
+  const hoje = valorDoCampoDeData(agora);
   const { de, ate, periodo } = lerPeriodo(parametros.de, parametros.ate, hoje);
   const aba = lerAba(parametros.aba);
 
@@ -43,16 +43,27 @@ export default async function PainelPage({
         tabelas={["bookings", "lectures", "lecture_enrollments", "tickets"]}
       />
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <h1 className="text-lg font-semibold tracking-tight sm:text-xl">Dashboard</h1>
+        <h1 className="text-lg font-semibold tracking-tight sm:text-xl">
+          Dashboard
+        </h1>
         <FiltroDoPeriodo aba={aba} de={de} ate={ate} hoje={hoje} />
       </div>
 
       <AbasDoPainel aba={aba} de={de} ate={ate} />
 
-      {aba === "reservas" && <AbaDeReservas dados={dados} periodo={periodo} anterior={anterior} />}
-      {aba === "palestras" && <AbaDePalestras dados={dados} periodo={periodo} anterior={anterior} />}
+      {aba === "reservas" && (
+        <AbaDeReservas dados={dados} periodo={periodo} anterior={anterior} />
+      )}
+      {aba === "palestras" && (
+        <AbaDePalestras dados={dados} periodo={periodo} anterior={anterior} />
+      )}
       {aba === "chamados" && (
-        <AbaDeChamados dados={dados} periodo={periodo} anterior={anterior} agora={agora} />
+        <AbaDeChamados
+          dados={dados}
+          periodo={periodo}
+          anterior={anterior}
+          agora={agora}
+        />
       )}
     </div>
   );

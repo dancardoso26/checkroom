@@ -15,19 +15,19 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import {
-  combineDateTime,
-  formatFullDate,
-  formatTimeRange,
-} from "@/lib/datetime";
+  combinarDataEHora,
+  formatarDataPorExtenso,
+  formatarIntervaloDeHoras,
+} from "@/lib/datas";
 
-import type { RoomOption } from "@/lib/repositories/repositorio-de-espacos";
-import type { ClassOption } from "@/lib/repositories/repositorio-de-turmas";
-import type { ProfessorOption } from "@/lib/repositories/repositorio-de-professores";
-import type { ResourceOption } from "@/lib/repositories/repositorio-de-recursos";
+import type { OpcaoDeEspaco } from "@/lib/repositories/repositorio-de-espacos";
+import type { OpcaoDeTurma } from "@/lib/repositories/repositorio-de-turmas";
+import type { ProfessorParaSelecao } from "@/lib/repositories/repositorio-de-professores";
+import type { OpcaoDeRecurso } from "@/lib/repositories/repositorio-de-recursos";
 import type { CursoOpcao } from "@/lib/repositories/repositorio-de-cursos";
 import type {
-  SubjectOption,
-  TeachingAssignmentOption,
+  OpcaoDeDisciplina,
+  OpcaoDeVinculo,
 } from "@/lib/repositories/repositorio-de-disciplinas";
 
 import type { Rascunho } from "../agenda/calendario-grade";
@@ -40,12 +40,12 @@ import {
 } from "./use-formulario-de-reserva";
 
 export type Catalogos = {
-  rooms: RoomOption[];
-  professors: ProfessorOption[];
-  classes: ClassOption[];
-  resources: ResourceOption[];
-  subjects: SubjectOption[];
-  assignments: TeachingAssignmentOption[];
+  espacos: OpcaoDeEspaco[];
+  professores: ProfessorParaSelecao[];
+  turmas: OpcaoDeTurma[];
+  recursos: OpcaoDeRecurso[];
+  disciplinas: OpcaoDeDisciplina[];
+  vinculos: OpcaoDeVinculo[];
   cursos: CursoOpcao[];
 };
 
@@ -65,7 +65,7 @@ export function PainelDeReserva({
   professorFixo: string | null;
   preenchimento: Preenchimento;
   onFechar: () => void;
-  onConcluir: (bookingId: string | null, dia: string) => void;
+  onConcluir: (reservaId: string | null, dia: string) => void;
   onRascunho: (rascunho: Rascunho | null) => void;
   permitePalestra: boolean;
   somentePalestra?: boolean;
@@ -80,7 +80,7 @@ export function PainelDeReserva({
     alternarRecurso,
     analise,
     analisando,
-    roomIdValido,
+    espacoIdValido,
     atividadeCompleta,
     prontoParaEspacos,
     prontoParaConfirmar,
@@ -93,7 +93,7 @@ export function PainelDeReserva({
     hoje,
     professorFixo,
     preenchimento,
-    rooms: catalogos.rooms,
+    espacos: catalogos.espacos,
   });
 
   const [etapa, setEtapa] = useState<"detalhes" | "espaco">("detalhes");
@@ -116,10 +116,10 @@ export function PainelDeReserva({
   useEffect(() => {
     if (!conclusao) return;
     toast.success(
-      conclusao.bookingId ? "Reserva confirmada." : "Palestra cadastrada.",
+      conclusao.reservaId ? "Reserva confirmada." : "Palestra cadastrada.",
     );
-    onConcluir(conclusao.bookingId, campos.date);
-  }, [conclusao, campos.date, onConcluir]);
+    onConcluir(conclusao.reservaId, campos.data);
+  }, [conclusao, campos.data, onConcluir]);
 
   const periodoValido = ehPeriodoValido(campos);
 
@@ -127,31 +127,31 @@ export function PainelDeReserva({
     onRascunho(
       periodoValido
         ? {
-            dia: campos.date,
-            inicio: campos.startTime,
-            fim: campos.endTime,
-            titulo: campos.purpose,
-            tipo: campos.activityType,
+            dia: campos.data,
+            inicio: campos.horaDeInicio,
+            fim: campos.horaDeTermino,
+            titulo: campos.finalidade,
+            tipo: campos.tipoDeAtividade,
           }
-        : null
+        : null,
     );
   }, [
     periodoValido,
-    campos.date,
-    campos.startTime,
-    campos.endTime,
-    campos.purpose,
-    campos.activityType,
+    campos.data,
+    campos.horaDeInicio,
+    campos.horaDeTermino,
+    campos.finalidade,
+    campos.tipoDeAtividade,
     onRascunho,
   ]);
 
-  const turma = catalogos.classes.find((c) => c.id === campos.classId);
-  const espaco = catalogos.rooms.find((r) => r.id === roomIdValido);
+  const turma = catalogos.turmas.find((c) => c.id === campos.turmaId);
+  const espaco = catalogos.espacos.find((r) => r.id === espacoIdValido);
 
   const periodo = periodoValido
-    ? `${formatFullDate(combineDateTime(campos.date, campos.startTime))}, ${formatTimeRange(
-        combineDateTime(campos.date, campos.startTime),
-        combineDateTime(campos.date, campos.endTime)
+    ? `${formatarDataPorExtenso(combinarDataEHora(campos.data, campos.horaDeInicio))}, ${formatarIntervaloDeHoras(
+        combinarDataEHora(campos.data, campos.horaDeInicio),
+        combinarDataEHora(campos.data, campos.horaDeTermino),
       )}`
     : null;
 
@@ -210,9 +210,9 @@ export function PainelDeReserva({
               </button>
 
               <div className="space-y-1">
-                <h2 className="text-xl">{campos.purpose}</h2>
+                <h2 className="text-xl">{campos.finalidade}</h2>
                 <p className="text-muted-foreground text-sm first-letter:uppercase">
-                  {ROTULO_DA_ATIVIDADE[campos.activityType]} · {periodo}
+                  {ROTULO_DA_ATIVIDADE[campos.tipoDeAtividade]} · {periodo}
                 </p>
                 {ehPalestra ? (
                   <p className="text-muted-foreground text-sm">
@@ -221,7 +221,7 @@ export function PainelDeReserva({
                 ) : (
                   turma && (
                     <p className="text-muted-foreground text-sm">
-                      {turma.name}, {turma.studentCount} alunos
+                      {turma.nome}, {turma.quantidadeDeAlunos} alunos
                     </p>
                   )
                 )}
@@ -250,11 +250,11 @@ export function PainelDeReserva({
                 </p>
               ) : (
                 <SeletorDeEspaco
-                  rooms={catalogos.rooms}
-                  resources={catalogos.resources}
-                  verdicts={analise.rooms}
-                  selectedRoomId={roomIdValido}
-                  onSelect={(id) => alterar("roomId", id)}
+                  espacos={catalogos.espacos}
+                  recursos={catalogos.recursos}
+                  veredictos={analise.espacos}
+                  espacoEscolhidoId={espacoIdValido}
+                  aoEscolher={(id) => alterar("espacoId", id)}
                 />
               )}
             </div>
@@ -263,16 +263,20 @@ export function PainelDeReserva({
           {(ehPalestra || etapa === "espaco") &&
             (ehPalestra ? (
               <>
-                <input type="hidden" name="titulo" value={campos.purpose} />
+                <input type="hidden" name="titulo" value={campos.finalidade} />
                 <input
                   type="hidden"
                   name="palestrante"
                   value={palestra.palestrante}
                 />
-                <input type="hidden" name="espacoId" value={roomIdValido} />
-                <input type="hidden" name="data" value={campos.date} />
-                <input type="hidden" name="inicio" value={campos.startTime} />
-                <input type="hidden" name="fim" value={campos.endTime} />
+                <input type="hidden" name="espacoId" value={espacoIdValido} />
+                <input type="hidden" name="data" value={campos.data} />
+                <input
+                  type="hidden"
+                  name="inicio"
+                  value={campos.horaDeInicio}
+                />
+                <input type="hidden" name="fim" value={campos.horaDeTermino} />
                 <input type="hidden" name="vagas" value={palestra.vagas} />
                 {palestra.cursoIds.map((id) => (
                   <input key={id} type="hidden" name="cursoIds" value={id} />
@@ -280,25 +284,41 @@ export function PainelDeReserva({
               </>
             ) : (
               <>
-                <input type="hidden" name="roomId" value={roomIdValido} />
+                <input type="hidden" name="espacoId" value={espacoIdValido} />
                 <input
                   type="hidden"
                   name="professorId"
                   value={campos.professorId}
                 />
-                <input type="hidden" name="classId" value={campos.classId} />
-                <input type="hidden" name="subjectId" value={campos.subjectId} />
+                <input type="hidden" name="turmaId" value={campos.turmaId} />
                 <input
                   type="hidden"
-                  name="activityType"
-                  value={campos.activityType}
+                  name="disciplinaId"
+                  value={campos.disciplinaId}
                 />
-                <input type="hidden" name="purpose" value={campos.purpose} />
-                <input type="hidden" name="date" value={campos.date} />
-                <input type="hidden" name="startTime" value={campos.startTime} />
-                <input type="hidden" name="endTime" value={campos.endTime} />
+                <input
+                  type="hidden"
+                  name="tipoDeAtividade"
+                  value={campos.tipoDeAtividade}
+                />
+                <input
+                  type="hidden"
+                  name="finalidade"
+                  value={campos.finalidade}
+                />
+                <input type="hidden" name="data" value={campos.data} />
+                <input
+                  type="hidden"
+                  name="horaDeInicio"
+                  value={campos.horaDeInicio}
+                />
+                <input
+                  type="hidden"
+                  name="horaDeTermino"
+                  value={campos.horaDeTermino}
+                />
                 {recursos.map((id) => (
-                  <input key={id} type="hidden" name="resourceIds" value={id} />
+                  <input key={id} type="hidden" name="recursoIds" value={id} />
                 ))}
               </>
             ))}
@@ -307,7 +327,7 @@ export function PainelDeReserva({
         <SheetFooter className="flex-row items-center justify-end gap-2 border-t px-6 py-4">
           {etapa === "espaco" && espaco && (
             <p className="text-muted-foreground mr-auto truncate text-sm">
-              {espaco.name}
+              {espaco.nome}
             </p>
           )}
 

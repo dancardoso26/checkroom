@@ -1,5 +1,5 @@
 import "server-only";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { criarClienteDoServidor } from "@/lib/supabase/servidor";
 import type { DadosDoRecurso } from "@/domain/espacos/espaco";
 import {
   classificarErro,
@@ -7,13 +7,13 @@ import {
   type ResultadoDaGravacao,
 } from "./erros";
 
-export type ResourceOption = {
+export type OpcaoDeRecurso = {
   id: string;
-  name: string;
+  nome: string;
 };
 
-export async function listResources(): Promise<ResourceOption[]> {
-  const supabase = await createSupabaseServerClient();
+export async function listarRecursos(): Promise<OpcaoDeRecurso[]> {
+  const supabase = await criarClienteDoServidor();
 
   const { data, error } = await supabase
     .from("resources")
@@ -24,13 +24,13 @@ export async function listResources(): Promise<ResourceOption[]> {
     throw new Error(`Falha ao listar os recursos: ${error.message}`);
   }
 
-  return data;
+  return data.map((recurso) => ({ id: recurso.id, nome: recurso.name }));
 }
 
-export function toResourceNameMap(
-  resources: ResourceOption[]
+export function mapaDeNomesDosRecursos(
+  recursos: OpcaoDeRecurso[],
 ): Record<string, string> {
-  return Object.fromEntries(resources.map((r) => [r.id, r.name]));
+  return Object.fromEntries(recursos.map((r) => [r.id, r.nome]));
 }
 
 export type RecursoGerenciado = {
@@ -40,7 +40,7 @@ export type RecursoGerenciado = {
 };
 
 export async function listarRecursosParaGestao(): Promise<RecursoGerenciado[]> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await criarClienteDoServidor();
 
   const { data, error } = await supabase
     .from("resources")
@@ -57,9 +57,9 @@ export async function listarRecursosParaGestao(): Promise<RecursoGerenciado[]> {
 }
 
 export async function salvarRecurso(
-  dados: DadosDoRecurso
+  dados: DadosDoRecurso,
 ): Promise<ResultadoDaGravacao> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await criarClienteDoServidor();
   const nome = dados.nome.trim();
 
   const { data, error } = dados.id
@@ -77,7 +77,7 @@ export async function salvarRecurso(
 }
 
 export async function excluirRecurso(id: string): Promise<ResultadoDaExclusao> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await criarClienteDoServidor();
 
   const { data, error } = await supabase
     .from("resources")

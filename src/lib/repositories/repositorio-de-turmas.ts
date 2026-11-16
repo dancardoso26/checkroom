@@ -1,40 +1,40 @@
 import "server-only";
 import {
-  createSupabaseServerClient,
-  supabaseAdmin,
-} from "@/lib/supabase/server";
-import type { ClassSnapshot } from "@/domain/booking/types";
+  criarClienteDoServidor,
+  clienteAdministrativo,
+} from "@/lib/supabase/servidor";
+import type { TurmaParaReserva } from "@/domain/reservas/tipos";
 
-export async function findClassSnapshot(
-  classId: string,
-): Promise<ClassSnapshot | null> {
-  const supabase = await createSupabaseServerClient();
+export async function buscarTurmaParaReserva(
+  turmaId: string,
+): Promise<TurmaParaReserva | null> {
+  const supabase = await criarClienteDoServidor();
 
   const { data, error } = await supabase
     .from("classes")
     .select("id, name")
-    .eq("id", classId)
+    .eq("id", turmaId)
     .maybeSingle();
 
   if (error) {
-    throw new Error(`Falha ao carregar a turma ${classId}: ${error.message}`);
+    throw new Error(`Falha ao carregar a turma ${turmaId}: ${error.message}`);
   }
 
   if (!data) return null;
 
   return {
     id: data.id,
-    name: data.name,
-    studentCount: (await contagemDeAlunosPorTurma()).get(data.id) ?? 0,
+    nome: data.name,
+    quantidadeDeAlunos: (await contagemDeAlunosPorTurma()).get(data.id) ?? 0,
   };
 }
 
-export type ClassOption = {
+export type OpcaoDeTurma = {
   id: string;
-  name: string;
-  studentCount: number;
-  courseId: string;
-  courseName: string;
+  nome: string;
+  quantidadeDeAlunos: number;
+  cursoId: string;
+  nomeDoCurso: string;
 };
 
 export type TurmaOpcao = {
@@ -45,18 +45,18 @@ export type TurmaOpcao = {
 };
 
 export async function listarTurmas(): Promise<TurmaOpcao[]> {
-  const turmas = await listClasses();
+  const turmas = await listarTurmasComCurso();
 
   return turmas.map((turma) => ({
     id: turma.id,
-    nome: turma.name,
-    detalhe: turma.courseName,
-    cursoId: turma.courseId,
+    nome: turma.nome,
+    detalhe: turma.nomeDoCurso,
+    cursoId: turma.cursoId,
   }));
 }
 
-export async function listClasses(): Promise<ClassOption[]> {
-  const supabase = await createSupabaseServerClient();
+export async function listarTurmasComCurso(): Promise<OpcaoDeTurma[]> {
+  const supabase = await criarClienteDoServidor();
 
   const { data, error } = await supabase
     .from("classes")
@@ -71,15 +71,15 @@ export async function listClasses(): Promise<ClassOption[]> {
 
   return data.map((turma) => ({
     id: turma.id,
-    name: turma.name,
-    studentCount: alunos.get(turma.id) ?? 0,
-    courseId: turma.course_id,
-    courseName: turma.courses.name,
+    nome: turma.name,
+    quantidadeDeAlunos: alunos.get(turma.id) ?? 0,
+    cursoId: turma.course_id,
+    nomeDoCurso: turma.courses.name,
   }));
 }
 
 export async function contagemDeAlunosPorTurma(): Promise<Map<string, number>> {
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await clienteAdministrativo
     .from("profiles")
     .select("class_id")
     .eq("role", "student")

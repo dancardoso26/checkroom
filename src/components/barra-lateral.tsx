@@ -145,11 +145,9 @@ function iniciais(nome: string): string {
 export function BarraLateral({
   nome,
   papel,
-  semSegundoFator,
 }: {
   nome: string;
   papel: Papel;
-  semSegundoFator: boolean;
 }) {
   const caminho = usePathname();
   const router = useRouter();
@@ -211,11 +209,6 @@ export function BarraLateral({
       </SidebarContent>
 
       <SidebarFooter>
-        {semSegundoFator && (
-          <p className="border-warning/40 bg-warning-subtle text-warning mx-2 rounded-md border px-2.5 py-1.5 text-xs font-medium group-data-[collapsible=icon]:hidden">
-            Segundo fator dispensado neste ambiente
-          </p>
-        )}
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>

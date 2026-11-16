@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { SeletorDeData } from "@/components/seletor-de-data";
 import { SeletorDeHora } from "@/components/seletor-de-hora";
-import { localDayKey } from "@/lib/datetime";
+import { chaveDoDiaLocal } from "@/lib/datas";
 
 export function CampoDeData({
   id,
@@ -22,7 +22,7 @@ export function CampoDeData({
   onChange?: (valor: string) => void;
 }) {
   const [valor, setValor] = useState(defaultValue);
-  const [diaDeHoje] = useState(() => hoje ?? localDayKey(new Date()));
+  const [diaDeHoje] = useState(() => hoje ?? chaveDoDiaLocal(new Date()));
 
   return (
     <>

@@ -32,9 +32,7 @@ export default async function LoginPage({
         </p>
       )}
 
-      <div className="bg-card rounded-lg border p-6">
-        <FormularioDeLogin proximo={proximo} />
-      </div>
+      <FormularioDeLogin proximo={proximo} />
     </TelaDeEntrada>
   );
 }

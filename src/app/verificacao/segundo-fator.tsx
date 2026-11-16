@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { criarClienteDoNavegador } from "@/lib/supabase/navegador";
 import { registrarCadastroDeSegundoFator } from "./acoes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 type Cadastro = { factorId: string; qrCode: string; secret: string };
 
 export function SegundoFator({ cadastrando }: { cadastrando: boolean }) {
-  const [supabase] = useState(createSupabaseBrowserClient);
+  const [supabase] = useState(criarClienteDoNavegador);
 
   const [cadastro, setCadastro] = useState<Cadastro | null>(null);
   const [factorId, setFactorId] = useState<string | null>(null);
@@ -41,7 +41,8 @@ export function SegundoFator({ cadastrando }: { cadastrando: boolean }) {
       }
 
       const pendente = fatores.all.find(
-        (fator) => fator.factor_type === "totp" && fator.status === "unverified"
+        (fator) =>
+          fator.factor_type === "totp" && fator.status === "unverified",
       );
 
       if (pendente) await supabase.auth.mfa.unenroll({ factorId: pendente.id });
@@ -93,7 +94,7 @@ export function SegundoFator({ cadastrando }: { cadastrando: boolean }) {
 
     if (error) {
       setErro(
-        "Código incorreto ou expirado. O código muda a cada 30 segundos."
+        "Código incorreto ou expirado. O código muda a cada 30 segundos.",
       );
       setCodigo("");
       setOcupado(false);

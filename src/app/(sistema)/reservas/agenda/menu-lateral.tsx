@@ -13,8 +13,8 @@ import {
   somarDias,
   tituloDoPeriodo,
 } from "@/domain/agenda/navegacao-da-agenda";
-import { formatTimeRange, localDayKey } from "@/lib/datetime";
-import type { BookingListItem } from "@/lib/repositories/repositorio-de-reservas";
+import { formatarIntervaloDeHoras, chaveDoDiaLocal } from "@/lib/datas";
+import type { ReservaDaLista } from "@/lib/repositories/repositorio-de-reservas";
 import { cn } from "@/lib/utils";
 
 import {
@@ -58,7 +58,7 @@ export function MenuLateral({
   estado: EstadoDaAgenda;
   hoje: string;
   agora: Date;
-  proximos: BookingListItem[];
+  proximos: ReservaDaLista[];
   onEscolherDia: (dia: string) => void;
   onAbrirReserva: (id: string) => void;
 }) {
@@ -66,10 +66,10 @@ export function MenuLateral({
 
   const destacados = diasDoPeriodo(estado.escala, estado.data);
 
-  const dias = new Map<string, BookingListItem[]>();
+  const dias = new Map<string, ReservaDaLista[]>();
   for (const item of proximos) {
-    if (item.cancelled) continue;
-    const dia = localDayKey(item.startsAt);
+    if (item.cancelada) continue;
+    const dia = chaveDoDiaLocal(item.inicio);
     dias.set(dia, [...(dias.get(dia) ?? []), item]);
   }
 
@@ -171,18 +171,20 @@ export function MenuLateral({
                       onClick={() => onAbrirReserva(item.id)}
                       className={cn(
                         "w-full rounded-md border border-l-4 px-2 py-1.5 text-left text-xs shadow-sm transition-shadow hover:shadow-md",
-                        COR_DA_ATIVIDADE[item.activityType],
-                        corDaEncerrada(item.endsAt, agora),
+                        COR_DA_ATIVIDADE[item.tipoDeAtividade],
+                        corDaEncerrada(item.fim, agora),
                         item.inscricaoAberta && COR_DA_INSCRICAO_ABERTA,
                       )}
                     >
-                      <p className="truncate font-semibold">{item.purpose}</p>
+                      <p className="truncate font-semibold">
+                        {item.finalidade}
+                      </p>
                       <p className="truncate">
-                        {formatTimeRange(item.startsAt, item.endsAt)}
+                        {formatarIntervaloDeHoras(item.inicio, item.fim)}
                       </p>
                       <p className="text-muted-foreground flex items-center gap-1 truncate">
                         <DoorOpen aria-hidden className="size-3 shrink-0" />
-                        {item.roomName}
+                        {item.nomeDoEspaco}
                       </p>
                     </button>
                   </li>

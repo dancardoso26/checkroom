@@ -30,22 +30,22 @@ const schema = z.object({
 
 export async function salvarRecurso(
   _estado: EstadoDoFormulario,
-  formData: FormData
+  dadosDoFormulario: FormData,
 ): Promise<EstadoDoFormulario> {
   const sessao = await sessaoAtual();
   if (!sessao || !podeGerenciarCadastros(sessao)) return falha(SEM_PERMISSAO);
 
-  const parsed = schema.safeParse({
-    id: texto(formData.get("id")),
-    nome: texto(formData.get("nome")),
+  const validado = schema.safeParse({
+    id: texto(dadosDoFormulario.get("id")),
+    nome: texto(dadosDoFormulario.get("nome")),
   });
 
-  if (!parsed.success) return falhaDeValidacao(parsed.error);
+  if (!validado.success) return falhaDeValidacao(validado.error);
 
-  const erros = validarRecurso(parsed.data, await listarRecursosParaGestao());
+  const erros = validarRecurso(validado.data, await listarRecursosParaGestao());
   if (!semErros(erros)) return falha(null, erros);
 
-  const resultado = await salvarNoBanco(parsed.data);
+  const resultado = await salvarNoBanco(validado.data);
 
   if (!resultado.ok) {
     return resultado.falha === "duplicado"

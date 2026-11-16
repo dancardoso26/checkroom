@@ -2,23 +2,23 @@
 
 import { redirect } from "next/navigation";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { criarClienteDoServidor } from "@/lib/supabase/servidor";
 import { registrarEventoDeAutenticacao } from "@/lib/auditoria";
 import { VERSAO_DOS_TERMOS } from "@/domain/documentos/documentos";
 
-export type AceiteState =
-  | { status: "idle" }
-  | { status: "success" }
-  | { status: "error"; message: string };
+export type EstadoDoAceite =
+  | { status: "inicial" }
+  | { status: "sucesso" }
+  | { status: "erro"; message: string };
 
 export async function aceitarTermos(
-  estadoAnterior: AceiteState,
-  dados: FormData
-): Promise<AceiteState> {
+  estadoAnterior: EstadoDoAceite,
+  dados: FormData,
+): Promise<EstadoDoAceite> {
   void estadoAnterior;
   void dados;
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = await criarClienteDoServidor();
 
   const {
     data: { user },
@@ -35,12 +35,12 @@ export async function aceitarTermos(
     .eq("id", user.id);
 
   if (error) {
-    return { status: "error", message: "Não foi possível registrar o aceite." };
+    return { status: "erro", message: "Não foi possível registrar o aceite." };
   }
 
   await registrarEventoDeAutenticacao("terms_accepted", user.id, {
     versao: VERSAO_DOS_TERMOS,
   });
 
-  return { status: "success" };
+  return { status: "sucesso" };
 }

@@ -16,7 +16,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import type { ActivityType } from "@/domain/booking/types";
+import type { TipoDeAtividade } from "@/domain/reservas/tipos";
 import type { ParDeDocencia } from "@/lib/repositories/repositorio-de-disciplinas";
 import {
   contarFiltrosAtivos,
@@ -68,12 +68,12 @@ export function FiltrosDaAgenda({
     rascunho.professores,
     docencia,
     "professorId",
-    "classId",
+    "turmaId",
   );
   const professoresDasTurmas = relacionados(
     rascunho.turmas,
     docencia,
-    "classId",
+    "turmaId",
     "professorId",
   );
   const turmasOferecidas = turmasDosProfessores
@@ -150,7 +150,7 @@ export function FiltrosDaAgenda({
                     ids,
                     docencia,
                     "professorId",
-                    "classId",
+                    "turmaId",
                   );
                   setRascunho({
                     ...rascunho,
@@ -186,7 +186,7 @@ export function FiltrosDaAgenda({
                   const professoresDosEscolhidos = relacionados(
                     ids,
                     docencia,
-                    "classId",
+                    "turmaId",
                     "professorId",
                   );
                   setRascunho({
@@ -229,7 +229,7 @@ export function FiltrosDaAgenda({
                 name="filtroTipo"
                 iniciais={rascunho.tipos}
                 onChange={(ids) =>
-                  setRascunho({ ...rascunho, tipos: ids as ActivityType[] })
+                  setRascunho({ ...rascunho, tipos: ids as TipoDeAtividade[] })
                 }
                 opcoes={TIPOS_DE_ATIVIDADE.map((t) => ({
                   id: t,

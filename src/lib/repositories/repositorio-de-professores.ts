@@ -1,22 +1,25 @@
 import "server-only";
-import { createSupabaseServerClient, supabaseAdmin } from "@/lib/supabase/server";
+import {
+  criarClienteDoServidor,
+  clienteAdministrativo,
+} from "@/lib/supabase/servidor";
 
 export const PROFESSOR_REMOVIDO = "Professor removido";
 
-export type ProfessorOption = {
+export type ProfessorParaSelecao = {
   id: string;
-  name: string;
+  nome: string;
 };
 
 export type ContatoDoProfessor = {
-  name: string;
+  nome: string;
   email: string;
 };
 
-export async function findProfessorContact(
-  id: string
+export async function buscarContatoDoProfessor(
+  id: string,
 ): Promise<ContatoDoProfessor | null> {
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await clienteAdministrativo
     .from("professors")
     .select("name, email")
     .eq("id", id)
@@ -24,11 +27,11 @@ export async function findProfessorContact(
 
   if (error || !data) return null;
 
-  return data;
+  return { nome: data.name, email: data.email };
 }
 
-export async function listProfessors(): Promise<ProfessorOption[]> {
-  const supabase = await createSupabaseServerClient();
+export async function listarProfessores(): Promise<ProfessorParaSelecao[]> {
+  const supabase = await criarClienteDoServidor();
 
   const { data, error } = await supabase
     .from("professors")
@@ -40,5 +43,5 @@ export async function listProfessors(): Promise<ProfessorOption[]> {
     throw new Error(`Falha ao listar os professores: ${error.message}`);
   }
 
-  return data;
+  return data.map((professor) => ({ id: professor.id, nome: professor.name }));
 }

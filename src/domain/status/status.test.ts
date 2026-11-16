@@ -8,24 +8,24 @@ describe("status da reserva", () => {
   it("cancelada vence qualquer horário", () => {
     expect(
       statusDaReserva(
-        { cancelled: true, endsAt: new Date("2026-09-20T00:00:00Z") },
-        AGORA
-      )
+        { cancelada: true, fim: new Date("2026-09-20T00:00:00Z") },
+        AGORA,
+      ),
     ).toBe("cancelada");
   });
 
   it("concluída quando o término já passou", () => {
-    expect(statusDaReserva({ cancelled: false, endsAt: AGORA }, AGORA)).toBe(
-      "concluida"
+    expect(statusDaReserva({ cancelada: false, fim: AGORA }, AGORA)).toBe(
+      "concluida",
     );
   });
 
   it("agendada enquanto não terminou", () => {
     expect(
       statusDaReserva(
-        { cancelled: false, endsAt: new Date("2026-09-29T00:00:00Z") },
-        AGORA
-      )
+        { cancelada: false, fim: new Date("2026-09-29T00:00:00Z") },
+        AGORA,
+      ),
     ).toBe("agendada");
   });
 });

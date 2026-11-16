@@ -7,9 +7,9 @@ import {
   type CalendarioDoDia,
   type PeriodoLetivo,
 } from "@/domain/calendario/calendario";
-import { PERIODO_LETIVO_VIGENTE } from "@/domain/booking/businessHours";
-import { toDateInputValue } from "@/lib/datetime";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { PERIODO_LETIVO_VIGENTE } from "@/domain/reservas/expediente";
+import { valorDoCampoDeData } from "@/lib/datas";
+import { criarClienteDoServidor } from "@/lib/supabase/servidor";
 
 import {
   classificarErro,
@@ -18,7 +18,7 @@ import {
 } from "./erros";
 
 export async function listarPeriodos(): Promise<PeriodoLetivo[]> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await criarClienteDoServidor();
 
   const { data, error } = await supabase
     .from("academic_terms")
@@ -36,7 +36,7 @@ export async function listarPeriodos(): Promise<PeriodoLetivo[]> {
 }
 
 export async function listarBloqueios(): Promise<Bloqueio[]> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await criarClienteDoServidor();
 
   const { data, error } = await supabase
     .from("calendar_blocks")
@@ -54,8 +54,10 @@ export async function listarBloqueios(): Promise<Bloqueio[]> {
   }));
 }
 
-export async function carregarCalendarioDoDia(dia: string): Promise<CalendarioDoDia> {
-  const supabase = await createSupabaseServerClient();
+export async function carregarCalendarioDoDia(
+  dia: string,
+): Promise<CalendarioDoDia> {
+  const supabase = await criarClienteDoServidor();
 
   const [periodos, bloqueios] = await Promise.all([
     supabase
@@ -75,7 +77,12 @@ export async function carregarCalendarioDoDia(dia: string): Promise<CalendarioDo
   }
 
   return calendarioDoDia(
-    periodos.data.map((p) => ({ id: p.id, codigo: p.code, inicio: p.starts_on, fim: p.ends_on })),
+    periodos.data.map((p) => ({
+      id: p.id,
+      codigo: p.code,
+      inicio: p.starts_on,
+      fim: p.ends_on,
+    })),
     bloqueios.data.map((b) => ({
       id: b.id,
       inicio: b.starts_on,
@@ -83,7 +90,7 @@ export async function carregarCalendarioDoDia(dia: string): Promise<CalendarioDo
       espacoId: b.room_id,
       motivo: b.reason,
     })),
-    dia
+    dia,
   );
 }
 
@@ -93,19 +100,27 @@ export async function codigoDoPeriodoDe(dia: string): Promise<string | null> {
 
 export async function periodoLetivoVigente(): Promise<string> {
   return (
-    (await codigoDoPeriodoDe(toDateInputValue(new Date()))) ??
+    (await codigoDoPeriodoDe(valorDoCampoDeData(new Date()))) ??
     PERIODO_LETIVO_VIGENTE
   );
 }
 
 export async function salvarPeriodo(
-  dados: Omit<PeriodoLetivo, "id"> & { id: string | null }
+  dados: Omit<PeriodoLetivo, "id"> & { id: string | null },
 ): Promise<ResultadoDaGravacao> {
-  const supabase = await createSupabaseServerClient();
-  const linha = { code: dados.codigo.trim(), starts_on: dados.inicio, ends_on: dados.fim };
+  const supabase = await criarClienteDoServidor();
+  const linha = {
+    code: dados.codigo.trim(),
+    starts_on: dados.inicio,
+    ends_on: dados.fim,
+  };
 
   const { data, error } = dados.id
-    ? await supabase.from("academic_terms").update(linha).eq("id", dados.id).select("id")
+    ? await supabase
+        .from("academic_terms")
+        .update(linha)
+        .eq("id", dados.id)
+        .select("id")
     : await supabase.from("academic_terms").insert(linha).select("id");
 
   if (error) return { ok: false, falha: classificarErro(error) };
@@ -114,9 +129,9 @@ export async function salvarPeriodo(
 }
 
 export async function salvarBloqueio(
-  dados: Omit<Bloqueio, "id"> & { id: string | null }
+  dados: Omit<Bloqueio, "id"> & { id: string | null },
 ): Promise<ResultadoDaGravacao> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await criarClienteDoServidor();
   const linha = {
     starts_on: dados.inicio,
     ends_on: dados.fim,
@@ -125,7 +140,11 @@ export async function salvarBloqueio(
   };
 
   const { data, error } = dados.id
-    ? await supabase.from("calendar_blocks").update(linha).eq("id", dados.id).select("id")
+    ? await supabase
+        .from("calendar_blocks")
+        .update(linha)
+        .eq("id", dados.id)
+        .select("id")
     : await supabase.from("calendar_blocks").insert(linha).select("id");
 
   if (error) return { ok: false, falha: classificarErro(error) };
@@ -135,9 +154,9 @@ export async function salvarBloqueio(
 
 export async function excluirDoCalendario(
   tabela: "academic_terms" | "calendar_blocks",
-  id: string
+  id: string,
 ): Promise<ResultadoDaExclusao> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await criarClienteDoServidor();
 
   const { data, error } = await supabase
     .from(tabela as "academic_terms")

@@ -1,43 +1,44 @@
-import { combineDateTime } from "@/lib/datetime";
-import type { ActivityType } from "@/domain/booking/types";
+import { combinarDataEHora } from "@/lib/datas";
+import type { TipoDeAtividade } from "@/domain/reservas/tipos";
 
 export type CamposDaReserva = {
-  activityType: ActivityType;
+  tipoDeAtividade: TipoDeAtividade;
   professorId: string;
-  classId: string;
-  subjectId: string;
-  purpose: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  roomId: string;
+  turmaId: string;
+  disciplinaId: string;
+  finalidade: string;
+  data: string;
+  horaDeInicio: string;
+  horaDeTermino: string;
+  espacoId: string;
 };
 
 export const CAMPOS_VAZIOS = (hoje: string): CamposDaReserva => ({
-  activityType: "class",
+  tipoDeAtividade: "class",
   professorId: "",
-  classId: "",
-  subjectId: "",
-  purpose: "",
-  date: hoje,
-  startTime: "",
-  endTime: "",
-  roomId: "",
+  turmaId: "",
+  disciplinaId: "",
+  finalidade: "",
+  data: hoje,
+  horaDeInicio: "",
+  horaDeTermino: "",
+  espacoId: "",
 });
 
 export function ehPeriodoValido(campos: {
-  date: string;
-  startTime: string;
-  endTime: string;
+  data: string;
+  horaDeInicio: string;
+  horaDeTermino: string;
 }) {
-  if (!campos.date || !campos.startTime || !campos.endTime) return false;
+  if (!campos.data || !campos.horaDeInicio || !campos.horaDeTermino)
+    return false;
   return (
-    combineDateTime(campos.date, campos.endTime) >
-    combineDateTime(campos.date, campos.startTime)
+    combinarDataEHora(campos.data, campos.horaDeTermino) >
+    combinarDataEHora(campos.data, campos.horaDeInicio)
   );
 }
 
-export const ROTULO_DA_ATIVIDADE: Record<ActivityType, string> = {
+export const ROTULO_DA_ATIVIDADE: Record<TipoDeAtividade, string> = {
   class: "Aula",
   lecture: "Palestra",
   exam: "Prova",

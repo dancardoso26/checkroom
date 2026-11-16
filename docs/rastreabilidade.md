@@ -27,8 +27,8 @@ pasta `CheckRoom/`.
 | RF06 | Gerenciar contas de usuário | `src/domain/auth/permissoes.ts`, `supabase/migrations/20260924000200_alterar_papel.sql` | `src/app/(sistema)/configuracoes/usuarios/` | `src/domain/auth/permissoes.test.ts`, `tests/e2e/usuarios.spec.ts` |
 | RF07 | Excluir a própria conta | `supabase/migrations/20260922000400_anonimizar_conta.sql` | `src/app/(sistema)/conta/` | `tests/e2e/usuarios.spec.ts` |
 | RF08 | Consultar a agenda de ocupação | `src/domain/agenda/`, `src/domain/tabela/` | `src/app/(sistema)/reservas/` (`page.tsx`, `agenda/`) | `src/domain/agenda/navegacao-da-agenda.test.ts`, `src/domain/agenda/filtros-da-agenda.test.ts`, `tests/e2e/agenda.spec.ts`, `tests/e2e/permissoes-da-agenda.spec.ts` |
-| RF09 | Avaliar os espaços compatíveis | `src/domain/booking/evaluateRooms.ts` | `src/app/(sistema)/reservas/formulario/` | `src/domain/booking/evaluateRooms.test.ts`, `tests/e2e/criar-reserva.spec.ts` |
-| RF10 | Registrar reserva de espaço | `src/domain/booking/validateBooking.ts`, `src/domain/booking/messages.ts` | `src/app/(sistema)/reservas/formulario/`, ação em `src/app/(sistema)/reservas/acoes/criar.ts` | `src/domain/booking/validateBooking.test.ts`, `tests/e2e/criar-reserva.spec.ts`, `tests/e2e/constraints-do-banco.spec.ts` |
+| RF09 | Avaliar os espaços compatíveis | `src/domain/reservas/avaliar-espacos.ts` | `src/app/(sistema)/reservas/formulario/` | `src/domain/reservas/avaliar-espacos.test.ts`, `tests/e2e/criar-reserva.spec.ts` |
+| RF10 | Registrar reserva de espaço | `src/domain/reservas/validar-reserva.ts`, `src/domain/reservas/mensagens.ts` | `src/app/(sistema)/reservas/formulario/`, ação em `src/app/(sistema)/reservas/acoes/criar.ts` | `src/domain/reservas/validar-reserva.test.ts`, `tests/e2e/criar-reserva.spec.ts`, `tests/e2e/constraints-do-banco.spec.ts` |
 | RF11 | Cancelar reserva | `src/app/(sistema)/reservas/acoes/cancelar.ts`, `supabase/migrations/20260908000400_booking_cancellation.sql` | `src/app/(sistema)/reservas/agenda/cancelar-reserva.tsx` | `tests/e2e/cancelar-reserva.spec.ts` |
 | RF12 | Excluir reserva | `src/app/(sistema)/reservas/acoes/excluir.ts` | `src/app/(sistema)/reservas/agenda/excluir-reserva.tsx` | `tests/e2e/excluir-reserva.spec.ts` |
 | RF13 | Notificar o professor (reserva nova, cancelada ou removida) | `src/app/(sistema)/reservas/acoes/notificar.ts`, `src/app/(sistema)/reservas/acoes/excluir.ts`, `src/lib/email/` | sem tela (e-mail) | `src/lib/email/destinatario.test.ts`, `src/lib/email/remetente.test.ts` |
@@ -53,11 +53,11 @@ pasta `CheckRoom/`.
 | RN03 | Conta nasce como aluno; só o administrador define o papel | `src/domain/auth/permissoes.ts`, `supabase/migrations/20260926000100_cadastro_seguro.sql` | `src/domain/auth/permissoes.test.ts`, `tests/e2e/usuarios.spec.ts` |
 | RN04 | O master não é removido nem rebaixado; ninguém altera a própria conta | `supabase/migrations/20260926000000_administrador_master.sql`, `supabase/migrations/20260924000100_administrador_unico.sql` | `tests/e2e/usuarios.spec.ts` |
 | RN05 | Remover conta é anonimizar | `supabase/migrations/20260922000400_anonimizar_conta.sql` | `tests/e2e/usuarios.spec.ts` |
-| RN06 | Quem pode reservar, cancelar e excluir; a equipe de TI não vê a agenda | `src/domain/auth/permissoes.ts`, `supabase/migrations/20260922000300_row_level_security_policies.sql`, `supabase/migrations/20261107000100_ti_sem_agenda.sql` | `src/domain/auth/permissoes.test.ts`, `tests/e2e/permissoes-da-agenda.spec.ts`, `tests/e2e/autenticacao.spec.ts` |
-| RN07 | Futuro, mesmo dia, entre 7h e 22h, com finalidade | `src/domain/booking/validateBooking.ts`, `src/domain/booking/businessHours.ts` | `src/domain/booking/validateBooking.test.ts` |
-| RN08 | Sem sobreposição de espaço, professor ou turma | `src/domain/booking/evaluateRooms.ts`, `supabase/migrations/20260904000200_booking_constraints.sql` | `tests/e2e/constraints-do-banco.spec.ts`, `src/domain/booking/evaluateRooms.test.ts` |
-| RN09 | Aula exige disciplina e vínculo no período | `src/domain/booking/validateBooking.ts`, `supabase/migrations/20260908000100_create_booking_with_subject.sql` | `src/domain/booking/validateBooking.test.ts` |
-| RN10 | O espaço comporta a turma e tem os recursos | `src/domain/booking/evaluateRooms.ts`, `supabase/migrations/20261106000200_alunos_da_turma_pela_contagem.sql` | `src/domain/booking/evaluateRooms.test.ts`, `tests/e2e/criar-reserva.spec.ts` |
+| RN06 | Quem pode reservar, cancelar e excluir; a equipe de TI não vê a agenda; o professor só vê as reservas dele e as das turmas em que leciona | `src/domain/auth/permissoes.ts`, `supabase/migrations/20260922000300_row_level_security_policies.sql`, `supabase/migrations/20261107000100_ti_sem_agenda.sql`, `supabase/migrations/20261116000000_agenda_do_professor_restrita.sql` | `src/domain/auth/permissoes.test.ts`, `tests/e2e/permissoes-da-agenda.spec.ts`, `tests/e2e/autenticacao.spec.ts` |
+| RN07 | Futuro, mesmo dia, entre 7h e 22h, com finalidade | `src/domain/reservas/validar-reserva.ts`, `src/domain/reservas/expediente.ts` | `src/domain/reservas/validar-reserva.test.ts` |
+| RN08 | Sem sobreposição de espaço, professor ou turma | `src/domain/reservas/avaliar-espacos.ts`, `supabase/migrations/20260904000200_booking_constraints.sql` | `tests/e2e/constraints-do-banco.spec.ts`, `src/domain/reservas/avaliar-espacos.test.ts` |
+| RN09 | Aula exige disciplina e vínculo no período | `src/domain/reservas/validar-reserva.ts`, `supabase/migrations/20260908000100_create_booking_with_subject.sql` | `src/domain/reservas/validar-reserva.test.ts` |
+| RN10 | O espaço comporta a turma e tem os recursos | `src/domain/reservas/avaliar-espacos.ts`, `supabase/migrations/20261106000200_alunos_da_turma_pela_contagem.sql` | `src/domain/reservas/avaliar-espacos.test.ts`, `tests/e2e/criar-reserva.spec.ts` |
 | RN11 | Cancelamento exige motivo e libera o horário | `src/app/(sistema)/reservas/acoes/cancelar.ts`, `supabase/migrations/20260908000400_booking_cancellation.sql` | `tests/e2e/cancelar-reserva.spec.ts` |
 | RN12 | Alterações e acessos vão para a auditoria | `supabase/migrations/20260922000200_audit_log.sql`, `src/domain/auditoria/descricao.ts` | `src/domain/auditoria/descricao.test.ts`, `tests/e2e/excluir-reserva.spec.ts` |
 | RN13 | Falha de e-mail não desfaz a operação | `src/app/(sistema)/reservas/acoes/notificar.ts`, `src/lib/email/enviar.tsx` | sem teste dedicado |
@@ -71,6 +71,6 @@ pasta `CheckRoom/`.
 - RF13, RF20, RF22 e RN13 (e-mails) não têm teste automatizado dedicado: os
   e-mails de reservas de teste são suprimidos pelo prefixo `[e2e]`, e os testes
   em `src/lib/email/` cobrem só destinatário e remetente.
-- Os nomes de `src/domain/booking/` seguem em inglês (`validateBooking`,
-  `evaluateRooms`, `businessHours`), por acompanharem as funções que o Guia de
+- Os nomes de `src/domain/reservas/` seguem em inglês (`validarReserva`,
+  `avaliarEspacos`, `businessHours`), por acompanharem as funções que o Guia de
   estudo e a monografia citam.

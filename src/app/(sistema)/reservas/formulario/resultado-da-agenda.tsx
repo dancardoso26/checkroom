@@ -1,6 +1,6 @@
 "use client";
 
-import type { AnaliseResult } from "./analise";
+import type { ResultadoDaAnalise } from "./analise";
 import { Aviso } from "./aviso";
 
 export function ResultadoDaAgenda({
@@ -10,7 +10,7 @@ export function ResultadoDaAgenda({
   espacosDisponiveis,
 }: {
   espacosDisponiveis: number | null;
-  analise: AnaliseResult | null;
+  analise: ResultadoDaAnalise | null;
   analisando: boolean;
   ehPalestra: boolean;
 }) {
@@ -20,20 +20,20 @@ export function ResultadoDaAgenda({
     );
   }
 
-  if (analise.status === "invalid") {
-    return <p className="text-muted-foreground text-sm">{analise.message}</p>;
+  if (analise.status === "invalido") {
+    return <p className="text-muted-foreground text-sm">{analise.mensagem}</p>;
   }
 
   if (espacosDisponiveis === 0) {
     return (
       <Aviso tom="erro" titulo="Nenhum espaço disponível">
-        Nenhum espaço atende à data, ao horário e aos recursos escolhidos.
-        Mude o horário ou tire algum recurso.
+        Nenhum espaço atende à data, ao horário e aos recursos escolhidos. Mude
+        o horário ou tire algum recurso.
       </Aviso>
     );
   }
 
-  if (analise.scheduleMessages.length === 0) {
+  if (analise.mensagensDeHorario.length === 0) {
     return ehPalestra ? (
       <Aviso
         tom="ok"
@@ -55,7 +55,7 @@ export function ResultadoDaAgenda({
   return (
     <Aviso tom="erro" titulo="Conflito de agenda">
       <ul className="list-disc space-y-1 pl-4">
-        {analise.scheduleMessages.map((m) => (
+        {analise.mensagensDeHorario.map((m) => (
           <li key={m}>{m}</li>
         ))}
       </ul>

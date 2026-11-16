@@ -12,7 +12,7 @@ test("exige login para chegar à agenda", async ({ page }) => {
   await page.goto("/reservas");
 
   await expect(page).toHaveURL(/\/login/);
-  await expect(page.getByLabel("E-mail institucional")).toBeVisible();
+  await expect(page.getByLabel("E-mail", { exact: true })).toBeVisible();
 });
 
 test("guarda o destino pedido antes do login", async ({ page }) => {
@@ -139,21 +139,18 @@ test("cadastra e verifica o segundo fator", async ({ page }) => {
   await entrarComo(page, CONTA_COM_SEGUNDO_FATOR);
 
   await expect(page).toHaveURL(/\/reservas/);
-  await expect(page.getByText("sem segundo fator")).toBeHidden();
 });
 
-test("a conta de desenvolvimento entra sem segundo fator e avisa disso", async ({
-  page,
-}) => {
+test("nenhuma conta entra sem o segundo fator", async ({ page }) => {
   await page.goto("/login");
   await page.fill("#email", ADMIN);
   await page.fill("#senha", SENHA);
   await page.getByRole("button", { name: "Entrar" }).click();
 
-  await expect(page).toHaveURL(/\/reservas/);
-  await expect(
-    page.getByText("Segundo fator dispensado neste ambiente")
-  ).toBeVisible();
+  await expect(page).toHaveURL(/\/verificacao/);
+
+  await page.goto("/reservas");
+  await expect(page).toHaveURL(/\/verificacao/);
 });
 
 test("termos e privacidade são lidos sem login", async ({ page }) => {
@@ -181,27 +178,6 @@ test("o olho mostra e oculta a senha digitada", async ({ page }) => {
   await expect(page.locator("#senha")).toHaveAttribute("type", "password");
 });
 
-test("a conta dispensada não cai na verificação por um destino antigo", async ({
-  page,
-}) => {
-  await page.goto("/login?proximo=%2Fverificacao");
-  await page.fill("#email", ADMIN);
-  await page.fill("#senha", SENHA);
-  await page.getByRole("button", { name: "Entrar" }).click();
-
-  await expect(page).toHaveURL(/\/reservas/);
-});
-
-test("a conta dispensada é levada à agenda se abrir a verificação", async ({
-  page,
-}) => {
-  await entrarComo(page, ADMIN);
-
-  await page.goto("/verificacao");
-
-  await expect(page).toHaveURL(/\/reservas/);
-});
-
 test("o login não segue destino que aponta para outro site", async ({
   page,
 }) => {
@@ -210,7 +186,7 @@ test("o login não segue destino que aponta para outro site", async ({
   await page.fill("#senha", SENHA);
   await page.getByRole("button", { name: "Entrar" }).click();
 
-  await expect(page).toHaveURL(/localhost.*\/reservas/);
+  await expect(page).toHaveURL(/localhost:\d+\/verificacao/);
 });
 
 test("o menu do perfil abre os documentos em outra aba", async ({
@@ -294,11 +270,16 @@ test("o Enter no campo de senha entra no sistema", async ({ page }) => {
   await page.fill("#senha", SENHA);
   await page.locator("#senha").press("Enter");
 
-  await expect(page).toHaveURL(/\/reservas/);
+  await expect(page).toHaveURL(/\/verificacao/);
 });
 
 test("a sessão aberta só com a senha não troca a senha", async ({ page }) => {
-  await entrarComo(page, ADMIN);
+  await page.goto("/login");
+  await page.fill("#email", ADMIN);
+  await page.fill("#senha", SENHA);
+  await page.getByRole("button", { name: "Entrar" }).click();
+  await expect(page).toHaveURL(/\/verificacao/);
+
   await page.goto("/nova-senha");
 
   await page.fill("#senha", "Outra-senha-123");

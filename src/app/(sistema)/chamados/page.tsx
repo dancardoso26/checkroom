@@ -6,7 +6,7 @@ import {
   podeVerTodosOsChamados,
 } from "@/domain/auth/permissoes";
 import { acoesDisponiveis, ordenarFila } from "@/domain/chamados/chamado";
-import { listRooms } from "@/lib/repositories/repositorio-de-espacos";
+import { listarEspacos } from "@/lib/repositories/repositorio-de-espacos";
 import { listarChamados } from "@/lib/repositories/repositorio-de-chamados";
 import { exigirSessao } from "@/lib/sessao";
 import { AtualizacaoAoVivo } from "@/components/atualizacao-ao-vivo";
@@ -30,7 +30,7 @@ export default async function ChamadosPage({
 
   const [chamados, espacos] = await Promise.all([
     listarChamados(),
-    abre ? listRooms() : Promise.resolve([]),
+    abre ? listarEspacos() : Promise.resolve([]),
   ]);
 
   return (
@@ -42,7 +42,7 @@ export default async function ChamadosPage({
           ...c,
           acoes: acoesDisponiveis(c, sessao),
         }))}
-        espacos={espacos.map((e) => ({ id: e.id, nome: e.name }))}
+        espacos={espacos.map((e) => ({ id: e.id, nome: e.nome }))}
         podeAbrir={abre}
         podeExcluir={podeExcluirChamado(sessao)}
         veTodos={veTodos}

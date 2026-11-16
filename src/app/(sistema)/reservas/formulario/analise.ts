@@ -3,22 +3,26 @@
 import { z } from "zod";
 
 import {
-  evaluateRooms,
-  findScheduleConflicts,
-} from "@/domain/booking/evaluateRooms";
-import { describeViolations } from "@/domain/booking/messages";
-import type { BookingViolation } from "@/domain/booking/types";
+  avaliarEspacos,
+  encontrarConflitosDeHorario,
+} from "@/domain/reservas/avaliar-espacos";
+import { descreverViolacoes } from "@/domain/reservas/mensagens";
+import type {
+  ContextoDaReserva,
+  PedidoDeReserva,
+  ViolacaoDaReserva,
+} from "@/domain/reservas/tipos";
 
-import { findClassSnapshot } from "@/lib/repositories/repositorio-de-turmas";
-import { listRooms } from "@/lib/repositories/repositorio-de-espacos";
+import { buscarTurmaParaReserva } from "@/lib/repositories/repositorio-de-turmas";
+import { listarEspacos } from "@/lib/repositories/repositorio-de-espacos";
 import {
-  listResources,
-  toResourceNameMap,
+  listarRecursos,
+  mapaDeNomesDosRecursos,
 } from "@/lib/repositories/repositorio-de-recursos";
-import { findBookingsInPeriod } from "@/lib/repositories/repositorio-de-reservas";
-import { findTeachingAssignment } from "@/lib/repositories/repositorio-de-disciplinas";
-import { PERIODO_LETIVO_VIGENTE } from "@/domain/booking/businessHours";
-import { combineDateTime } from "@/lib/datetime";
+import { buscarOcupacoesNoPeriodo } from "@/lib/repositories/repositorio-de-reservas";
+import { buscarVinculoDocente } from "@/lib/repositories/repositorio-de-disciplinas";
+import { PERIODO_LETIVO_VIGENTE } from "@/domain/reservas/expediente";
+import { combinarDataEHora } from "@/lib/datas";
 import { carregarCalendarioDoDia } from "@/lib/repositories/repositorio-do-calendario";
 import {
   podeCadastrarPalestra,
@@ -28,189 +32,191 @@ import { exigirSessao } from "@/lib/sessao";
 
 const schema = z.object({
   professorId: z.uuid(),
-  classId: z.uuid(),
-  subjectId: z.union([z.uuid(), z.literal("")]).transform((v) => v || null),
-  activityType: z.enum(["class", "lecture", "exam", "event"]),
-  date: z.iso.date(),
-  startTime: z.iso.time(),
-  endTime: z.iso.time(),
-  resourceIds: z.array(z.uuid()),
+  turmaId: z.uuid(),
+  disciplinaId: z.union([z.uuid(), z.literal("")]).transform((v) => v || null),
+  tipoDeAtividade: z.enum(["class", "lecture", "exam", "event"]),
+  data: z.iso.date(),
+  horaDeInicio: z.iso.time(),
+  horaDeTermino: z.iso.time(),
+  recursoIds: z.array(z.uuid()),
 });
 
-export type AnaliseInput = z.infer<typeof schema>;
+export type DadosDaAnalise = z.infer<typeof schema>;
 
-export type RoomVerdict = {
-  roomId: string;
-  compatible: boolean;
+export type VeredictoDoEspaco = {
+  espacoId: string;
+  compativel: boolean;
   motivos: string[];
 };
 
-export type AnaliseResult =
+export type ResultadoDaAnalise =
   | {
       status: "ok";
-      scheduleMessages: string[];
-      rooms: RoomVerdict[];
+      mensagensDeHorario: string[];
+      espacos: VeredictoDoEspaco[];
     }
-  | { status: "invalid"; message: string };
+  | { status: "invalido"; mensagem: string };
 
 export async function analisarReserva(
-  input: AnaliseInput
-): Promise<AnaliseResult> {
-  const parsed = schema.safeParse(input);
+  entrada: DadosDaAnalise,
+): Promise<ResultadoDaAnalise> {
+  const validado = schema.safeParse(entrada);
 
-  if (!parsed.success) {
+  if (!validado.success) {
     return {
-      status: "invalid",
-      message: "Preencha turma, professor, data e horário para ver os espaços.",
+      status: "invalido",
+      mensagem:
+        "Preencha turma, professor, data e horário para ver os espaços.",
     };
   }
 
-  const dados = parsed.data;
+  const dados = validado.data;
 
   const sessao = await exigirSessao();
   if (!podeReservarPara(sessao, dados.professorId)) {
     return {
-      status: "invalid",
-      message: "Você só pode registrar reservas em seu próprio nome.",
+      status: "invalido",
+      mensagem: "Você só pode registrar reservas em seu próprio nome.",
     };
   }
 
-  const startsAt = combineDateTime(dados.date, dados.startTime);
-  const endsAt = combineDateTime(dados.date, dados.endTime);
+  const inicio = combinarDataEHora(dados.data, dados.horaDeInicio);
+  const fim = combinarDataEHora(dados.data, dados.horaDeTermino);
 
-  const calendario = await carregarCalendarioDoDia(dados.date);
+  const calendario = await carregarCalendarioDoDia(dados.data);
 
-  const [classGroup, rooms, resources, teachingAssignment, bookings] =
-    await Promise.all([
-      findClassSnapshot(dados.classId),
-      listRooms(),
-      listResources(),
-      findTeachingAssignment({
-        professorId: dados.professorId,
-        subjectId: dados.subjectId,
-        classId: dados.classId,
-        term: calendario.periodo?.codigo ?? PERIODO_LETIVO_VIGENTE,
-      }),
-      findBookingsInPeriod({ startsAt, endsAt }),
-    ]);
+  const [turma, espacos, recursos, vinculo, ocupacoes] = await Promise.all([
+    buscarTurmaParaReserva(dados.turmaId),
+    listarEspacos(),
+    listarRecursos(),
+    buscarVinculoDocente({
+      professorId: dados.professorId,
+      disciplinaId: dados.disciplinaId,
+      turmaId: dados.turmaId,
+      periodo: calendario.periodo?.codigo ?? PERIODO_LETIVO_VIGENTE,
+    }),
+    buscarOcupacoesNoPeriodo({ inicio, fim }),
+  ]);
 
-  const resourceNames = toResourceNameMap(resources);
+  const nomesDosRecursos = mapaDeNomesDosRecursos(recursos);
 
-  const pedido = {
+  const pedido: Omit<PedidoDeReserva, "espacoId"> = {
     professorId: dados.professorId,
-    classId: dados.classId,
-    subjectId: dados.subjectId,
-    activityType: dados.activityType,
-    purpose: "análise",
-    startsAt,
-    endsAt,
-    requiredResourceIds: dados.resourceIds,
+    turmaId: dados.turmaId,
+    disciplinaId: dados.disciplinaId,
+    tipoDeAtividade: dados.tipoDeAtividade,
+    finalidade: "análise",
+    inicio,
+    fim,
+    recursosExigidos: dados.recursoIds,
   };
 
-  const contexto = {
-    classGroup,
-    teachingAssignment,
-    conflictingBookings: bookings,
-    now: new Date(),
+  const contexto: Omit<ContextoDaReserva, "espaco"> = {
+    turma,
+    vinculo,
+    ocupacoes,
+    agora: new Date(),
     calendario,
   };
 
-  const avaliacoes = evaluateRooms(pedido, rooms, contexto);
-  const conflitos = findScheduleConflicts(pedido, contexto);
+  const avaliacoes = avaliarEspacos(pedido, espacos, contexto);
+  const conflitos = encontrarConflitosDeHorario(pedido, contexto);
 
   return {
     status: "ok",
-    scheduleMessages: describeViolations(conflitos, { resourceNames }),
-    rooms: avaliacoes.map((avaliacao) => ({
-      roomId: avaliacao.room.id,
-      compatible: avaliacao.compatible,
-      motivos: describeViolations(avaliacao.violations, { resourceNames }),
+    mensagensDeHorario: descreverViolacoes(conflitos, { nomesDosRecursos }),
+    espacos: avaliacoes.map((avaliacao) => ({
+      espacoId: avaliacao.espaco.id,
+      compativel: avaliacao.compativel,
+      motivos: descreverViolacoes(avaliacao.violacoes, { nomesDosRecursos }),
     })),
   };
 }
 
 const schemaDaPalestra = z.object({
-  date: z.iso.date(),
-  startTime: z.iso.time(),
-  endTime: z.iso.time(),
+  data: z.iso.date(),
+  horaDeInicio: z.iso.time(),
+  horaDeTermino: z.iso.time(),
   vagas: z.number().int().positive(),
-  resourceIds: z.array(z.uuid()),
+  recursoIds: z.array(z.uuid()),
 });
 
-export type AnaliseDaPalestraInput = z.infer<typeof schemaDaPalestra>;
+export type DadosDaAnaliseDaPalestra = z.infer<typeof schemaDaPalestra>;
 
 const PUBLICO_DA_PALESTRA = "__palestra__";
 
 export async function analisarPalestra(
-  input: AnaliseDaPalestraInput
-): Promise<AnaliseResult> {
-  const parsed = schemaDaPalestra.safeParse(input);
+  entrada: DadosDaAnaliseDaPalestra,
+): Promise<ResultadoDaAnalise> {
+  const validado = schemaDaPalestra.safeParse(entrada);
 
-  if (!parsed.success) {
+  if (!validado.success) {
     return {
-      status: "invalid",
-      message: "Preencha data, horário e vagas para ver os espaços.",
+      status: "invalido",
+      mensagem: "Preencha data, horário e vagas para ver os espaços.",
     };
   }
 
   const sessao = await exigirSessao();
   if (!podeCadastrarPalestra(sessao)) {
     return {
-      status: "invalid",
-      message: "Apenas a administração cadastra palestras.",
+      status: "invalido",
+      mensagem: "Apenas a administração cadastra palestras.",
     };
   }
 
-  const dados = parsed.data;
-  const startsAt = combineDateTime(dados.date, dados.startTime);
-  const endsAt = combineDateTime(dados.date, dados.endTime);
+  const dados = validado.data;
+  const inicio = combinarDataEHora(dados.data, dados.horaDeInicio);
+  const fim = combinarDataEHora(dados.data, dados.horaDeTermino);
 
-  const [calendario, rooms, resources, bookings] = await Promise.all([
-    carregarCalendarioDoDia(dados.date),
-    listRooms(),
-    listResources(),
-    findBookingsInPeriod({ startsAt, endsAt }),
+  const [calendario, espacos, recursos, ocupacoes] = await Promise.all([
+    carregarCalendarioDoDia(dados.data),
+    listarEspacos(),
+    listarRecursos(),
+    buscarOcupacoesNoPeriodo({ inicio, fim }),
   ]);
 
-  const resourceNames = toResourceNameMap(resources);
+  const nomesDosRecursos = mapaDeNomesDosRecursos(recursos);
 
-  const descrever = (violacoes: BookingViolation[]) =>
+  const descrever = (violacoes: ViolacaoDaReserva[]) =>
     violacoes.map((v) =>
-      v.code === "INSUFFICIENT_CAPACITY"
-        ? `O espaço comporta ${v.capacity} pessoas e a palestra tem ${v.studentCount} vagas.`
-        : describeViolations([v], { resourceNames })[0]
+      v.codigo === "CAPACIDADE_INSUFICIENTE"
+        ? `O espaço comporta ${v.capacidade} pessoas e a palestra tem ${v.quantidadeDeAlunos} vagas.`
+        : descreverViolacoes([v], { nomesDosRecursos })[0],
     );
 
-  const pedido = {
+  const pedido: Omit<PedidoDeReserva, "espacoId"> = {
     professorId: PUBLICO_DA_PALESTRA,
-    classId: PUBLICO_DA_PALESTRA,
-    subjectId: null,
-    activityType: "lecture" as const,
-    purpose: "análise",
-    startsAt,
-    endsAt,
-    requiredResourceIds: dados.resourceIds,
+    turmaId: PUBLICO_DA_PALESTRA,
+    disciplinaId: null,
+    tipoDeAtividade: "lecture",
+    finalidade: "análise",
+    inicio,
+    fim,
+    recursosExigidos: dados.recursoIds,
   };
 
-  const contexto = {
-    classGroup: {
+  const contexto: Omit<ContextoDaReserva, "espaco"> = {
+    turma: {
       id: PUBLICO_DA_PALESTRA,
-      name: "Palestra",
-      studentCount: dados.vagas,
+      nome: "Palestra",
+      quantidadeDeAlunos: dados.vagas,
     },
-    teachingAssignment: null,
-    conflictingBookings: bookings,
-    now: new Date(),
+    vinculo: null,
+    ocupacoes,
+    agora: new Date(),
     calendario,
   };
 
   return {
     status: "ok",
-    scheduleMessages: descrever(findScheduleConflicts(pedido, contexto)),
-    rooms: evaluateRooms(pedido, rooms, contexto).map((avaliacao) => ({
-      roomId: avaliacao.room.id,
-      compatible: avaliacao.compatible,
-      motivos: descrever(avaliacao.violations),
+    mensagensDeHorario: descrever(
+      encontrarConflitosDeHorario(pedido, contexto),
+    ),
+    espacos: avaliarEspacos(pedido, espacos, contexto).map((avaliacao) => ({
+      espacoId: avaliacao.espaco.id,
+      compativel: avaliacao.compativel,
+      motivos: descrever(avaliacao.violacoes),
     })),
   };
 }

@@ -3,27 +3,30 @@ import { z } from "zod";
 import type { ErrosPorCampo } from "@/domain/formulario/validacao";
 
 export type EstadoDoFormulario =
-  | { status: "idle" }
-  | { status: "success" }
+  | { status: "inicial" }
+  | { status: "sucesso" }
   | {
-      status: "error";
+      status: "erro";
       mensagem: string | null;
       erros: Record<string, string[]>;
     };
 
-export const ESTADO_INICIAL: EstadoDoFormulario = { status: "idle" };
+export const ESTADO_INICIAL: EstadoDoFormulario = { status: "inicial" };
 
-export const SUCESSO: EstadoDoFormulario = { status: "success" };
+export const SUCESSO: EstadoDoFormulario = { status: "sucesso" };
 
 export function falha(
   mensagem: string | null,
-  erros: ErrosPorCampo = {}
+  erros: ErrosPorCampo = {},
 ): EstadoDoFormulario {
-  return { status: "error", mensagem, erros: erros as Record<string, string[]> };
+  return { status: "erro", mensagem, erros: erros as Record<string, string[]> };
 }
 
 export function falhaDeValidacao(erro: z.ZodError): EstadoDoFormulario {
-  return falha(null, z.flattenError(erro).fieldErrors as Record<string, string[]>);
+  return falha(
+    null,
+    z.flattenError(erro).fieldErrors as Record<string, string[]>,
+  );
 }
 
 export function texto(valor: FormDataEntryValue | null): string {

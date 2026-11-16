@@ -19,7 +19,7 @@ export const ABERTURA = minutosParaHora(ABERTURA_EM_MINUTOS);
 export const FECHAMENTO = minutosParaHora(FECHAMENTO_EM_MINUTOS);
 
 export const ULTIMO_INICIO = minutosParaHora(
-  FECHAMENTO_EM_MINUTOS - PASSO_EM_MINUTOS
+  FECHAMENTO_EM_MINUTOS - PASSO_EM_MINUTOS,
 );
 
 export const PERIODO_LETIVO_VIGENTE = "2026.2";

@@ -12,7 +12,10 @@ import {
 } from "@/domain/auth/permissoes";
 import { registrarEventoDeAutenticacao } from "@/lib/auditoria";
 import { enderecoDoSite } from "@/lib/endereco-do-site";
-import { carregarCadastroAcademico, gravarEntidade } from "@/lib/repositories/repositorio-academico";
+import {
+  carregarCadastroAcademico,
+  gravarEntidade,
+} from "@/lib/repositories/repositorio-academico";
 import { periodoLetivoVigente } from "@/lib/repositories/repositorio-do-calendario";
 import {
   alvoDoUsuario,
@@ -25,7 +28,7 @@ import {
   reenviarConvite,
   vincularProfessor,
 } from "@/lib/repositories/repositorio-de-usuarios";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { criarClienteDoServidor } from "@/lib/supabase/servidor";
 import { sessaoAtual } from "@/lib/sessao";
 
 export type ResultadoDaAcao = { ok: true } | { ok: false; mensagem: string };
@@ -40,7 +43,7 @@ async function autorizar(alvoId: string) {
 
 export async function alterarAtivo(
   alvoId: string,
-  ativo: boolean
+  ativo: boolean,
 ): Promise<ResultadoDaAcao> {
   const sessao = await autorizar(alvoId);
   if (!sessao)
@@ -55,7 +58,7 @@ export async function alterarAtivo(
   await registrarEventoDeAutenticacao(
     ativo ? "user_reactivated" : "user_deactivated",
     sessao.profileId,
-    { alvo: alvoId }
+    { alvo: alvoId },
   );
 
   revalidatePath("/configuracoes/usuarios");
@@ -67,7 +70,7 @@ export async function removerUsuario(alvoId: string): Promise<ResultadoDaAcao> {
   if (!sessao)
     return { ok: false, mensagem: "Esta conta não pode ser removida." };
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = await criarClienteDoServidor();
   const { error } = await supabase.rpc("remover_usuario", { p_alvo: alvoId });
 
   if (error)
@@ -94,7 +97,7 @@ const MENSAGEM_PROFESSOR_EM_USO =
 export async function alterarPapel(
   alvoId: string,
   papel: Papel,
-  turmaId: string | null = null
+  turmaId: string | null = null,
 ): Promise<ResultadoDaAcao> {
   const sessao = await autorizar(alvoId);
   if (!sessao || !PAPEIS_ATRIBUIVEIS.includes(papel)) {
@@ -121,7 +124,7 @@ export async function alterarPapel(
     };
   }
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = await criarClienteDoServidor();
   const { error } = await supabase.rpc("alterar_papel", {
     p_alvo: alvoId,
     p_papel: papel,
@@ -129,7 +132,8 @@ export async function alterarPapel(
   });
 
   if (error) {
-    if (professor?.ok && professor.criado) await desfazerProfessor(professor.id, []);
+    if (professor?.ok && professor.criado)
+      await desfazerProfessor(professor.id, []);
     return { ok: false, mensagem: "Não foi possível alterar o papel agora." };
   }
 
@@ -171,32 +175,32 @@ export async function convidarUsuario(dados: {
     return { ok: false, mensagem: "Apenas o administrador convida usuários." };
   }
 
-  const parsed = schemaDoConvite.safeParse(dados);
-  if (!parsed.success) {
+  const validado = schemaDoConvite.safeParse(dados);
+  if (!validado.success) {
     return {
       ok: false,
-      mensagem: parsed.error.issues[0]?.message ?? "Dados inválidos.",
+      mensagem: validado.error.issues[0]?.message ?? "Dados inválidos.",
     };
   }
 
-  const { nome, email, papel } = parsed.data;
-  const turmaId = papel === "student" ? parsed.data.turmaId : null;
-  const vinculos = papel === "professor" ? parsed.data.vinculos : [];
+  const { nome, email, papel } = validado.data;
+  const turmaId = papel === "student" ? validado.data.turmaId : null;
+  const vinculos = papel === "professor" ? validado.data.vinculos : [];
 
   const cadastro = await carregarCadastroAcademico();
   const periodo = await periodoLetivoVigente();
 
   const existente = cadastro.professores.find(
-    (d) => d.email.toLowerCase() === email.trim().toLowerCase()
+    (d) => d.email.toLowerCase() === email.trim().toLowerCase(),
   );
   const existentes = cadastro.vinculos.filter(
-    (v) => v.professorId === existente?.id && v.periodo === periodo
+    (v) => v.professorId === existente?.id && v.periodo === periodo,
   );
   const pendentes = vinculos.filter(
     (v) =>
       !existentes.some(
-        (e) => e.disciplinaId === v.disciplinaId && e.turmaId === v.turmaId
-      )
+        (e) => e.disciplinaId === v.disciplinaId && e.turmaId === v.turmaId,
+      ),
   );
 
   const vistos = new Set<string>();
@@ -219,7 +223,7 @@ export async function convidarUsuario(dados: {
         existentes: cadastro.vinculos,
         disciplinas: cadastro.disciplinas,
         turmas: cadastro.turmas,
-      }
+      },
     );
     const mensagem = Object.values(erros).flat()[0];
     if (mensagem) return { ok: false, mensagem };
@@ -254,7 +258,7 @@ export async function convidarUsuario(dados: {
       if (!gravado.ok) {
         await desfazerProfessor(
           professorCriado ? professorId : null,
-          vinculosCriados
+          vinculosCriados,
         );
         return {
           ok: false,
@@ -271,13 +275,16 @@ export async function convidarUsuario(dados: {
     nome,
     email,
     papel,
-    professorId: professorId,
+    professorId,
     turmaId,
     redirecionarPara,
   });
 
   if (!resultado.ok) {
-    await desfazerProfessor(professorCriado ? professorId : null, vinculosCriados);
+    await desfazerProfessor(
+      professorCriado ? professorId : null,
+      vinculosCriados,
+    );
     return {
       ok: false,
       mensagem: resultado.jaExiste
@@ -301,7 +308,7 @@ async function destinoDoConvite(): Promise<string> {
 }
 
 export async function reenviarConviteDoUsuario(
-  alvoId: string
+  alvoId: string,
 ): Promise<ResultadoDaAcao> {
   const sessao = await autorizar(alvoId);
   if (!sessao)

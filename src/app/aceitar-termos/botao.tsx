@@ -1,37 +1,32 @@
 "use client";
 
-import {
-  startTransition,
-  useActionState,
-  useEffect,
-  useState,
-} from "react";
+import { startTransition, useActionState, useEffect, useState } from "react";
 
-import { aceitarTermos, type AceiteState } from "./acoes";
+import { aceitarTermos, type EstadoDoAceite } from "./acoes";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 
-const ESTADO_INICIAL: AceiteState = { status: "idle" };
+const ESTADO_INICIAL: EstadoDoAceite = { status: "inicial" };
 
 export function BotaoDeAceite() {
   const [marcado, setMarcado] = useState(false);
-  const [state, formAction, enviando] = useActionState(
+  const [estado, acaoDoFormulario, enviando] = useActionState(
     aceitarTermos,
-    ESTADO_INICIAL
+    ESTADO_INICIAL,
   );
 
   useEffect(() => {
-    if (state.status !== "success") return;
+    if (estado.status !== "sucesso") return;
 
     // eslint-disable-next-line @next/next/no-location-assign-relative-destination
     window.location.assign("/reservas");
-  }, [state.status]);
+  }, [estado.status]);
 
   function enviar(evento: React.FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     const dados = new FormData(evento.currentTarget);
-    startTransition(() => formAction(dados));
+    startTransition(() => acaoDoFormulario(dados));
   }
 
   return (
@@ -50,17 +45,13 @@ export function BotaoDeAceite() {
         </Label>
       </div>
 
-      {state.status === "error" && (
+      {estado.status === "erro" && (
         <p className="text-destructive text-sm" role="alert">
-          {state.message}
+          {estado.message}
         </p>
       )}
 
-      <Button
-        type="submit"
-        className="w-full"
-        disabled={!marcado || enviando}
-      >
+      <Button type="submit" className="w-full" disabled={!marcado || enviando}>
         {enviando ? "Registrando..." : "Continuar"}
       </Button>
     </form>

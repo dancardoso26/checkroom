@@ -9,17 +9,17 @@ import {
   somarDias,
   tituloDoPeriodo,
 } from "@/domain/agenda/navegacao-da-agenda";
-import { combineDateTime, localDayKey } from "@/lib/datetime";
+import { combinarDataEHora, chaveDoDiaLocal } from "@/lib/datas";
 import {
-  listBookingsInRange,
-  listBookingsPage,
+  listarReservasNoIntervalo,
+  listarPaginaDeReservas,
   reservaCorrespondeABusca,
   type EscopoDoAluno,
 } from "@/lib/repositories/repositorio-de-reservas";
-import { listProfessors } from "@/lib/repositories/repositorio-de-professores";
+import { listarProfessores } from "@/lib/repositories/repositorio-de-professores";
 import { listarParesDeDocencia } from "@/lib/repositories/repositorio-de-disciplinas";
-import { listClasses } from "@/lib/repositories/repositorio-de-turmas";
-import { listRooms } from "@/lib/repositories/repositorio-de-espacos";
+import { listarTurmasComCurso } from "@/lib/repositories/repositorio-de-turmas";
+import { listarEspacos } from "@/lib/repositories/repositorio-de-espacos";
 import { palestrasNaAgenda } from "@/lib/repositories/repositorio-de-palestras";
 import {
   podeCadastrarPalestra,
@@ -28,7 +28,7 @@ import {
   podeVerAgenda,
   podeVerPalestras,
 } from "@/domain/auth/permissoes";
-import type { BookingListItem } from "@/lib/repositories/repositorio-de-reservas";
+import type { ReservaDaLista } from "@/lib/repositories/repositorio-de-reservas";
 import { exigirSessao } from "@/lib/sessao";
 import { AtualizacaoAoVivo } from "@/components/atualizacao-ao-vivo";
 import {
@@ -84,16 +84,16 @@ export default async function ReservasPage({
   const parametros = await searchParams;
 
   const podeReservar = podeCriarReserva(sessao);
-  const comPermissao = (lista: BookingListItem[]) =>
+  const comPermissao = (lista: ReservaDaLista[]) =>
     lista.map((reserva) => ({
       ...reserva,
       gerenciavel: !reserva.ehPalestra && podeGerenciarReserva(sessao, reserva),
     }));
 
   const agora = new Date();
-  const hoje = localDayKey(agora);
+  const hoje = chaveDoDiaLocal(agora);
 
-  const turmasCarregando = listClasses();
+  const turmasCarregando = listarTurmasComCurso();
 
   const escopo: EscopoDoAluno | null =
     sessao.papel === "student"
@@ -139,20 +139,25 @@ export default async function ReservasPage({
     podeReservar
       ? carregarCatalogos(hoje, {
           comCursos: podeCadastrarPalestra(sessao),
-          turmas: turmasCarregando,
+          turmasCarregando,
         })
       : Promise.resolve(null),
-    listProfessors(),
+    listarProfessores(),
     estado.visao === "calendario"
       ? carregarProximos(agora, hoje, filtrosEfetivos.professores, escopo)
       : Promise.resolve([]),
-    listRooms(),
+    listarEspacos(),
     listarParesDeDocencia(),
     turmasCarregando,
   ]);
 
+  const doProfessor =
+    sessao.papel === "professor"
+      ? recorteDoProfessor(docencia, sessao.professorId)
+      : null;
+
   const painel: Painel | null = catalogos && {
-    catalogos: { ...catalogos, professors: professores },
+    catalogos: { ...catalogos, professores },
     professorFixo: sessao.papel === "admin" ? null : sessao.professorId,
     permitePalestra: podeCadastrarPalestra(sessao),
   };
@@ -183,16 +188,46 @@ export default async function ReservasPage({
         tituloDaPagina={
           sessao.papel === "student" ? "Minha agenda" : "Reservas"
         }
-        professores={professores.map(({ id, name }) => ({ id, nome: name }))}
+        professores={professores
+          .filter(
+            (professor) =>
+              !doProfessor || doProfessor.professores.has(professor.id),
+          )
+          .map(({ id, nome: name }) => ({ id, nome: name }))}
         turmas={(escopo
           ? todasAsTurmas.filter((turma) => escopo.turmaIds.includes(turma.id))
-          : todasAsTurmas
-        ).map(({ id, name }) => ({ id, nome: name }))}
-        espacos={espacos.map(({ id, name }) => ({ id, nome: name }))}
-        docencia={docencia}
+          : doProfessor
+            ? todasAsTurmas.filter((turma) => doProfessor.turmas.has(turma.id))
+            : todasAsTurmas
+        ).map(({ id, nome: name }) => ({ id, nome: name }))}
+        espacos={espacos.map(({ id, nome: name }) => ({ id, nome: name }))}
+        docencia={
+          doProfessor
+            ? docencia.filter((par) => doProfessor.turmas.has(par.turmaId))
+            : docencia
+        }
       />
     </>
   );
+}
+
+function recorteDoProfessor(
+  docencia: { professorId: string; turmaId: string }[],
+  professorId: string | null,
+) {
+  const turmas = new Set(
+    docencia
+      .filter((par) => par.professorId === professorId)
+      .map((par) => par.turmaId),
+  );
+  const professores = new Set(
+    docencia
+      .filter((par) => turmas.has(par.turmaId))
+      .map((par) => par.professorId),
+  );
+  if (professorId) professores.add(professorId);
+
+  return { turmas, professores };
 }
 
 async function carregarPeriodo(
@@ -210,19 +245,19 @@ async function carregarPeriodo(
     (filtros.tipos.length === 0 || filtros.tipos.includes("lecture"));
 
   const [reservas, palestras] = await Promise.all([
-    listBookingsInRange({ inicio, fim, filtros, escopo }),
+    listarReservasNoIntervalo({ inicio, fim, filtros, escopo }),
     comPalestras
       ? palestrasNaAgenda(inicio, fim, escopo, filtros.professores)
       : Promise.resolve([]),
   ]);
 
   const palestrasDosEspacos = palestras.filter(
-    (p) => filtros.espacos.length === 0 || filtros.espacos.includes(p.roomId),
+    (p) => filtros.espacos.length === 0 || filtros.espacos.includes(p.espacoId),
   );
 
   return [...reservas, ...palestrasDosEspacos]
     .filter((reserva) => reservaCorrespondeABusca(reserva, busca))
-    .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
+    .sort((a, b) => a.inicio.getTime() - b.inicio.getTime());
 }
 
 async function carregarProximos(
@@ -231,10 +266,10 @@ async function carregarProximos(
   professores: string[],
   escopo: EscopoDoAluno | null,
 ) {
-  const fim = combineDateTime(somarDias(hoje, 31), "00:00");
+  const fim = combinarDataEHora(somarDias(hoje, 31), "00:00");
 
   const [reservas, palestras] = await Promise.all([
-    listBookingsInRange({
+    listarReservasNoIntervalo({
       inicio: agora,
       fim,
       filtros: { ...FILTROS_PADRAO, professores },
@@ -244,7 +279,7 @@ async function carregarProximos(
   ]);
 
   return [...reservas, ...palestras]
-    .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
+    .sort((a, b) => a.inicio.getTime() - b.inicio.getTime())
     .slice(0, 40);
 }
 
@@ -255,7 +290,7 @@ async function carregarTabela(
   escopo: EscopoDoAluno | null,
 ): Promise<PaginaDaTabela> {
   const pedida = paginar(Infinity, pagina, porPagina);
-  const { reservas, total } = await listBookingsPage({
+  const { reservas, total } = await listarPaginaDeReservas({
     de: pedida.de,
     ate: pedida.ate,
     ordenar,
@@ -268,7 +303,7 @@ async function carregarTabela(
   const paginacao = paginar(total, pagina, porPagina);
 
   if (paginacao.pagina !== pagina && total > 0) {
-    const ultima = await listBookingsPage({
+    const ultima = await listarPaginaDeReservas({
       de: paginacao.de,
       ate: paginacao.ate,
       ordenar,

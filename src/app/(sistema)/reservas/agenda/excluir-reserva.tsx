@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import { excluirReserva, type ExclusaoState } from "../acoes/excluir";
+import { excluirReserva, type EstadoDaExclusao } from "../acoes/excluir";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,23 +14,22 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-const ESTADO_INICIAL: ExclusaoState = { status: "idle" };
+const ESTADO_INICIAL: EstadoDaExclusao = { status: "inicial" };
 
 export function ExcluirReserva({
-  bookingId,
+  reservaId,
   descricao,
   aberto,
   onAbertoChange,
   cancelada,
 }: {
-  bookingId: string;
+  reservaId: string;
   descricao: string;
   aberto: boolean;
   onAbertoChange: (aberto: boolean) => void;
   cancelada: boolean;
 }) {
-
-  const [state, setState] = useState(ESTADO_INICIAL);
+  const [estado, setState] = useState(ESTADO_INICIAL);
   const [excluindo, startTransition] = useTransition();
 
   function enviar(evento: React.FormEvent<HTMLFormElement>) {
@@ -38,9 +37,9 @@ export function ExcluirReserva({
     const dados = new FormData(evento.currentTarget);
 
     startTransition(async () => {
-      const resultado = await excluirReserva(state, dados);
+      const resultado = await excluirReserva(estado, dados);
       setState(resultado);
-      if (resultado.status === "success") {
+      if (resultado.status === "sucesso") {
         toast.success("Reserva excluída.");
         onAbertoChange(false);
       }
@@ -62,11 +61,11 @@ export function ExcluirReserva({
               " Se a atividade apenas não vai acontecer, cancele: o registro fica preservado."}
           </p>
 
-          <input type="hidden" name="bookingId" value={bookingId} />
+          <input type="hidden" name="reservaId" value={reservaId} />
 
-          {state.status === "error" && (
+          {estado.status === "erro" && (
             <p className="text-destructive text-sm" role="alert">
-              {state.message}
+              {estado.message}
             </p>
           )}
 
@@ -79,11 +78,7 @@ export function ExcluirReserva({
               Voltar
             </Button>
 
-            <Button
-              type="submit"
-              variant="destructive"
-              disabled={excluindo}
-            >
+            <Button type="submit" variant="destructive" disabled={excluindo}>
               {excluindo ? "Excluindo..." : "Excluir"}
             </Button>
           </DialogFooter>

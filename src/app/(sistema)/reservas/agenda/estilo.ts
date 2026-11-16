@@ -1,6 +1,6 @@
-import type { ActivityType } from "@/domain/booking/types";
+import type { TipoDeAtividade } from "@/domain/reservas/tipos";
 
-export const COR_DA_ATIVIDADE: Record<ActivityType, string> = {
+export const COR_DA_ATIVIDADE: Record<TipoDeAtividade, string> = {
   class:
     "bg-sky-100 border-sky-200 border-l-sky-600 dark:bg-sky-950 dark:border-sky-900 dark:border-l-sky-400",
   lecture:
@@ -10,7 +10,7 @@ export const COR_DA_ATIVIDADE: Record<ActivityType, string> = {
     "bg-emerald-100 border-emerald-200 border-l-emerald-600 dark:bg-emerald-950 dark:border-emerald-900 dark:border-l-emerald-400",
 };
 
-export const PONTO_DA_ATIVIDADE: Record<ActivityType, string> = {
+export const PONTO_DA_ATIVIDADE: Record<TipoDeAtividade, string> = {
   class: "bg-sky-600 dark:bg-sky-400",
   lecture: "bg-violet-600 dark:bg-violet-400",
   exam: "bg-amber-600 dark:bg-amber-400",

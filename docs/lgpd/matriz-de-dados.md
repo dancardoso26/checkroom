@@ -1,19 +1,23 @@
 # Matriz de dado, finalidade, hipótese legal, acesso e retenção
 
-Versão 1.0, de 22/09/2026. Deriva do
-[inventário de tratamento](inventario-de-tratamento.md) e é a base da Política
-de Privacidade publicada em `/privacidade`.
+Versão 1.1, de 12/11/2026, revista na validação da entrega de 16/11. Deriva
+do [inventário de tratamento](inventario-de-tratamento.md) e é a base da
+Política de Privacidade publicada em `/privacidade`.
 
 | Dado | Finalidade | Hipótese legal | Quem acessa | Compartilhado com | Retenção | Destino |
 |---|---|---|---|---|---|---|
-| Nome | Identificar o responsável pela atividade e por cada operação | Execução de contrato (art. 7º, V) | Titular, administração e demais autenticados na agenda | Supabase | Enquanto durar o vínculo | Anonimização |
-| E-mail institucional | Autenticar e avisar sobre reservas em nome do professor | Execução de contrato (art. 7º, V) | Titular e administração | Supabase, Resend | Enquanto durar o vínculo | Anonimização |
-| Senha | Autenticar o acesso | Execução de contrato (art. 7º, V) | Ninguém: armazenada como resumo criptográfico | Supabase | Enquanto a conta existir | Exclusão |
-| Segundo fator | Confirmar identidade a cada acesso | Legítimo interesse em segurança (art. 7º, IX) | Ninguém: o segredo não é exibido após o cadastro | Supabase | Enquanto a conta existir | Exclusão |
-| Papel no sistema | Decidir o que cada pessoa pode fazer | Execução de contrato (art. 7º, V) | Titular e administração | Supabase | Enquanto durar o vínculo | Mantido, desvinculado |
-| Vínculo de professor | Validar se a reserva corresponde a atividade que a pessoa leciona | Execução de contrato (art. 7º, V) | Todos os autenticados | Supabase | Período letivo | Mantido |
-| Reservas | Gerir ocupação dos espaços e evitar conflitos | Execução de contrato (art. 7º, V) | Todos os autenticados leem; alteram apenas responsável, autor e administração | Supabase, Resend | Indefinida, como registro institucional | Mantidas |
-| Registros de auditoria | Rastrear alterações e acessos | Legítimo interesse em rastreabilidade (art. 7º, IX) | Apenas administração | Supabase | Indefinida | Mantidos, autor anonimizado |
+| Nome | Identificar o responsável pela atividade e por cada operação | Execução de contrato (art. 7º, V) | Titular e administração; professores veem o nome do responsável na agenda | Supabase, Resend | Enquanto a conta existir | Anonimização |
+| E-mail | Autenticar, convidar, recuperar a senha e enviar os avisos | Execução de contrato (art. 7º, V) | Titular e administração | Supabase, Resend | Enquanto a conta existir | Trocado por endereço sem correspondência real |
+| Senha | Autenticar o acesso | Execução de contrato (art. 7º, V) | Ninguém: armazenada como resumo criptográfico | Supabase | Enquanto a conta existir | Conta bloqueada |
+| Segundo fator | Confirmar identidade a cada acesso | Legítimo interesse em segurança (art. 7º, IX) | Ninguém: o segredo não é exibido após o cadastro | Supabase | Enquanto a conta existir | Conta bloqueada |
+| Papel no sistema | Decidir o que cada pessoa pode fazer | Execução de contrato (art. 7º, V) | Titular e administração | Supabase | Enquanto a conta existir | Mantido, sem nome |
+| Vínculo de professor | Validar se a reserva corresponde a atividade que a pessoa leciona | Execução de contrato (art. 7º, V) | Autenticados, no cadastro acadêmico | Supabase | Período letivo | Desfeito na remoção da conta |
+| Curso e turma do aluno | Mostrar a agenda da turma e as palestras do curso, avisar de palestra nova e contar os alunos da turma | Execução de contrato (art. 7º, V) | Titular e administração | Supabase | Enquanto a conta existir | Desvinculados na anonimização |
+| Reservas | Gerir a ocupação dos espaços e evitar conflitos | Execução de contrato (art. 7º, V) | Administração e professores leem todas; aluno, só as da sua turma; TI, nenhuma. Alteram só responsável, autor e administração | Supabase, Resend | Até o fim do projeto acadêmico | Futuras canceladas e passadas sem ligação com a pessoa na remoção da conta |
+| Inscrições em palestras | Controlar as vagas | Execução de contrato (art. 7º, V) | O próprio aluno e a administração; os demais veem só a quantidade | Supabase | Até o fim do projeto acadêmico | As de palestras futuras são apagadas na remoção da conta |
+| Chamados de suporte | Registrar e resolver problemas nos espaços | Execução de contrato (art. 7º, V) | Quem abriu, a equipe de TI e a administração | Supabase, Resend | Até o fim do projeto acadêmico | Os abertos são cancelados na remoção da conta |
+| Registros de acesso (IP, navegador, último acesso) | Proteger as contas e investigar acessos indevidos | Legítimo interesse em segurança (art. 7º, IX) | Só pelo painel do Supabase | Supabase | Retenção do serviço, limitada ao fim do projeto | Excluídos |
+| Registros de auditoria | Rastrear alterações e acessos | Legítimo interesse em rastreabilidade (art. 7º, IX) | Apenas administração | Supabase | Até o fim do projeto acadêmico | E-mail da pessoa apagado na remoção da conta |
 | Cookies de sessão | Manter a pessoa autenticada entre requisições | Execução de contrato (art. 7º, V) | O próprio navegador | Nenhum | Duração da sessão | Expiram |
 
 ## Sobre o não uso de consentimento

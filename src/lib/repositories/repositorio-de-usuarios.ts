@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { AlvoDeGestao, Papel } from "@/domain/auth/permissoes";
-import { supabaseAdmin } from "@/lib/supabase/server";
+import { clienteAdministrativo } from "@/lib/supabase/servidor";
 
 export type UsuarioItem = {
   id: string;
@@ -21,10 +21,12 @@ export type UsuarioItem = {
 
 export async function listarUsuarios(): Promise<UsuarioItem[]> {
   const [contas, perfis] = await Promise.all([
-    supabaseAdmin.auth.admin.listUsers({ perPage: 1000 }),
-    supabaseAdmin
+    clienteAdministrativo.auth.admin.listUsers({ perPage: 1000 }),
+    clienteAdministrativo
       .from("profiles")
-      .select("id, role, full_name, anonymized_at, user_master, course_id, courses(name), class_id, classes(name)")
+      .select(
+        "id, role, full_name, anonymized_at, user_master, course_id, courses(name), class_id, classes(name)",
+      )
       .is("anonymized_at", null),
   ]);
 
@@ -67,7 +69,7 @@ export async function listarUsuarios(): Promise<UsuarioItem[]> {
 }
 
 export async function alvoDoUsuario(id: string): Promise<AlvoDeGestao | null> {
-  const { data } = await supabaseAdmin
+  const { data } = await clienteAdministrativo
     .from("profiles")
     .select("role, user_master")
     .eq("id", id)
@@ -77,7 +79,7 @@ export async function alvoDoUsuario(id: string): Promise<AlvoDeGestao | null> {
 }
 
 export async function definirAtivo(id: string, ativo: boolean): Promise<void> {
-  const { error } = await supabaseAdmin.auth.admin.updateUserById(id, {
+  const { error } = await clienteAdministrativo.auth.admin.updateUserById(id, {
     ban_duration: ativo ? "none" : "876000h",
   });
 
@@ -85,7 +87,7 @@ export async function definirAtivo(id: string, ativo: boolean): Promise<void> {
 }
 
 export async function bloquearContaRemovida(id: string): Promise<void> {
-  const { error } = await supabaseAdmin.auth.admin.updateUserById(id, {
+  const { error } = await clienteAdministrativo.auth.admin.updateUserById(id, {
     email: `removido-${id}@checkroom.invalid`,
     ban_duration: "876000h",
   });
@@ -104,11 +106,11 @@ function padraoExato(valor: string): string {
 
 export async function professorDoUsuario(
   nome: string,
-  email: string
+  email: string,
 ): Promise<ProfessorDoUsuario> {
   const emailNormalizado = email.trim().toLowerCase();
 
-  const { data: existente, error } = await supabaseAdmin
+  const { data: existente, error } = await clienteAdministrativo
     .from("professors")
     .select("id")
     .ilike("email", padraoExato(emailNormalizado))
@@ -120,7 +122,7 @@ export async function professorDoUsuario(
   }
 
   if (existente) {
-    const { data: perfil } = await supabaseAdmin
+    const { data: perfil } = await clienteAdministrativo
       .from("profiles")
       .select("id")
       .eq("professor_id", existente.id)
@@ -130,7 +132,7 @@ export async function professorDoUsuario(
     return { ok: true, id: existente.id, criado: false };
   }
 
-  const { data: novo, error: falha } = await supabaseAdmin
+  const { data: novo, error: falha } = await clienteAdministrativo
     .from("professors")
     .insert({ name: nome.trim(), email: emailNormalizado })
     .select("id")
@@ -146,10 +148,10 @@ export async function professorDoUsuario(
 
 export async function desfazerProfessor(
   professorId: string | null,
-  vinculos: string[]
+  vinculos: string[],
 ): Promise<void> {
   if (vinculos.length > 0) {
-    const { error } = await supabaseAdmin
+    const { error } = await clienteAdministrativo
       .from("teaching_assignments")
       .delete()
       .in("id", vinculos);
@@ -157,7 +159,7 @@ export async function desfazerProfessor(
   }
 
   if (professorId) {
-    const { error } = await supabaseAdmin
+    const { error } = await clienteAdministrativo
       .from("professors")
       .delete()
       .eq("id", professorId);
@@ -167,9 +169,9 @@ export async function desfazerProfessor(
 
 export async function vincularProfessor(
   perfilId: string,
-  professorId: string
+  professorId: string,
 ): Promise<boolean> {
-  const { error } = await supabaseAdmin
+  const { error } = await clienteAdministrativo
     .from("profiles")
     .update({ professor_id: professorId })
     .eq("id", perfilId);
@@ -179,11 +181,15 @@ export async function vincularProfessor(
 }
 
 export async function contaDoUsuario(
-  id: string
+  id: string,
 ): Promise<{ nome: string; email: string } | null> {
   const [conta, perfil] = await Promise.all([
-    supabaseAdmin.auth.admin.getUserById(id),
-    supabaseAdmin.from("profiles").select("full_name").eq("id", id).maybeSingle(),
+    clienteAdministrativo.auth.admin.getUserById(id),
+    clienteAdministrativo
+      .from("profiles")
+      .select("full_name")
+      .eq("id", id)
+      .maybeSingle(),
   ]);
 
   const email = conta.data.user?.email;
@@ -199,10 +205,11 @@ export async function convidar(convite: {
   turmaId: string | null;
   redirecionarPara: string;
 }): Promise<{ ok: true } | { ok: false; jaExiste: boolean }> {
-  const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(
-    convite.email,
-    { data: { full_name: convite.nome }, redirectTo: convite.redirecionarPara }
-  );
+  const { data, error } =
+    await clienteAdministrativo.auth.admin.inviteUserByEmail(convite.email, {
+      data: { full_name: convite.nome },
+      redirectTo: convite.redirecionarPara,
+    });
 
   if (error) {
     console.error("Falha ao convidar usuário:", error);
@@ -212,7 +219,7 @@ export async function convidar(convite: {
     };
   }
 
-  const { error: falha } = await supabaseAdmin
+  const { error: falha } = await clienteAdministrativo
     .from("profiles")
     .update({
       role: convite.papel,
@@ -223,7 +230,7 @@ export async function convidar(convite: {
 
   if (falha) {
     console.error("Falha ao definir o papel do convidado:", falha);
-    await supabaseAdmin.auth.admin.deleteUser(data.user.id);
+    await clienteAdministrativo.auth.admin.deleteUser(data.user.id);
     return { ok: false, jaExiste: false };
   }
 
@@ -232,19 +239,18 @@ export async function convidar(convite: {
 
 export async function reenviarConvite(
   id: string,
-  redirecionarPara: string
+  redirecionarPara: string,
 ): Promise<"reenviado" | "ja_ativo" | "falhou"> {
-  const { data, error } = await supabaseAdmin.auth.admin.getUserById(id);
+  const { data, error } =
+    await clienteAdministrativo.auth.admin.getUserById(id);
   if (error || !data.user?.email) return "falhou";
   if (data.user.email_confirmed_at) return "ja_ativo";
 
-  const { error: falha } = await supabaseAdmin.auth.admin.inviteUserByEmail(
-    data.user.email,
-    {
+  const { error: falha } =
+    await clienteAdministrativo.auth.admin.inviteUserByEmail(data.user.email, {
       data: { full_name: data.user.user_metadata.full_name },
       redirectTo: redirecionarPara,
-    }
-  );
+    });
 
   if (falha) {
     console.error("Falha ao reenviar convite:", falha);

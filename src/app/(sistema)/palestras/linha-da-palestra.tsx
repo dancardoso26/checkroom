@@ -3,14 +3,11 @@
 import { Trash2, UsersRound, X } from "lucide-react";
 
 import { BarraDeOcupacao } from "@/components/barra-de-ocupacao";
-import {
-  CelulaDaSelecao,
-  MenuDeAcoes,
-} from "@/components/cadastro";
-import { StatusBadge } from "@/components/status-badge";
+import { CelulaDaSelecao, MenuDeAcoes } from "@/components/cadastro";
+import { SeloDeSituacao } from "@/components/selo-de-situacao";
 import { Button } from "@/components/ui/button";
 import { TableCell, TableRow } from "@/components/ui/table";
-import { formatPeriod } from "@/lib/datetime";
+import { formatarPeriodo } from "@/lib/datas";
 import type { Selecao } from "@/hooks/use-tabela";
 
 import { cancelarInscricao, inscreverEmPalestra } from "./acoes";
@@ -54,7 +51,7 @@ export function LinhaDaPalestra({
       </TableCell>
       <TableCell>{palestra.palestrante}</TableCell>
       <TableCell className="whitespace-nowrap">
-        {formatPeriod(palestra.inicio, palestra.fim)}
+        {formatarPeriodo(palestra.inicio, palestra.fim)}
       </TableCell>
       <TableCell className="whitespace-nowrap">{palestra.espaco}</TableCell>
       <TableCell className="min-w-52 whitespace-nowrap">
@@ -67,7 +64,7 @@ export function LinhaDaPalestra({
         />
       </TableCell>
       <TableCell>
-        <StatusBadge status={statusDaPalestra(palestra)} />
+        <SeloDeSituacao status={statusDaPalestra(palestra)} />
       </TableCell>
       <TableCell>
         <div className="flex items-center justify-end gap-1">

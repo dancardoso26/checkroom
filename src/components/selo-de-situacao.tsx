@@ -37,7 +37,7 @@ export function PontoDeStatus({
   );
 }
 
-export function StatusBadge({
+export function SeloDeSituacao({
   status,
   className,
 }: {

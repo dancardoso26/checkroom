@@ -40,9 +40,9 @@ export const STATUS: Record<Status, { rotulo: string; tom: Tom }> = {
 };
 
 export function statusDaReserva(
-  reserva: { cancelled: boolean; endsAt: Date },
-  agora: Date
+  reserva: { cancelada: boolean; fim: Date },
+  agora: Date,
 ): Status {
-  if (reserva.cancelled) return "cancelada";
-  return reserva.endsAt <= agora ? "concluida" : "agendada";
+  if (reserva.cancelada) return "cancelada";
+  return reserva.fim <= agora ? "concluida" : "agendada";
 }

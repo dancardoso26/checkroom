@@ -140,7 +140,7 @@ recusa cancelar o que já terminou.
 
 1. **Zod**, na Server Action. Verificação de _forma_: o campo veio, tem o
    formato certo. Recusa entrada inválida antes de qualquer consulta.
-2. **`validateBooking`**, no domínio. Verificação de _regra_: a reserva é
+2. **`validarReserva`**, no domínio. Verificação de _regra_: a reserva é
    possível. É uma função pura, sem banco e sem relógio.
 3. **Constraints de exclusão do PostgreSQL**. Garantia de _integridade_. É a
    única camada que sobrevive a duas requisições simultâneas, porque é avaliada
@@ -246,15 +246,15 @@ antes):
 | Grupo         | Contas                                                                                                                   | Segundo fator                          |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------ | -------------------------------------- |
 | Demonstração  | `coordenacao@exemplo.edu.br`, a da Ana (e-mail de `SEED_DEMO_EMAIL`), `marina.prado@exemplo.edu.br`                      | Exigido                                |
-| Uso diário    | `adm@umc.br` (administrador master), `professor@umc.br` (professor), `aluno@umc.br` (aluno de SI), `suporte@umc.br` (TI) | Dispensado fora de produção            |
+| Uso diário    | `adm@umc.br` (administrador master), `professor@umc.br` (professor), `aluno@umc.br` (aluno de SI), `suporte@umc.br` (TI) | Exigido, com segredo conhecido pelos testes |
 | Demais contas | Professores, alunos de cada curso e a segunda pessoa de TI, todas em `@exemplo.edu.br`                                   | Exigido                                |
 | Teste do TOTP | `teste.mfa@exemplo.edu.br`                                                                                               | Exigido, e apagado antes de cada suíte |
 
-As de uso diário servem para entrar rápido enquanto se programa, e são as que os
-testes usam. A dispensa vem da variável `MFA_DISPENSADO_PARA` e o código a
-ignora quando `NODE_ENV` é `production`, então nenhuma configuração esquecida
-abre essa porta num ambiente publicado. Um aviso no cabeçalho identifica a conta,
-para que ela não apareça por engano numa demonstração.
+As de uso diário são as que os testes usam. Desde 16/11 nenhuma conta entra sem
+segundo fator, porque o próprio banco recusa a sessão sem ele. O `global-setup`
+dos testes cadastra o TOTP dessas quatro contas e guarda o segredo em
+`tests/e2e/.segredos-totp.json`, fora do Git; os testes geram o código a partir
+dele. O mesmo segredo vai para o autenticador do celular, para entrar à mão.
 
 O script também cria um chamado em cada situação e uma palestra com uma
 inscrição, para o painel e a fila da TI não começarem vazios.
@@ -299,7 +299,7 @@ CHECKROOM_PORT=3002 npm run test:e2e
 
 ```
 src/
-  domain/booking/          a regra da reserva, sem I/O e sem framework
+  domain/reservas/          a regra da reserva, sem I/O e sem framework
   domain/chamados/         a máquina de estados do chamado
   domain/palestras/        cadastro e inscrição em palestras
   domain/calendario/       períodos letivos e bloqueios
@@ -325,7 +325,7 @@ tests/e2e/            navegador e banco reais
 Para achar a regra, a tela e o teste de um requisito (RF08, RN09...), use a
 tabela em [docs/rastreabilidade.md](docs/rastreabilidade.md).
 
-A separação entre `domain` e o restante é o ponto central. `validateBooking` não
+A separação entre `domain` e o restante é o ponto central. `validarReserva` não
 importa o Supabase, não lê o relógio e não conhece HTTP: recebe o pedido e um
 contexto já carregado. É isso que permite testá-la sem infraestrutura e
 reaproveitá-la sem duplicação em uma futura API pública.

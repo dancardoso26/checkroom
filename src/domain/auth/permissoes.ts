@@ -15,7 +15,7 @@ export type Ator = {
 };
 
 export type ReservaAlvo = {
-  createdBy: string;
+  criadaPor: string;
   professorId: string;
 };
 
@@ -24,7 +24,7 @@ export function podeGerenciarReserva(
   reserva: ReservaAlvo,
 ): boolean {
   if (ator.papel === "admin") return true;
-  if (reserva.createdBy === ator.profileId) return true;
+  if (reserva.criadaPor === ator.profileId) return true;
 
   return ator.professorId !== null && reserva.professorId === ator.professorId;
 }

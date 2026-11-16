@@ -1,10 +1,10 @@
 import "server-only";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { criarClienteDoServidor } from "@/lib/supabase/servidor";
 
 export type CursoOpcao = { id: string; nome: string; departamento: string };
 
 export async function listarCursos(): Promise<CursoOpcao[]> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await criarClienteDoServidor();
 
   const { data, error } = await supabase
     .from("courses")
@@ -13,5 +13,9 @@ export async function listarCursos(): Promise<CursoOpcao[]> {
 
   if (error) throw new Error(`Falha ao listar os cursos: ${error.message}`);
 
-  return data.map((c) => ({ id: c.id, nome: c.name, departamento: c.department }));
+  return data.map((c) => ({
+    id: c.id,
+    nome: c.name,
+    departamento: c.department,
+  }));
 }

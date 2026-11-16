@@ -1,18 +1,18 @@
 import "server-only";
 
-import { PERIODO_LETIVO_VIGENTE } from "@/domain/booking/businessHours";
+import { PERIODO_LETIVO_VIGENTE } from "@/domain/reservas/expediente";
 import { codigoDoPeriodoDe } from "@/lib/repositories/repositorio-do-calendario";
 import {
-  listClasses,
-  type ClassOption,
+  listarTurmasComCurso,
+  type OpcaoDeTurma,
 } from "@/lib/repositories/repositorio-de-turmas";
 import { listarCursos } from "@/lib/repositories/repositorio-de-cursos";
-import { listProfessors } from "@/lib/repositories/repositorio-de-professores";
-import { listResources } from "@/lib/repositories/repositorio-de-recursos";
-import { listRooms } from "@/lib/repositories/repositorio-de-espacos";
+import { listarProfessores } from "@/lib/repositories/repositorio-de-professores";
+import { listarRecursos } from "@/lib/repositories/repositorio-de-recursos";
+import { listarEspacos } from "@/lib/repositories/repositorio-de-espacos";
 import {
-  listSubjects,
-  listTeachingAssignments,
+  listarDisciplinas,
+  listarVinculosDoPeriodo,
 } from "@/lib/repositories/repositorio-de-disciplinas";
 
 import type { Catalogos } from "./formulario/painel-de-reserva";
@@ -21,29 +21,36 @@ export async function carregarCatalogos(
   hoje: string,
   {
     comCursos,
-    turmas,
-  }: { comCursos: boolean; turmas?: Promise<ClassOption[]> }
+    turmasCarregando,
+  }: { comCursos: boolean; turmasCarregando?: Promise<OpcaoDeTurma[]> },
 ): Promise<Catalogos> {
-  const [rooms, professors, classes, resources, subjects, assignments, cursos] =
-    await Promise.all([
-      listRooms(),
-      listProfessors(),
-      turmas ?? listClasses(),
-      listResources(),
-      listSubjects(),
-      codigoDoPeriodoDe(hoje).then((periodo) =>
-        listTeachingAssignments(periodo ?? PERIODO_LETIVO_VIGENTE)
-      ),
-      comCursos ? listarCursos() : Promise.resolve([]),
-    ]);
+  const [
+    espacos,
+    professores,
+    turmas,
+    recursos,
+    disciplinas,
+    vinculos,
+    cursos,
+  ] = await Promise.all([
+    listarEspacos(),
+    listarProfessores(),
+    turmasCarregando ?? listarTurmasComCurso(),
+    listarRecursos(),
+    listarDisciplinas(),
+    codigoDoPeriodoDe(hoje).then((periodo) =>
+      listarVinculosDoPeriodo(periodo ?? PERIODO_LETIVO_VIGENTE),
+    ),
+    comCursos ? listarCursos() : Promise.resolve([]),
+  ]);
 
   return {
-    rooms,
-    professors,
-    classes,
-    resources,
-    subjects,
-    assignments,
+    espacos,
+    professores,
+    turmas,
+    recursos,
+    disciplinas,
+    vinculos,
     cursos,
   };
 }

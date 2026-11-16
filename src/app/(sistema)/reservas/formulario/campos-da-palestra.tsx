@@ -21,14 +21,14 @@ export function CamposDaPalestraNoPainel({
   palestra: CamposDaPalestra;
   alterarPalestra: <C extends keyof CamposDaPalestra>(
     campo: C,
-    valor: CamposDaPalestra[C]
+    valor: CamposDaPalestra[C],
   ) => void;
   professores: ProfessorDaLista[];
   cursos: { id: string; nome: string }[];
 }) {
   const professorEscolhido = professorDoPalestrante(
     palestra.palestrante,
-    professores
+    professores,
   );
 
   return (
@@ -39,7 +39,7 @@ export function CamposDaPalestraNoPainel({
           name="palestrante"
           valorInicial={palestra.palestrante}
           onChange={(v) => alterarPalestra("palestrante", v)}
-          sugestoes={professores.map((p) => p.name)}
+          sugestoes={professores.map((p) => p.nome)}
           placeholder="Palestrante (digite ou escolha um professor)"
           rotuloDasSugestoes="Professores da instituição"
         />
@@ -57,9 +57,7 @@ export function CamposDaPalestraNoPainel({
         )}
       </LinhaDoFormulario>
 
-      <LinhaDoFormulario rotulo="Cursos"
-        htmlFor="cursosField"
-      >
+      <LinhaDoFormulario rotulo="Cursos" htmlFor="cursosField">
         <SelecaoMultipla
           id="cursosField"
           name="cursoIds"
@@ -82,18 +80,18 @@ export function EspacoEVagasDaPalestra({
   espacoId,
   aoEscolherEspaco,
 }: {
-  espacosLivres: { id: string; name: string; capacity: number }[] | null;
+  espacosLivres: { id: string; nome: string; capacidade: number }[] | null;
   buscandoEspacos: boolean;
   espacoId: string;
   aoEscolherEspaco: (id: string) => void;
   palestra: CamposDaPalestra;
   alterarPalestra: <C extends keyof CamposDaPalestra>(
     campo: C,
-    valor: CamposDaPalestra[C]
+    valor: CamposDaPalestra[C],
   ) => void;
 }) {
   const capacidadeDoEspaco =
-    espacosLivres?.find((e) => e.id === espacoId)?.capacity ?? null;
+    espacosLivres?.find((e) => e.id === espacoId)?.capacidade ?? null;
   const capacidadeExcedida =
     capacidadeDoEspaco !== null && Number(palestra.vagas) > capacidadeDoEspaco;
   const vagasInvalidas =
@@ -105,15 +103,13 @@ export function EspacoEVagasDaPalestra({
       <LinhaDoFormulario rotulo="Espaço" htmlFor="espacoField">
         <SelecaoComPesquisa
           id="espacoField"
-          value={
-            espacosLivres?.some((e) => e.id === espacoId) ? espacoId : ""
-          }
+          value={espacosLivres?.some((e) => e.id === espacoId) ? espacoId : ""}
           onChange={aoEscolherEspaco}
           disabled={espacosLivres === null || espacosLivres.length === 0}
           opcoes={(espacosLivres ?? []).map((e) => ({
             id: e.id,
-            nome: e.name,
-            detalhe: `${e.capacity} lugares`,
+            nome: e.nome,
+            detalhe: `${e.capacidade} lugares`,
           }))}
           placeholder={
             buscandoEspacos

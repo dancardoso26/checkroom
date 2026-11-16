@@ -17,18 +17,18 @@ for (const linha of readFileSync(".env.local", "utf8").split(/\r?\n/)) {
 }
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const secretKey = process.env.SUPABASE_SECRET_KEY;
+const chaveSecreta = process.env.SUPABASE_SECRET_KEY;
 const senha = process.env.SEED_USER_PASSWORD;
 
 const emailDemo = process.env.SEED_DEMO_EMAIL;
 
-if (!url || !secretKey || !senha || !emailDemo) {
+if (!url || !chaveSecreta || !senha || !emailDemo) {
   throw new Error(
-    "Defina NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SECRET_KEY, SEED_USER_PASSWORD e SEED_DEMO_EMAIL em .env.local"
+    "Defina NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SECRET_KEY, SEED_USER_PASSWORD e SEED_DEMO_EMAIL em .env.local",
   );
 }
 
-const supabase = createClient(url, secretKey, {
+const supabase = createClient(url, chaveSecreta, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 
@@ -84,7 +84,7 @@ async function removerContasAntigas() {
 
 async function mapear(
   tabela: "professors" | "courses" | "classes" | "subjects" | "resources",
-  coluna = "name"
+  coluna = "name",
 ): Promise<Map<string, string>> {
   const { data, error } = await supabase.from(tabela).select(`id, ${coluna}`);
   if (error) throw error;
@@ -106,11 +106,15 @@ async function mapearEspacos(): Promise<Map<string, string>> {
   return new Map(data.map((sala) => [sala.name, sala.id]));
 }
 
-function exigir(mapa: Map<string, string>, chave: string, tipo: string): string {
+function exigir(
+  mapa: Map<string, string>,
+  chave: string,
+  tipo: string,
+): string {
   const id = mapa.get(chave);
   if (!id) {
     throw new Error(
-      `${tipo} ${chave} não encontrado. Rode o supabase/seed.sql antes.`
+      `${tipo} ${chave} não encontrado. Rode o supabase/seed.sql antes.`,
     );
   }
   return id;
@@ -119,7 +123,7 @@ function exigir(mapa: Map<string, string>, chave: string, tipo: string): string 
 async function criarContas(
   professores: Map<string, string>,
   cursos: Map<string, string>,
-  turmas: Map<string, string>
+  turmas: Map<string, string>,
 ): Promise<Map<string, string>> {
   const porEmail = new Map<string, string>();
 
@@ -202,7 +206,7 @@ async function criarReservas(
   disciplinas: Map<string, string>,
   recursos: Map<string, string>,
   espacos: Map<string, string>,
-  perfilPorEmail: Map<string, string>
+  perfilPorEmail: Map<string, string>,
 ) {
   const linhas = RESERVAS.map((reserva) => ({
     room_id: exigir(espacos, reserva.espaco, "Espaço"),
@@ -223,7 +227,10 @@ async function criarReservas(
 
   let criadas = 0;
 
-  for (const lote of emLotes(linhas.map((linha, i) => ({ linha, i })), 100)) {
+  for (const lote of emLotes(
+    linhas.map((linha, i) => ({ linha, i })),
+    100,
+  )) {
     const { data, error } = await supabase
       .from("bookings")
       .insert(lote.map(({ linha }) => linha))
@@ -235,7 +242,7 @@ async function criarReservas(
       RESERVAS[i].recursos.map((nome) => ({
         booking_id: data[posicao].id,
         resource_id: exigir(recursos, nome, "Recurso"),
-      }))
+      })),
     );
 
     if (ligacoes.length > 0) {
@@ -253,7 +260,7 @@ async function criarReservas(
 
 async function criarChamados(
   espacos: Map<string, string>,
-  perfilPorEmail: Map<string, string>
+  perfilPorEmail: Map<string, string>,
 ) {
   const agora = Date.now();
   const horasAtras = (h: number) =>
@@ -284,7 +291,7 @@ async function criarChamados(
 async function criarPalestras(
   espacos: Map<string, string>,
   cursos: Map<string, string>,
-  perfilPorEmail: Map<string, string>
+  perfilPorEmail: Map<string, string>,
 ) {
   const admin = exigir(perfilPorEmail, EMAIL_DO_ADMIN, "Conta");
   const alunos = CONTAS.filter((c) => c.papel === "student");
@@ -312,7 +319,7 @@ async function criarPalestras(
         palestra.cursos.map((curso) => ({
           lecture_id: data.id,
           course_id: exigir(cursos, curso, "Curso"),
-        }))
+        })),
       );
     if (falhaDestino) throw falhaDestino;
 
@@ -321,7 +328,7 @@ async function criarPalestras(
       .filter(
         ({ aluno, posicao }) =>
           palestra.cursos.includes(aluno.curso ?? "") &&
-          (posicao + indice) % 4 !== 0
+          (posicao + indice) % 4 !== 0,
       );
 
     if (inscritos.length > 0) {
@@ -331,14 +338,16 @@ async function criarPalestras(
           inscritos.map(({ aluno }) => ({
             lecture_id: data.id,
             profile_id: exigir(perfilPorEmail, aluno.email, "Conta"),
-          }))
+          })),
         );
       if (falhaInscricao) throw falhaInscricao;
       inscricoes += inscritos.length;
     }
   }
 
-  console.log(`${PALESTRAS.length} palestras e ${inscricoes} inscrições criadas`);
+  console.log(
+    `${PALESTRAS.length} palestras e ${inscricoes} inscrições criadas`,
+  );
 }
 
 const professores = await mapear("professors");
@@ -365,7 +374,7 @@ await criarReservas(
   disciplinas,
   recursos,
   espacos,
-  perfilPorEmail
+  perfilPorEmail,
 );
 await criarChamados(espacos, perfilPorEmail);
 await criarPalestras(espacos, cursos, perfilPorEmail);
@@ -373,6 +382,5 @@ await marcarMaster(perfilPorEmail);
 await apontarProfessoresDeDemonstracao();
 
 console.log(
-  "\nPronto. Entre com qualquer conta e a senha de SEED_USER_PASSWORD."
+  "\nPronto. Entre com qualquer conta e a senha de SEED_USER_PASSWORD.",
 );
-

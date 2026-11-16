@@ -8,9 +8,9 @@ import type {
   Vinculo,
 } from "@/domain/academico/academico";
 import {
-  createSupabaseServerClient,
-  supabaseAdmin,
-} from "@/lib/supabase/server";
+  criarClienteDoServidor,
+  clienteAdministrativo,
+} from "@/lib/supabase/servidor";
 
 import { contagemDeAlunosPorTurma } from "./repositorio-de-turmas";
 
@@ -29,27 +29,35 @@ export type CadastroAcademico = {
 };
 
 export async function carregarCadastroAcademico(): Promise<CadastroAcademico> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await criarClienteDoServidor();
 
   const [cursos, disciplinas, turmas, professores, vinculos, alunos] =
     await Promise.all([
-    supabase.from("courses").select("id, name, department").order("name"),
-    supabase.from("subjects").select("id, name, course_id").order("name"),
-    supabase
-      .from("classes")
-      .select("id, name, course_id")
-      .order("name"),
-    supabaseAdmin.from("professors").select("id, name, email").order("name"),
-    supabase
-      .from("teaching_assignments")
-      .select("id, professor_id, subject_id, class_id, term")
-      .order("term", { ascending: false }),
-    contagemDeAlunosPorTurma(),
-  ]);
+      supabase.from("courses").select("id, name, department").order("name"),
+      supabase.from("subjects").select("id, name, course_id").order("name"),
+      supabase.from("classes").select("id, name, course_id").order("name"),
+      clienteAdministrativo
+        .from("professors")
+        .select("id, name, email")
+        .order("name"),
+      supabase
+        .from("teaching_assignments")
+        .select("id, professor_id, subject_id, class_id, term")
+        .order("term", { ascending: false }),
+      contagemDeAlunosPorTurma(),
+    ]);
 
-  for (const { error } of [cursos, disciplinas, turmas, professores, vinculos]) {
+  for (const { error } of [
+    cursos,
+    disciplinas,
+    turmas,
+    professores,
+    vinculos,
+  ]) {
     if (error)
-      throw new Error(`Falha ao carregar o cadastro acadêmico: ${error.message}`);
+      throw new Error(
+        `Falha ao carregar o cadastro acadêmico: ${error.message}`,
+      );
   }
 
   return {
@@ -83,18 +91,14 @@ export async function carregarCadastroAcademico(): Promise<CadastroAcademico> {
 }
 
 export type EntidadeAcademica =
-  | "courses"
-  | "subjects"
-  | "classes"
-  | "professors"
-  | "teaching_assignments";
+  "courses" | "subjects" | "classes" | "professors" | "teaching_assignments";
 
 export async function gravarEntidade<T extends EntidadeAcademica>(
   tabela: T,
   id: string | null,
-  valores: Record<string, string | number>
+  valores: Record<string, string | number>,
 ): Promise<ResultadoDaGravacao> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await criarClienteDoServidor();
 
   const consulta = supabase.from(tabela as "courses");
   const { data, error } = id
@@ -115,9 +119,9 @@ export async function gravarEntidade<T extends EntidadeAcademica>(
 
 export async function excluirEntidade(
   tabela: EntidadeAcademica,
-  id: string
+  id: string,
 ): Promise<ResultadoDaExclusao> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await criarClienteDoServidor();
 
   const { data, error } = await supabase
     .from(tabela as "courses")

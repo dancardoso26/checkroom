@@ -1,14 +1,14 @@
 # Fornecedores e APIs externas
 
-Versão 1.0, de 22/09/2026. Exigido pela Seção 2.4 das orientações da
+Versão 1.1, de 12/11/2026, revista com o site publicado. Exigido pela Seção 2.4 das orientações da
 disciplina, que pede identificar cada terceiro, a finalidade e os dados
 enviados.
 
 | Fornecedor | Papel | Dados que recebe | Onde processa |
 |---|---|---|---|
 | Supabase | Banco de dados e autenticação | Todos os dados do inventário | São Paulo, Brasil |
-| Resend | Entrega de e-mail transacional | Nome e endereço do destinatário, e os dados da reserva citada na mensagem | São Paulo, Brasil |
-| Vercel | Hospedagem da aplicação | Dados que trafegam nas requisições | A definir na publicação |
+| Resend | Entrega de e-mail transacional, a partir do domínio `checkroom.com.br` | Nome e endereço do destinatário e o conteúdo da mensagem | São Paulo, Brasil |
+| Vercel | Hospedagem da aplicação, em [https://checkroom.com.br](https://checkroom.com.br) | Dados que trafegam nas requisições | São Paulo, Brasil (`gru1`) |
 
 ## Supabase
 
@@ -17,30 +17,41 @@ alcança o conjunto completo de dados, incluindo o resumo criptográfico das
 senhas e os segredos de segundo fator, que ele próprio gera e verifica.
 
 A instância está na região `sa-east-1`. O acesso da aplicação usa duas chaves
-com alcances diferentes: a publicável, que respeita as políticas de RLS e é a
-usada em todas as operações com sessão, e a secreta, que as ignora e fica
-restrita ao script de criação de contas e ao registro de eventos de
-autenticação, que ocorrem antes de haver sessão.
+com alcances diferentes. A publicável respeita as políticas de RLS e é a usada
+nas operações feitas em nome de quem está logado. A secreta ignora as
+políticas e fica só no servidor, para o que a sessão não alcança por desenho:
+o registro de eventos de autenticação, que acontece antes de haver sessão; a
+gestão de contas (convite, desativação, remoção); e as leituras que precisam
+de dado que o RLS esconde de quem pede, como o e-mail do destinatário de um
+aviso, o nome de quem abriu um chamado e as contagens do dashboard. Toda
+função que usa a chave secreta é chamada depois de uma verificação de papel na
+Server Action.
 
 ## Resend
 
-Entrega os avisos de reserva criada e cancelada. Recebe apenas o necessário
-para compor e endereçar a mensagem, conforme o princípio da necessidade: nome
-e e-mail do destinatário, e os dados da reserva que a mensagem cita.
+Entrega os avisos do sistema: reserva nova, cancelada ou removida; palestra
+nova ou cancelada, e o aviso ao palestrante; e chamado resolvido. Também é o
+SMTP do Supabase Auth, por onde saem o convite e a recuperação de senha. Recebe
+apenas o necessário para compor e endereçar a mensagem, conforme o princípio da
+necessidade: nome e e-mail do destinatário e os dados que a mensagem cita. No
+aviso de palestra nova, cada aluno recebe a própria mensagem, sem ver o
+endereço dos demais.
 
 Não recebe senha, papel, vínculo de professor nem qualquer registro de auditoria. O
 rastreamento de abertura e de cliques está desligado.
 
-Enquanto não houver domínio próprio verificado, o sistema usa o remetente de
-teste do serviço, que entrega apenas no endereço dono da conta. É limitação
-assumida do ambiente de demonstração.
+O domínio `checkroom.com.br` está verificado no Resend, com os registros de
+autenticação de remetente no DNS. O domínio ainda não recebe e-mail (achado A1
+do [relatório de validação](relatorio-de-validacao.md)).
 
 ## Vercel
 
-Hospedará a aplicação. Até 28/09/2026 o sistema roda apenas em ambiente local,
-então nenhum dado foi enviado a esse fornecedor. Quando a publicação ocorrer,
-esta seção precisa registrar a região escolhida, e a Política de Privacidade,
-a possibilidade de processamento fora do Brasil.
+Hospeda a aplicação desde 06/11/2026. As funções rodam em São Paulo (`gru1`),
+a mesma região do Supabase, então a requisição do usuário é processada no
+Brasil. A Vercel não guarda os dados das requisições: as funções não gravam em
+disco e os logs de execução registram só erros, sem o corpo das requisições.
+O plano gratuito (Hobby) é restrito a uso não comercial, o que vale para um
+protótipo acadêmico.
 
 ## Credenciais
 

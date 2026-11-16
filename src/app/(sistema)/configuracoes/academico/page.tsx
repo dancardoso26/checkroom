@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 
 import { podeGerenciarCadastros } from "@/domain/auth/permissoes";
-import { PERIODO_LETIVO_VIGENTE } from "@/domain/booking/businessHours";
-import { toDateInputValue } from "@/lib/datetime";
+import { PERIODO_LETIVO_VIGENTE } from "@/domain/reservas/expediente";
+import { valorDoCampoDeData } from "@/lib/datas";
 import { carregarCadastroAcademico } from "@/lib/repositories/repositorio-academico";
 import { codigoDoPeriodoDe } from "@/lib/repositories/repositorio-do-calendario";
 import { exigirSessao } from "@/lib/sessao";
@@ -24,7 +24,8 @@ export default async function AcademicoPage({
 
   const { aba } = await searchParams;
   const periodo =
-    (await codigoDoPeriodoDe(toDateInputValue(new Date()))) ?? PERIODO_LETIVO_VIGENTE;
+    (await codigoDoPeriodoDe(valorDoCampoDeData(new Date()))) ??
+    PERIODO_LETIVO_VIGENTE;
 
   return (
     <CadastroAcademico

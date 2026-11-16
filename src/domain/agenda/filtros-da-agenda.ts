@@ -1,6 +1,6 @@
-import type { ActivityType } from "@/domain/booking/types";
+import type { TipoDeAtividade } from "@/domain/reservas/tipos";
 
-export const TIPOS_DE_ATIVIDADE: ActivityType[] = [
+export const TIPOS_DE_ATIVIDADE: TipoDeAtividade[] = [
   "class",
   "lecture",
   "exam",
@@ -20,7 +20,7 @@ export type Filtros = {
   professores: string[];
   turmas: string[];
   espacos: string[];
-  tipos: ActivityType[];
+  tipos: TipoDeAtividade[];
   minhas: boolean | null;
 };
 

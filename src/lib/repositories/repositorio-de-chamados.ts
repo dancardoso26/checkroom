@@ -8,9 +8,9 @@ import type {
   SituacaoDoChamado,
 } from "@/domain/chamados/chamado";
 import {
-  createSupabaseServerClient,
-  supabaseAdmin,
-} from "@/lib/supabase/server";
+  criarClienteDoServidor,
+  clienteAdministrativo,
+} from "@/lib/supabase/servidor";
 
 import { classificarErro, type ResultadoDaGravacao } from "./erros";
 
@@ -35,7 +35,7 @@ export type ChamadoItem = {
 async function nomesDosPerfis(ids: string[]): Promise<Map<string, string>> {
   if (ids.length === 0) return new Map();
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await clienteAdministrativo
     .from("profiles")
     .select("id, full_name")
     .in("id", [...new Set(ids)]);
@@ -46,7 +46,7 @@ async function nomesDosPerfis(ids: string[]): Promise<Map<string, string>> {
 }
 
 export async function listarChamados(): Promise<ChamadoItem[]> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await criarClienteDoServidor();
 
   const consulta = supabase
     .from("tickets")
@@ -89,7 +89,7 @@ export async function listarChamados(): Promise<ChamadoItem[]> {
 export async function buscarChamadoParaTransicao(
   id: string,
 ): Promise<ChamadoParaTransicao | null> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await criarClienteDoServidor();
 
   const { data, error } = await supabase
     .from("tickets")
@@ -111,7 +111,7 @@ export async function abrirChamado(
   dados: DadosDaAbertura,
   solicitanteId: string,
 ): Promise<ResultadoDaGravacao> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await criarClienteDoServidor();
 
   const { data, error } = await supabase
     .from("tickets")
@@ -144,7 +144,7 @@ export async function transicionarChamado(
   id: string,
   nota: string,
 ): Promise<string> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await criarClienteDoServidor();
 
   const { data, error } =
     acao === "resolver"
@@ -156,14 +156,14 @@ export async function transicionarChamado(
 
   if (error) {
     console.error(`Falha ao ${acao} o chamado:`, error);
-    return "error";
+    return "erro";
   }
 
   return data;
 }
 
 export async function excluirChamadoNoBanco(id: string): Promise<string> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await criarClienteDoServidor();
 
   const { data, error } = await supabase.rpc("excluir_chamado", {
     p_chamado: id,
@@ -171,7 +171,7 @@ export async function excluirChamadoNoBanco(id: string): Promise<string> {
 
   if (error) {
     console.error("Falha ao excluir o chamado:", error);
-    return "error";
+    return "erro";
   }
 
   return data;
@@ -190,7 +190,7 @@ export type DadosDoChamadoParaAviso = {
 export async function dadosParaAvisoDoChamado(
   id: string,
 ): Promise<DadosDoChamadoParaAviso | null> {
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await clienteAdministrativo
     .from("tickets")
     .select(
       "description, resolution_note, created_at, requested_by, assigned_to, rooms(name, building)",
@@ -202,7 +202,7 @@ export async function dadosParaAvisoDoChamado(
 
   const [nomes, conta] = await Promise.all([
     nomesDosPerfis([data.requested_by, data.assigned_to ?? data.requested_by]),
-    supabaseAdmin.auth.admin.getUserById(data.requested_by),
+    clienteAdministrativo.auth.admin.getUserById(data.requested_by),
   ]);
 
   return {

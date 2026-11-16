@@ -13,10 +13,10 @@ import {
 import { podeVerAuditoria } from "@/domain/auth/permissoes";
 import { correspondeABusca } from "@/domain/tabela/busca";
 import { descreverEvento } from "@/domain/auditoria/descricao";
-import { formatDateTime } from "@/lib/datetime";
+import { formatarDataEHora } from "@/lib/datas";
 import {
   carregarCatalogoDeAuditoria,
-  listAuditLogs,
+  listarRegistrosDaAuditoria,
 } from "@/lib/repositories/repositorio-de-auditoria";
 import { ordenarPor } from "@/domain/tabela/ordenacao";
 import { exigirSessao } from "@/lib/sessao";
@@ -59,7 +59,7 @@ export default async function AuditoriaPage({
   if (!podeVerAuditoria(sessao)) redirect("/reservas");
 
   const [registros, catalogo] = await Promise.all([
-    listAuditLogs(JANELA_DA_BUSCA),
+    listarRegistrosDaAuditoria(JANELA_DA_BUSCA),
     carregarCatalogoDeAuditoria(),
   ]);
 
@@ -72,7 +72,7 @@ export default async function AuditoriaPage({
     .sort((a, b) => a.localeCompare(b, "pt-BR"))
     .map((acao) => ({ id: acao, nome: acao }));
   const opcoesDeUsuario = [
-    ...new Set(todas.map((l) => l.registro.actorName ?? "Sistema")),
+    ...new Set(todas.map((l) => l.registro.nomeDoAutor ?? "Sistema")),
   ]
     .sort((a, b) => a.localeCompare(b, "pt-BR"))
     .map((nome) => ({ id: nome, nome }));
@@ -82,14 +82,14 @@ export default async function AuditoriaPage({
       ({ registro, acao }) =>
         (acoesEscolhidas.length === 0 || acoesEscolhidas.includes(acao)) &&
         (usuariosEscolhidos.length === 0 ||
-          usuariosEscolhidos.includes(registro.actorName ?? "Sistema")),
+          usuariosEscolhidos.includes(registro.nomeDoAutor ?? "Sistema")),
     )
     .filter(({ registro, acao, detalhe }) =>
       correspondeABusca(
         [
-          formatDateTime(registro.occurredAt),
-          registro.actorName ?? "Sistema",
-          registro.actorEmail,
+          formatarDataEHora(registro.ocorridoEm),
+          registro.nomeDoAutor ?? "Sistema",
+          registro.emailDoAutor,
           acao,
           detalhe,
         ],
@@ -103,9 +103,9 @@ export default async function AuditoriaPage({
       ? { coluna: ordenar, sentido: sentido === "desc" ? "desc" : "asc" }
       : null,
     {
-      data: ({ registro }) => registro.occurredAt,
-      usuario: ({ registro }) => registro.actorName ?? "Sistema",
-      email: ({ registro }) => registro.actorEmail,
+      data: ({ registro }) => registro.ocorridoEm,
+      usuario: ({ registro }) => registro.nomeDoAutor ?? "Sistema",
+      email: ({ registro }) => registro.emailDoAutor,
       acao: ({ acao }) => acao,
       descricao: ({ detalhe }) => detalhe,
     },
@@ -126,10 +126,26 @@ export default async function AuditoriaPage({
         <Table className="table-fixed">
           <TableHeader>
             <TableRow>
-              <CabecalhoOrdenavelDaUrl coluna="data" rotulo="Data e hora" className="w-[14%]" />
-              <CabecalhoOrdenavelDaUrl coluna="usuario" rotulo="Usuário" className="w-[14%]" />
-              <CabecalhoOrdenavelDaUrl coluna="email" rotulo="E-mail" className="w-[18%]" />
-              <CabecalhoOrdenavelDaUrl coluna="acao" rotulo="Ação" className="w-[14%]" />
+              <CabecalhoOrdenavelDaUrl
+                coluna="data"
+                rotulo="Data e hora"
+                className="w-[14%]"
+              />
+              <CabecalhoOrdenavelDaUrl
+                coluna="usuario"
+                rotulo="Usuário"
+                className="w-[14%]"
+              />
+              <CabecalhoOrdenavelDaUrl
+                coluna="email"
+                rotulo="E-mail"
+                className="w-[18%]"
+              />
+              <CabecalhoOrdenavelDaUrl
+                coluna="acao"
+                rotulo="Ação"
+                className="w-[14%]"
+              />
               <CabecalhoOrdenavelDaUrl coluna="descricao" rotulo="Descrição" />
             </TableRow>
           </TableHeader>
@@ -152,15 +168,15 @@ export default async function AuditoriaPage({
             {visiveis.map(({ registro, acao, detalhe }) => (
               <TableRow key={registro.id}>
                 <TableCell className="whitespace-nowrap">
-                  {formatDateTime(registro.occurredAt)}
+                  {formatarDataEHora(registro.ocorridoEm)}
                 </TableCell>
                 <TableCell className="whitespace-nowrap">
-                  {registro.actorName ?? (
+                  {registro.nomeDoAutor ?? (
                     <span className="text-muted-foreground">Sistema</span>
                   )}
                 </TableCell>
                 <TableCell>
-                  {registro.actorEmail ?? (
+                  {registro.emailDoAutor ?? (
                     <span className="text-muted-foreground">-</span>
                   )}
                 </TableCell>

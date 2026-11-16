@@ -132,6 +132,16 @@ as $$
   select class_id from public.profiles where id = auth.uid();
 $$;
 
+create or replace function public.curso_atual()
+returns uuid
+language sql
+stable
+security definer
+set search_path = pg_catalog, public
+as $$
+  select course_id from public.profiles where id = auth.uid();
+$$;
+
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -319,6 +329,8 @@ begin
   update public.profiles
      set full_name = 'Usuário removido',
          professor_id = null,
+         course_id = null,
+         class_id = null,
          anonymized_at = now()
    where id = p_alvo;
 

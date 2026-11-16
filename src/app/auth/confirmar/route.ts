@@ -2,10 +2,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
 
 import { destinoAposLogin } from "@/domain/auth/destino-apos-login";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { criarClienteDoServidor } from "@/lib/supabase/servidor";
 
-export async function GET(request: NextRequest) {
-  const { searchParams, origin } = request.nextUrl;
+export async function GET(requisicao: NextRequest) {
+  const { searchParams, origin } = requisicao.nextUrl;
 
   const token = searchParams.get("token_hash");
   const tipo = searchParams.get("type") as EmailOtpType | null;
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
       ? pedido
       : destinoAposLogin(pedido);
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = await criarClienteDoServidor();
 
   let erro: unknown = null;
 

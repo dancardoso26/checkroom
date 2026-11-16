@@ -15,9 +15,9 @@ import {
   SITUACOES,
   STATUS_DA_SITUACAO,
 } from "@/domain/chamados/chamado";
-import { PontoDeStatus } from "@/components/status-badge";
+import { PontoDeStatus } from "@/components/selo-de-situacao";
 import { usePesquisa } from "@/hooks/use-pesquisa";
-import { formatDateTime } from "@/lib/datetime";
+import { formatarDataEHora } from "@/lib/datas";
 
 import {
   assumirChamado,
@@ -80,7 +80,7 @@ export function ListaDeChamados({
       ROTULO_DA_SITUACAO[chamado.situacao],
       veTodos ? chamado.solicitanteNome : null,
       chamado.responsavelNome,
-      formatDateTime(chamado.abertoEm),
+      formatarDataEHora(chamado.abertoEm),
     ],
     "Pesquisar chamados",
   );
