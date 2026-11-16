@@ -4,16 +4,16 @@ import Link from "next/link";
 import { startTransition, useActionState } from "react";
 import { MailCheck } from "lucide-react";
 
-import { pedirRecuperacao, type RecuperacaoState } from "./acoes";
+import { pedirRecuperacao, type EstadoDaRecuperacao } from "./acoes";
 import { TelaDeEntrada } from "@/components/tela-de-entrada";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const ESTADO_INICIAL: RecuperacaoState = { status: "idle" };
+const ESTADO_INICIAL: EstadoDaRecuperacao = { status: "inicial" };
 
 export default function RecuperarSenhaPage() {
-  const [state, formAction, enviando] = useActionState(
+  const [estado, acaoDoFormulario, enviando] = useActionState(
     pedirRecuperacao,
     ESTADO_INICIAL,
   );
@@ -21,7 +21,7 @@ export default function RecuperarSenhaPage() {
   function enviar(evento: React.FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     const dados = new FormData(evento.currentTarget);
-    startTransition(() => formAction(dados));
+    startTransition(() => acaoDoFormulario(dados));
   }
 
   return (
@@ -30,7 +30,7 @@ export default function RecuperarSenhaPage() {
       descricao="Informe seu e-mail e enviaremos um link para criar uma nova senha."
     >
       <div>
-        {state.status === "enviado" ? (
+        {estado.status === "enviado" ? (
           <div className="space-y-3 text-center">
             <MailCheck aria-hidden className="text-primary mx-auto size-8" />
             <p className="text-sm font-medium">
@@ -54,9 +54,9 @@ export default function RecuperarSenhaPage() {
               />
             </div>
 
-            {state.status === "error" && (
+            {estado.status === "erro" && (
               <p className="text-destructive text-sm" role="alert">
-                {state.message}
+                {estado.message}
               </p>
             )}
 

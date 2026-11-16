@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { AvisoDeConflito } from "@/components/aviso-de-conflito";
 import { BarraDeOcupacao } from "@/components/barra-de-ocupacao";
 import { RotuloDeCampo } from "@/components/rotulo-de-campo";
-import { StatusBadge } from "@/components/status-badge";
+import { SeloDeSituacao } from "@/components/selo-de-situacao";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -15,7 +15,7 @@ import {
   type SituacaoParaOAluno,
 } from "@/domain/palestras/palestra";
 import type { Status } from "@/domain/status/status";
-import { formatPeriod } from "@/lib/datetime";
+import { formatarPeriodo } from "@/lib/datas";
 import type { PalestraItem } from "@/lib/repositories/repositorio-de-palestras";
 
 import { cancelarInscricao, inscreverEmPalestra } from "./acoes";
@@ -94,7 +94,7 @@ function CartaoDaPalestra({
             {palestra.cursos.join(", ")}
           </p>
         </div>
-        {status && <StatusBadge status={status} />}
+        {status && <SeloDeSituacao status={status} />}
       </header>
 
       <dl className="grid gap-4 text-sm sm:grid-cols-2">
@@ -102,7 +102,7 @@ function CartaoDaPalestra({
           <dt className="text-muted-foreground text-xs">
             <RotuloDeCampo rotulo="Data e hora" />
           </dt>
-          <dd>{formatPeriod(palestra.inicio, palestra.fim)}</dd>
+          <dd>{formatarPeriodo(palestra.inicio, palestra.fim)}</dd>
         </div>
         <div className="space-y-1">
           <dt className="text-muted-foreground text-xs">

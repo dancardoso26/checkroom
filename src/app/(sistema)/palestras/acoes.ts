@@ -13,7 +13,7 @@ import {
   validarPalestra,
 } from "@/domain/palestras/palestra";
 import { semErros } from "@/domain/formulario/validacao";
-import { combineDateTime, formatPeriod } from "@/lib/datetime";
+import { combinarDataEHora, formatarPeriodo } from "@/lib/datas";
 import { mesmoNome } from "@/domain/palestras/palestrante";
 import {
   avisarPalestrante,
@@ -30,7 +30,7 @@ import {
   type ResultadoDaAcao,
 } from "@/lib/formulario";
 import { listarCursos } from "@/lib/repositories/repositorio-de-cursos";
-import { findProfessorContact } from "@/lib/repositories/repositorio-de-professores";
+import { buscarContatoDoProfessor } from "@/lib/repositories/repositorio-de-professores";
 import {
   avisoDePalestraExcluida,
   cadastrarPalestra as cadastrarNoBanco,
@@ -43,7 +43,7 @@ import {
   type InscritoDaPalestra,
 } from "@/lib/repositories/repositorio-de-palestras";
 import { carregarCalendarioDoDia } from "@/lib/repositories/repositorio-do-calendario";
-import { findRoomSnapshot } from "@/lib/repositories/repositorio-de-espacos";
+import { buscarEspacoParaReserva } from "@/lib/repositories/repositorio-de-espacos";
 import { sessaoAtual } from "@/lib/sessao";
 
 const PREFIXO_DE_TESTE = "[e2e]";
@@ -62,40 +62,42 @@ const schema = z.object({
 
 export async function cadastrarPalestra(
   _estado: EstadoDoFormulario,
-  formData: FormData,
+  dadosDoFormulario: FormData,
 ): Promise<EstadoDoFormulario> {
   const sessao = await sessaoAtual();
   if (!sessao || !podeCadastrarPalestra(sessao)) {
     return falha("Apenas a administração cadastra palestras.");
   }
 
-  const parsed = schema.safeParse({
-    titulo: texto(formData.get("titulo")),
-    palestrante: texto(formData.get("palestrante")),
-    palestranteProfessorId: texto(formData.get("palestranteProfessorId")),
-    espacoId: texto(formData.get("espacoId")),
-    data: texto(formData.get("data")),
-    inicio: texto(formData.get("inicio")),
-    fim: texto(formData.get("fim")),
-    vagas: texto(formData.get("vagas")),
-    cursoIds: formData.getAll("cursoIds").map(texto),
+  const validado = schema.safeParse({
+    titulo: texto(dadosDoFormulario.get("titulo")),
+    palestrante: texto(dadosDoFormulario.get("palestrante")),
+    palestranteProfessorId: texto(
+      dadosDoFormulario.get("palestranteProfessorId"),
+    ),
+    espacoId: texto(dadosDoFormulario.get("espacoId")),
+    data: texto(dadosDoFormulario.get("data")),
+    inicio: texto(dadosDoFormulario.get("inicio")),
+    fim: texto(dadosDoFormulario.get("fim")),
+    vagas: texto(dadosDoFormulario.get("vagas")),
+    cursoIds: dadosDoFormulario.getAll("cursoIds").map(texto),
   });
 
-  if (!parsed.success) return falhaDeValidacao(parsed.error);
+  if (!validado.success) return falhaDeValidacao(validado.error);
 
-  const entrada = parsed.data;
+  const entrada = validado.data;
   const dados = {
     titulo: entrada.titulo,
     palestrante: entrada.palestrante,
     espacoId: entrada.espacoId,
-    inicio: combineDateTime(entrada.data, entrada.inicio),
-    fim: combineDateTime(entrada.data, entrada.fim),
+    inicio: combinarDataEHora(entrada.data, entrada.inicio),
+    fim: combinarDataEHora(entrada.data, entrada.fim),
     vagas: entrada.vagas,
     cursoIds: [...new Set(entrada.cursoIds)],
   };
 
   const [espaco, ocupacoes, calendario] = await Promise.all([
-    dados.espacoId ? findRoomSnapshot(dados.espacoId) : null,
+    dados.espacoId ? buscarEspacoParaReserva(dados.espacoId) : null,
     dados.espacoId
       ? ocupacoesDoEspaco(dados.espacoId, dados.inicio, dados.fim)
       : [],
@@ -103,7 +105,7 @@ export async function cadastrarPalestra(
   ]);
 
   const erros = validarPalestra(dados, {
-    capacidadeDoEspaco: espaco?.capacity ?? null,
+    capacidadeDoEspaco: espaco?.capacidade ?? null,
     ocupacoes,
     agora: new Date(),
     bloqueios: calendario.bloqueios,
@@ -111,10 +113,10 @@ export async function cadastrarPalestra(
   if (!semErros(erros)) return falha(null, erros);
 
   const professorEscolhido = entrada.palestranteProfessorId
-    ? await findProfessorContact(entrada.palestranteProfessorId)
+    ? await buscarContatoDoProfessor(entrada.palestranteProfessorId)
     : null;
   const professor =
-    professorEscolhido && mesmoNome(professorEscolhido.name, dados.palestrante)
+    professorEscolhido && mesmoNome(professorEscolhido.nome, dados.palestrante)
       ? professorEscolhido
       : null;
 
@@ -151,8 +153,8 @@ export async function cadastrarPalestra(
     const aviso = {
       titulo: dados.titulo,
       palestrante: dados.palestrante,
-      espaco: espaco.name,
-      periodo: formatPeriod(dados.inicio, dados.fim),
+      espaco: espaco.nome,
+      periodo: formatarPeriodo(dados.inicio, dados.fim),
       vagas: String(dados.vagas),
       cursos: cursos
         .filter((c) => dados.cursoIds.includes(c.id))
@@ -220,14 +222,14 @@ export async function excluirPalestra(id: string): Promise<ResultadoDaAcao> {
       titulo: aviso.titulo,
       palestrante: aviso.palestrante,
       espaco: aviso.espaco,
-      periodo: formatPeriod(aviso.inicio, aviso.fim),
+      periodo: formatarPeriodo(aviso.inicio, aviso.fim),
       canceladaPor: sessao.nome,
     };
 
     await avisarSobrePalestraCancelada(aviso.emailsDosInscritos, dados);
 
     if (aviso.palestranteProfessorId) {
-      const professor = await findProfessorContact(
+      const professor = await buscarContatoDoProfessor(
         aviso.palestranteProfessorId,
       );
       if (professor) {

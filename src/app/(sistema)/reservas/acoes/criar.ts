@@ -3,207 +3,207 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 
-import { combineDateTime } from "@/lib/datetime";
+import { combinarDataEHora } from "@/lib/datas";
 
-import { validateBooking } from "@/domain/booking/validateBooking";
-import { describeViolations } from "@/domain/booking/messages";
-import type { BookingRequest } from "@/domain/booking/types";
+import { validarReserva } from "@/domain/reservas/validar-reserva";
+import { descreverViolacoes } from "@/domain/reservas/mensagens";
+import type { PedidoDeReserva } from "@/domain/reservas/tipos";
 
-import { findRoomSnapshot } from "@/lib/repositories/repositorio-de-espacos";
-import { findClassSnapshot } from "@/lib/repositories/repositorio-de-turmas";
+import { buscarEspacoParaReserva } from "@/lib/repositories/repositorio-de-espacos";
+import { buscarTurmaParaReserva } from "@/lib/repositories/repositorio-de-turmas";
 import {
-  listResources,
-  toResourceNameMap,
+  listarRecursos,
+  mapaDeNomesDosRecursos,
 } from "@/lib/repositories/repositorio-de-recursos";
 import {
-  createBooking,
-  findConflictCandidates,
+  gravarReserva,
+  buscarCandidatosAConflito,
 } from "@/lib/repositories/repositorio-de-reservas";
-import { findTeachingAssignment } from "@/lib/repositories/repositorio-de-disciplinas";
-import { PERIODO_LETIVO_VIGENTE } from "@/domain/booking/businessHours";
+import { buscarVinculoDocente } from "@/lib/repositories/repositorio-de-disciplinas";
+import { PERIODO_LETIVO_VIGENTE } from "@/domain/reservas/expediente";
 import { carregarCalendarioDoDia } from "@/lib/repositories/repositorio-do-calendario";
 import { exigirSessao } from "@/lib/sessao";
 import { notificarProfessor } from "./notificar";
 import { podeReservarPara } from "@/domain/auth/permissoes";
 
 const schema = z.object({
-  roomId: z.uuid("Selecione um espaço."),
+  espacoId: z.uuid("Selecione um espaço."),
   professorId: z.uuid("Selecione um professor."),
-  classId: z.uuid("Selecione uma turma."),
-  activityType: z.enum(["class", "exam", "event"], {
+  turmaId: z.uuid("Selecione uma turma."),
+  tipoDeAtividade: z.enum(["class", "exam", "event"], {
     error: "Palestras são cadastradas como palestra, não como reserva.",
   }),
-  subjectId: z.union([z.uuid(), z.literal("")]).transform((v) => v || null),
-  purpose: z
+  disciplinaId: z.union([z.uuid(), z.literal("")]).transform((v) => v || null),
+  finalidade: z
     .string()
     .trim()
     .min(1, "Informe a finalidade da reserva.")
     .max(200, "A finalidade deve ter no máximo 200 caracteres."),
-  date: z.iso.date("Informe a data."),
-  startTime: z.iso.time("Informe o horário de início."),
-  endTime: z.iso.time("Informe o horário de término."),
-  resourceIds: z.array(z.uuid()),
+  data: z.iso.date("Informe a data."),
+  horaDeInicio: z.iso.time("Informe o horário de início."),
+  horaDeTermino: z.iso.time("Informe o horário de término."),
+  recursoIds: z.array(z.uuid()),
 });
 
 function texto(valor: FormDataEntryValue | null): string {
   return typeof valor === "string" ? valor : "";
 }
 
-export type BookingFormState =
-  | { status: "idle" }
-  | { status: "success"; bookingId: string }
+export type EstadoDoFormularioDeReserva =
+  | { status: "inicial" }
+  | { status: "sucesso"; reservaId: string }
   | {
-      status: "error";
-      messages: string[];
-      fieldErrors: Record<string, string[]>;
-      values: SubmittedValues;
+      status: "erro";
+      mensagens: string[];
+      errosPorCampo: Record<string, string[]>;
+      valores: ValoresEnviados;
     };
 
-export type SubmittedValues = {
-  roomId: string;
+export type ValoresEnviados = {
+  espacoId: string;
   professorId: string;
-  classId: string;
-  activityType: string;
-  subjectId: string;
-  purpose: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  resourceIds: string[];
+  turmaId: string;
+  tipoDeAtividade: string;
+  disciplinaId: string;
+  finalidade: string;
+  data: string;
+  horaDeInicio: string;
+  horaDeTermino: string;
+  recursoIds: string[];
 };
 
 function erro(
-  values: SubmittedValues,
-  messages: string[],
-  fieldErrors: Record<string, string[]> = {}
-): BookingFormState {
-  return { status: "error", messages, fieldErrors, values };
+  valores: ValoresEnviados,
+  mensagens: string[],
+  errosPorCampo: Record<string, string[]> = {},
+): EstadoDoFormularioDeReserva {
+  return { status: "erro", mensagens, errosPorCampo, valores };
 }
 
 export async function criarReserva(
-  _prevState: BookingFormState,
-  formData: FormData
-): Promise<BookingFormState> {
-  const values: SubmittedValues = {
-    roomId: texto(formData.get("roomId")),
-    professorId: texto(formData.get("professorId")),
-    classId: texto(formData.get("classId")),
-    activityType: texto(formData.get("activityType")),
-    subjectId: texto(formData.get("subjectId")),
-    purpose: texto(formData.get("purpose")),
-    date: texto(formData.get("date")),
-    startTime: texto(formData.get("startTime")),
-    endTime: texto(formData.get("endTime")),
-    resourceIds: formData.getAll("resourceIds").map(texto),
+  _estadoAnterior: EstadoDoFormularioDeReserva,
+  dadosDoFormulario: FormData,
+): Promise<EstadoDoFormularioDeReserva> {
+  const valores: ValoresEnviados = {
+    espacoId: texto(dadosDoFormulario.get("espacoId")),
+    professorId: texto(dadosDoFormulario.get("professorId")),
+    turmaId: texto(dadosDoFormulario.get("turmaId")),
+    tipoDeAtividade: texto(dadosDoFormulario.get("tipoDeAtividade")),
+    disciplinaId: texto(dadosDoFormulario.get("disciplinaId")),
+    finalidade: texto(dadosDoFormulario.get("finalidade")),
+    data: texto(dadosDoFormulario.get("data")),
+    horaDeInicio: texto(dadosDoFormulario.get("horaDeInicio")),
+    horaDeTermino: texto(dadosDoFormulario.get("horaDeTermino")),
+    recursoIds: dadosDoFormulario.getAll("recursoIds").map(texto),
   };
 
-  const parsed = schema.safeParse(values);
+  const validado = schema.safeParse(valores);
 
-  if (!parsed.success) {
-    return erro(values, [], z.flattenError(parsed.error).fieldErrors);
+  if (!validado.success) {
+    return erro(valores, [], z.flattenError(validado.error).fieldErrors);
   }
 
-  const input = parsed.data;
+  const entrada = validado.data;
   const sessao = await exigirSessao();
 
-  if (!podeReservarPara(sessao, input.professorId)) {
-    return erro(values, [
+  if (!podeReservarPara(sessao, entrada.professorId)) {
+    return erro(valores, [
       "Você só pode registrar reservas em seu próprio nome.",
     ]);
   }
 
-  const request: BookingRequest = {
-    roomId: input.roomId,
-    professorId: input.professorId,
-    classId: input.classId,
-    activityType: input.activityType,
-    subjectId: input.subjectId,
-    purpose: input.purpose,
-    startsAt: combineDateTime(input.date, input.startTime),
-    endsAt: combineDateTime(input.date, input.endTime),
-    requiredResourceIds: input.resourceIds,
+  const pedido: PedidoDeReserva = {
+    espacoId: entrada.espacoId,
+    professorId: entrada.professorId,
+    turmaId: entrada.turmaId,
+    tipoDeAtividade: entrada.tipoDeAtividade,
+    disciplinaId: entrada.disciplinaId,
+    finalidade: entrada.finalidade,
+    inicio: combinarDataEHora(entrada.data, entrada.horaDeInicio),
+    fim: combinarDataEHora(entrada.data, entrada.horaDeTermino),
+    recursosExigidos: entrada.recursoIds,
   };
 
-  const calendario = await carregarCalendarioDoDia(input.date);
+  const calendario = await carregarCalendarioDoDia(entrada.data);
 
-  const [room, classGroup, conflictingBookings, resources, teachingAssignment] =
+  const [espaco, turma, ocupacoesEmConflito, recursos, vinculo] =
     await Promise.all([
-      findRoomSnapshot(request.roomId),
-      findClassSnapshot(request.classId),
-      findConflictCandidates(request),
-      listResources(),
-      findTeachingAssignment({
-        professorId: request.professorId,
-        subjectId: request.subjectId,
-        classId: request.classId,
-        term: calendario.periodo?.codigo ?? PERIODO_LETIVO_VIGENTE,
+      buscarEspacoParaReserva(pedido.espacoId),
+      buscarTurmaParaReserva(pedido.turmaId),
+      buscarCandidatosAConflito(pedido),
+      listarRecursos(),
+      buscarVinculoDocente({
+        professorId: pedido.professorId,
+        disciplinaId: pedido.disciplinaId,
+        turmaId: pedido.turmaId,
+        periodo: calendario.periodo?.codigo ?? PERIODO_LETIVO_VIGENTE,
       }),
     ]);
 
-  const resourceNames = toResourceNameMap(resources);
+  const nomesDosRecursos = mapaDeNomesDosRecursos(recursos);
 
-  const now = new Date();
+  const agora = new Date();
 
-  const veredito = validateBooking(request, {
-    room,
-    classGroup,
-    teachingAssignment,
-    conflictingBookings,
-    now,
+  const veredito = validarReserva(pedido, {
+    espaco,
+    turma,
+    vinculo,
+    ocupacoes: ocupacoesEmConflito,
+    agora,
     calendario,
   });
 
-  if (!veredito.valid) {
+  if (!veredito.valida) {
     return erro(
-      values,
-      describeViolations(veredito.violations, { resourceNames })
+      valores,
+      descreverViolacoes(veredito.violacoes, { nomesDosRecursos }),
     );
   }
 
-  const resultado = await createBooking({
-    roomId: request.roomId,
-    professorId: request.professorId,
-    classId: request.classId,
-    activityType: request.activityType,
-    subjectId: request.subjectId,
-    purpose: request.purpose,
-    startsAt: request.startsAt,
-    endsAt: request.endsAt,
-    resourceIds: [...new Set(request.requiredResourceIds)],
-    createdBy: sessao.profileId,
+  const resultado = await gravarReserva({
+    espacoId: pedido.espacoId,
+    professorId: pedido.professorId,
+    turmaId: pedido.turmaId,
+    tipoDeAtividade: pedido.tipoDeAtividade,
+    disciplinaId: pedido.disciplinaId,
+    finalidade: pedido.finalidade,
+    inicio: pedido.inicio,
+    fim: pedido.fim,
+    recursoIds: [...new Set(pedido.recursosExigidos)],
+    criadaPor: sessao.profileId,
   });
 
-  if (resultado.status === "conflict") {
-    const conflitosAtuais = await findConflictCandidates(request);
+  if (resultado.status === "conflito") {
+    const conflitosAtuais = await buscarCandidatosAConflito(pedido);
 
-    const revalidacao = validateBooking(request, {
-      room,
-      classGroup,
-      teachingAssignment,
-      conflictingBookings: conflitosAtuais,
-      now,
+    const revalidacao = validarReserva(pedido, {
+      espaco,
+      turma,
+      vinculo,
+      ocupacoes: conflitosAtuais,
+      agora,
       calendario,
     });
 
-    if (!revalidacao.valid) {
+    if (!revalidacao.valida) {
       return erro(
-        values,
-        describeViolations(revalidacao.violations, { resourceNames })
+        valores,
+        descreverViolacoes(revalidacao.violacoes, { nomesDosRecursos }),
       );
     }
 
-    return erro(values, [
+    return erro(valores, [
       "Outra reserva foi criada ao mesmo tempo e ocupou este horário. Tente enviar novamente.",
     ]);
   }
 
-  if (resultado.status === "error") {
-    return erro(values, [resultado.message]);
+  if (resultado.status === "erro") {
+    return erro(valores, [resultado.mensagem]);
   }
 
-  await notificarProfessor(resultado.bookingId, "nova", sessao.nome);
+  await notificarProfessor(resultado.reservaId, "nova", sessao.nome);
 
   revalidatePath("/reservas");
 
-  return { status: "success", bookingId: resultado.bookingId };
+  return { status: "sucesso", reservaId: resultado.reservaId };
 }

@@ -8,7 +8,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import type { ResourceOption } from "@/lib/repositories/repositorio-de-recursos";
+import type { OpcaoDeRecurso } from "@/lib/repositories/repositorio-de-recursos";
 import { cn } from "@/lib/utils";
 
 export function SeletorDeRecursos({
@@ -18,13 +18,13 @@ export function SeletorDeRecursos({
   alternar,
 }: {
   id: string;
-  recursos: ResourceOption[];
+  recursos: OpcaoDeRecurso[];
   selecionados: string[];
   alternar: (id: string, marcado: boolean) => void;
 }) {
   const nomes = recursos
     .filter((r) => selecionados.includes(r.id))
-    .map((r) => r.name);
+    .map((r) => r.nome);
 
   return (
     <Popover>
@@ -32,7 +32,7 @@ export function SeletorDeRecursos({
         id={id}
         className={cn(
           "border-input flex h-9 w-full items-center justify-between gap-2 rounded-md border bg-transparent px-3 text-left text-sm shadow-xs",
-          nomes.length === 0 && "text-muted-foreground"
+          nomes.length === 0 && "text-muted-foreground",
         )}
       >
         <span className="truncate">
@@ -58,7 +58,7 @@ export function SeletorDeRecursos({
                 checked={selecionados.includes(recurso.id)}
                 onCheckedChange={(v) => alternar(recurso.id, v === true)}
               />
-              {recurso.name}
+              {recurso.nome}
             </label>
           ))}
         </fieldset>

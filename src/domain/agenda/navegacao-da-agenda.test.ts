@@ -19,15 +19,15 @@ import {
   sugerirTermino,
   tituloDoPeriodo,
 } from "./navegacao-da-agenda";
-import { combineDateTime } from "@/lib/datetime";
+import { combinarDataEHora } from "@/lib/datas";
 
 const SEGUNDA = "2026-09-28";
 
 function reserva(id: string, dia: string, inicio: string, fim: string) {
   return {
     id,
-    startsAt: combineDateTime(dia, inicio),
-    endsAt: combineDateTime(dia, fim),
+    inicio: combinarDataEHora(dia, inicio),
+    fim: combinarDataEHora(dia, fim),
   };
 }
 
@@ -102,15 +102,15 @@ describe("intervalo consultado", () => {
   it("cobre a semana de segunda a domingo", () => {
     const { inicio, fim } = intervaloDoPeriodo("semana", "2026-10-01");
 
-    expect(inicio).toEqual(combineDateTime(SEGUNDA, "00:00"));
-    expect(fim).toEqual(combineDateTime("2026-10-05", "00:00"));
+    expect(inicio).toEqual(combinarDataEHora(SEGUNDA, "00:00"));
+    expect(fim).toEqual(combinarDataEHora("2026-10-05", "00:00"));
   });
 
   it("cobre a grade do mês, incluindo os dias de borda", () => {
     const { inicio, fim } = intervaloDoPeriodo("mes", "2026-09-15");
 
-    expect(inicio).toEqual(combineDateTime("2026-08-31", "00:00"));
-    expect(fim).toEqual(combineDateTime("2026-10-05", "00:00"));
+    expect(inicio).toEqual(combinarDataEHora("2026-08-31", "00:00"));
+    expect(fim).toEqual(combinarDataEHora("2026-10-05", "00:00"));
   });
 });
 
@@ -129,22 +129,22 @@ describe("navegação", () => {
 describe("título do período", () => {
   it("escreve o dia por extenso", () => {
     expect(tituloDoPeriodo("dia", SEGUNDA)).toBe(
-      "segunda-feira, 28 de setembro de 2026"
+      "segunda-feira, 28 de setembro de 2026",
     );
   });
 
   it("junta o mês quando a semana cruza a virada", () => {
     expect(tituloDoPeriodo("semana", SEGUNDA)).toBe(
-      "28 de setembro a 4 de outubro de 2026"
+      "28 de setembro a 4 de outubro de 2026",
     );
     expect(tituloDoPeriodo("semana", "2026-09-15")).toBe(
-      "14 a 20 de setembro de 2026"
+      "14 a 20 de setembro de 2026",
     );
   });
 
   it("repete o ano quando a semana cruza o réveillon", () => {
     expect(tituloDoPeriodo("semana", "2026-12-31")).toBe(
-      "28 de dezembro de 2026 a 3 de janeiro de 2027"
+      "28 de dezembro de 2026 a 3 de janeiro de 2027",
     );
   });
 
@@ -172,7 +172,7 @@ describe("posição na grade", () => {
   it("mede a partir da abertura", () => {
     const [posicao] = posicionarNoDia(
       [reserva("a", SEGUNDA, "19:00", "20:40")],
-      SEGUNDA
+      SEGUNDA,
     );
 
     expect(posicao.topo).toBe(12 * 60);
@@ -182,7 +182,7 @@ describe("posição na grade", () => {
 
   it("ignora reservas de outros dias", () => {
     expect(
-      posicionarNoDia([reserva("a", "2026-09-29", "19:00", "20:00")], SEGUNDA)
+      posicionarNoDia([reserva("a", "2026-09-29", "19:00", "20:00")], SEGUNDA),
     ).toHaveLength(0);
   });
 
@@ -192,7 +192,7 @@ describe("posição na grade", () => {
         reserva("a", SEGUNDA, "19:00", "20:40"),
         reserva("b", SEGUNDA, "19:00", "20:40"),
       ],
-      SEGUNDA
+      SEGUNDA,
     );
 
     expect(posicoes.map((p) => p.coluna).sort()).toEqual([0, 1]);
@@ -205,7 +205,7 @@ describe("posição na grade", () => {
         reserva("a", SEGUNDA, "19:00", "20:00"),
         reserva("b", SEGUNDA, "20:00", "21:00"),
       ],
-      SEGUNDA
+      SEGUNDA,
     );
 
     expect(posicoes.every((p) => p.colunas === 1 && p.coluna === 0)).toBe(true);
@@ -218,10 +218,11 @@ describe("posição na grade", () => {
         reserva("cedo", SEGUNDA, "08:00", "09:00"),
         reserva("tarde", SEGUNDA, "10:00", "11:00"),
       ],
-      SEGUNDA
+      SEGUNDA,
     );
 
-    const coluna = (id: string) => posicoes.find((p) => p.item.id === id)!.coluna;
+    const coluna = (id: string) =>
+      posicoes.find((p) => p.item.id === id)!.coluna;
 
     expect(coluna("longa")).toBe(0);
     expect(coluna("cedo")).toBe(1);
@@ -232,7 +233,7 @@ describe("posição na grade", () => {
   it("dá altura mínima a reservas muito curtas, para continuarem clicáveis", () => {
     const [posicao] = posicionarNoDia(
       [reserva("a", SEGUNDA, "19:00", "19:05")],
-      SEGUNDA
+      SEGUNDA,
     );
 
     expect(posicao.altura).toBe(15);
@@ -257,11 +258,20 @@ describe("intervalo arrastado", () => {
   });
 
   it("garante pelo menos um passo de duração", () => {
-    expect(intervaloArrastado(h(19), h(19))).toEqual({ inicio: "19:00", fim: "19:15" });
+    expect(intervaloArrastado(h(19), h(19))).toEqual({
+      inicio: "19:00",
+      fim: "19:15",
+    });
   });
 
   it("não sai do expediente", () => {
-    expect(intervaloArrastado(h(6), h(8))).toEqual({ inicio: "07:00", fim: "08:00" });
-    expect(intervaloArrastado(h(21, 50), h(23))).toEqual({ inicio: "21:45", fim: "22:00" });
+    expect(intervaloArrastado(h(6), h(8))).toEqual({
+      inicio: "07:00",
+      fim: "08:00",
+    });
+    expect(intervaloArrastado(h(21, 50), h(23))).toEqual({
+      inicio: "21:45",
+      fim: "22:00",
+    });
   });
 });

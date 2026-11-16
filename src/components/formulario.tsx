@@ -22,9 +22,9 @@ import {
 
 export function errosDoCampo(
   estado: EstadoDoFormulario,
-  campo: string
+  campo: string,
 ): string[] {
-  return estado.status === "error" ? (estado.erros[campo] ?? []) : [];
+  return estado.status === "erro" ? (estado.erros[campo] ?? []) : [];
 }
 
 export function Campo({
@@ -75,7 +75,7 @@ export function DialogoDeFormulario({
   descricao?: string;
   acao: (
     estado: EstadoDoFormulario,
-    dados: FormData
+    dados: FormData,
   ) => Promise<EstadoDoFormulario>;
   onFechar: () => void;
   rotuloDoBotao?: string;
@@ -92,7 +92,7 @@ export function DialogoDeFormulario({
     startTransition(async () => {
       const resultado = await acao(estado, dados);
       setEstado(resultado);
-      if (resultado.status === "success") {
+      if (resultado.status === "sucesso") {
         toast.success(sucesso);
         onFechar();
       }
@@ -110,7 +110,7 @@ export function DialogoDeFormulario({
         <form onSubmit={enviar} className="space-y-4" noValidate>
           {children(estado)}
 
-          {estado.status === "error" && estado.mensagem && (
+          {estado.status === "erro" && estado.mensagem && (
             <p className="text-destructive text-sm" role="alert">
               {estado.mensagem}
             </p>

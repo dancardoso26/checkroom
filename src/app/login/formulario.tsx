@@ -4,28 +4,31 @@ import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { startTransition, useActionState, useEffect } from "react";
 
-import { entrar, type LoginState } from "./acoes";
+import { entrar, type EstadoDoLogin } from "./acoes";
 import { Button } from "@/components/ui/button";
 import { CampoDeSenha } from "@/components/campo-de-senha";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const ESTADO_INICIAL: LoginState = { status: "idle" };
+const ESTADO_INICIAL: EstadoDoLogin = { status: "inicial" };
 
 export function FormularioDeLogin({ proximo }: { proximo?: string }) {
-  const [state, formAction, entrando] = useActionState(entrar, ESTADO_INICIAL);
-  const aguardando = entrando || state.status === "success";
+  const [estado, acaoDoFormulario, entrando] = useActionState(
+    entrar,
+    ESTADO_INICIAL,
+  );
+  const aguardando = entrando || estado.status === "sucesso";
 
   useEffect(() => {
-    if (state.status !== "success") return;
+    if (estado.status !== "sucesso") return;
 
-    window.location.assign(state.destino);
-  }, [state]);
+    window.location.assign(estado.destino);
+  }, [estado]);
 
   function enviar(evento: React.FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     const dados = new FormData(evento.currentTarget);
-    startTransition(() => formAction(dados));
+    startTransition(() => acaoDoFormulario(dados));
   }
 
   return (
@@ -61,9 +64,9 @@ export function FormularioDeLogin({ proximo }: { proximo?: string }) {
         />
       </div>
 
-      {state.status === "error" && (
+      {estado.status === "erro" && (
         <p className="text-destructive text-sm" role="alert">
-          {state.message}
+          {estado.message}
         </p>
       )}
 

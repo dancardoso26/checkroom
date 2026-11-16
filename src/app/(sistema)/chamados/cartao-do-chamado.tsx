@@ -2,10 +2,10 @@
 
 import { CheckCircle2, Hand, Undo2, X } from "lucide-react";
 
-import { StatusBadge } from "@/components/status-badge";
+import { SeloDeSituacao } from "@/components/selo-de-situacao";
 import { Button } from "@/components/ui/button";
 import { STATUS_DA_PRIORIDADE } from "@/domain/chamados/chamado";
-import { formatDateTime } from "@/lib/datetime";
+import { formatarDataEHora } from "@/lib/datas";
 import { cn } from "@/lib/utils";
 
 import type { Linha } from "./tipos";
@@ -53,10 +53,10 @@ export function CartaoDoChamado({
             {chamado.espaco}
           </h3>
           <p className="text-muted-foreground text-xs">
-            {formatDateTime(chamado.abertoEm)}
+            {formatarDataEHora(chamado.abertoEm)}
           </p>
         </div>
-        <StatusBadge status={STATUS_DA_PRIORIDADE[chamado.prioridade]} />
+        <SeloDeSituacao status={STATUS_DA_PRIORIDADE[chamado.prioridade]} />
       </header>
 
       <p className="line-clamp-2 text-sm">{chamado.descricao}</p>

@@ -1,8 +1,12 @@
 "use client";
 
-import { mesmoMes, nomeCurtoDoDia, numeroDoDia } from "@/domain/agenda/navegacao-da-agenda";
-import { formatTime, localDayKey } from "@/lib/datetime";
-import type { BookingListItem } from "@/lib/repositories/repositorio-de-reservas";
+import {
+  mesmoMes,
+  nomeCurtoDoDia,
+  numeroDoDia,
+} from "@/domain/agenda/navegacao-da-agenda";
+import { formatarHora, chaveDoDiaLocal } from "@/lib/datas";
+import type { ReservaDaLista } from "@/lib/repositories/repositorio-de-reservas";
 import { cn } from "@/lib/utils";
 
 import {
@@ -29,16 +33,16 @@ export function CalendarioMes({
   referencia: string;
   hoje: string;
   agora: Date;
-  reservas: BookingListItem[];
+  reservas: ReservaDaLista[];
   destaque?: string;
   onEscolherDia?: (dia: string) => void;
   onAbrirDia: (dia: string) => void;
   onAbrirReserva: (id: string) => void;
 }) {
-  const porDia = new Map<string, BookingListItem[]>();
+  const porDia = new Map<string, ReservaDaLista[]>();
 
   for (const reserva of reservas) {
-    const dia = localDayKey(reserva.startsAt);
+    const dia = chaveDoDiaLocal(reserva.inicio);
     porDia.set(dia, [...(porDia.get(dia) ?? []), reserva]);
   }
 
@@ -107,20 +111,20 @@ export function CalendarioMes({
                     onClick={() => onAbrirReserva(reserva.id)}
                     className={cn(
                       "block w-full truncate rounded border border-l-4 px-1.5 py-0.5 text-left text-xs",
-                      reserva.cancelled
+                      reserva.cancelada
                         ? COR_DA_CANCELADA
                         : [
-                            COR_DA_ATIVIDADE[reserva.activityType],
-                            corDaEncerrada(reserva.endsAt, agora),
+                            COR_DA_ATIVIDADE[reserva.tipoDeAtividade],
+                            corDaEncerrada(reserva.fim, agora),
                             reserva.inscricaoAberta && COR_DA_INSCRICAO_ABERTA,
                           ],
                       destaque === reserva.id && "ring-primary ring-2",
                     )}
                   >
                     <span className="font-semibold">
-                      {formatTime(reserva.startsAt)}
+                      {formatarHora(reserva.inicio)}
                     </span>{" "}
-                    {reserva.purpose}
+                    {reserva.finalidade}
                   </button>
                 ))}
 

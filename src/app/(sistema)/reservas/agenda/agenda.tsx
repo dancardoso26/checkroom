@@ -1,6 +1,6 @@
 "use client";
 
-import type { ActivityType } from "@/domain/booking/types";
+import type { TipoDeAtividade } from "@/domain/reservas/tipos";
 import { useRouter } from "next/navigation";
 import { useCallback, useState, useTransition } from "react";
 
@@ -13,7 +13,7 @@ import {
   type Visao,
 } from "@/domain/agenda/navegacao-da-agenda";
 import type { Filtros } from "@/domain/agenda/filtros-da-agenda";
-import type { BookingListItem } from "@/lib/repositories/repositorio-de-reservas";
+import type { ReservaDaLista } from "@/lib/repositories/repositorio-de-reservas";
 import {
   alternarOrdenacao,
   type Ordenacao,
@@ -49,17 +49,17 @@ export type NovaReserva = {
   dia: string;
   inicio?: string;
   fim?: string;
-  tipo?: ActivityType;
+  tipo?: TipoDeAtividade;
 };
 
 export type PaginaDaTabela = {
-  reservas: BookingListItem[];
+  reservas: ReservaDaLista[];
   total: number;
   paginacao: Paginacao;
 };
 
-function descreverReserva(reserva: BookingListItem): string {
-  return `${reserva.purpose}, ${reserva.roomName}`;
+function descreverReserva(reserva: ReservaDaLista): string {
+  return `${reserva.finalidade}, ${reserva.nomeDoEspaco}`;
 }
 
 export function Agenda({
@@ -87,8 +87,8 @@ export function Agenda({
   dias: string[];
   hoje: string;
   agora: Date;
-  reservas: BookingListItem[];
-  proximos: BookingListItem[];
+  reservas: ReservaDaLista[];
+  proximos: ReservaDaLista[];
   tabela: PaginaDaTabela | null;
   destaque?: string;
   painel: Painel | null;
@@ -110,7 +110,7 @@ export function Agenda({
   );
   const [confirmacao, setConfirmacao] = useState<{
     tipo: "cancelar" | "excluir" | "palestra";
-    reserva: BookingListItem;
+    reserva: ReservaDaLista;
   } | null>(null);
 
   const reservaAberta =
@@ -205,10 +205,10 @@ export function Agenda({
   }, [estado]);
 
   const onConcluir = useCallback(
-    (bookingId: string | null, dia: string) => {
+    (reservaId: string | null, dia: string) => {
       setNovaReserva(null);
       setRascunho(null);
-      ir({ data: dia }, bookingId ? { destaque: bookingId } : undefined);
+      ir({ data: dia }, reservaId ? { destaque: reservaId } : undefined);
     },
     [ir],
   );
@@ -255,47 +255,47 @@ export function Agenda({
               navegando && "opacity-50 delay-150 duration-200",
             )}
           >
-          {estado.visao === "calendario" && estado.escala !== "mes" && (
-            <CalendarioGrade
-              dias={dias}
-              hoje={hoje}
-              agora={agora}
-              reservas={reservas}
-              destaque={destaque}
-              rascunho={novaReserva ? rascunho : null}
-              onEscolherHorario={podeReservar ? onEscolherHorario : undefined}
-              onAbrirReserva={setSelecionada}
-            />
-          )}
+            {estado.visao === "calendario" && estado.escala !== "mes" && (
+              <CalendarioGrade
+                dias={dias}
+                hoje={hoje}
+                agora={agora}
+                reservas={reservas}
+                destaque={destaque}
+                rascunho={novaReserva ? rascunho : null}
+                onEscolherHorario={podeReservar ? onEscolherHorario : undefined}
+                onAbrirReserva={setSelecionada}
+              />
+            )}
 
-          {estado.visao === "calendario" && estado.escala === "mes" && (
-            <CalendarioMes
-              dias={dias}
-              referencia={estado.data}
-              hoje={hoje}
-              agora={agora}
-              reservas={reservas}
-              destaque={destaque}
-              onEscolherDia={
-                podeReservar ? (dia) => abrirNovaReserva({ dia }) : undefined
-              }
-              onAbrirDia={(dia) => ir({ escala: "dia", data: dia })}
-              onAbrirReserva={setSelecionada}
-            />
-          )}
-          {tabela && (
-            <Tabela
-              selecionavel={podeReservar}
-              reservas={tabela.reservas}
-              paginacao={tabela.paginacao}
-              ordenacao={estado.tabela}
-              agora={agora}
-              destaque={destaque}
-              pesquisando={estado.busca.length > 0}
-              total={tabela.total}
-              onOrdenar={onOrdenar}
-            />
-          )}
+            {estado.visao === "calendario" && estado.escala === "mes" && (
+              <CalendarioMes
+                dias={dias}
+                referencia={estado.data}
+                hoje={hoje}
+                agora={agora}
+                reservas={reservas}
+                destaque={destaque}
+                onEscolherDia={
+                  podeReservar ? (dia) => abrirNovaReserva({ dia }) : undefined
+                }
+                onAbrirDia={(dia) => ir({ escala: "dia", data: dia })}
+                onAbrirReserva={setSelecionada}
+              />
+            )}
+            {tabela && (
+              <Tabela
+                selecionavel={podeReservar}
+                reservas={tabela.reservas}
+                paginacao={tabela.paginacao}
+                ordenacao={estado.tabela}
+                agora={agora}
+                destaque={destaque}
+                pesquisando={estado.busca.length > 0}
+                total={tabela.total}
+                onOrdenar={onOrdenar}
+              />
+            )}
           </div>
         </div>
       </div>
@@ -324,7 +324,7 @@ export function Agenda({
       {confirmacao?.tipo === "cancelar" && (
         <CancelarReserva
           key={confirmacao.reserva.id}
-          bookingId={confirmacao.reserva.id}
+          reservaId={confirmacao.reserva.id}
           descricao={descreverReserva(confirmacao.reserva)}
           aberto
           onAbertoChange={(aberto) => !aberto && setConfirmacao(null)}
@@ -334,7 +334,7 @@ export function Agenda({
       {confirmacao?.tipo === "palestra" && (
         <ConfirmarExclusao
           titulo="Excluir palestra?"
-          descricao={confirmacao.reserva.purpose}
+          descricao={confirmacao.reserva.finalidade}
           aviso="As inscrições são removidas junto, e o espaço é liberado no horário da palestra."
           acao={() =>
             excluirPalestra(confirmacao.reserva.id.replace("palestra:", ""))
@@ -346,9 +346,9 @@ export function Agenda({
       {confirmacao?.tipo === "excluir" && (
         <ExcluirReserva
           key={confirmacao.reserva.id}
-          bookingId={confirmacao.reserva.id}
+          reservaId={confirmacao.reserva.id}
           descricao={descreverReserva(confirmacao.reserva)}
-          cancelada={confirmacao.reserva.cancelled}
+          cancelada={confirmacao.reserva.cancelada}
           aberto
           onAbertoChange={(aberto) => !aberto && setConfirmacao(null)}
         />
@@ -361,10 +361,10 @@ export function Agenda({
           hoje={hoje}
           professorFixo={painel.professorFixo}
           preenchimento={{
-            activityType: novaReserva.tipo,
-            date: novaReserva.dia,
-            startTime: novaReserva.inicio,
-            endTime:
+            tipoDeAtividade: novaReserva.tipo,
+            data: novaReserva.dia,
+            horaDeInicio: novaReserva.inicio,
+            horaDeTermino:
               novaReserva.fim ??
               (novaReserva.inicio
                 ? sugerirTermino(novaReserva.inicio)

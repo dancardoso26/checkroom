@@ -15,11 +15,11 @@ import { CancelarReserva } from "./cancelar-reserva";
 import { ExcluirReserva } from "./excluir-reserva";
 
 export function AcoesDaReserva({
-  bookingId,
+  reservaId,
   descricao,
   cancelada,
 }: {
-  bookingId: string;
+  reservaId: string;
   descricao: string;
   cancelada: boolean;
 }) {
@@ -30,7 +30,7 @@ export function AcoesDaReserva({
   const dialogos = (
     <>
       <CancelarReserva
-        bookingId={bookingId}
+        reservaId={reservaId}
         descricao={descricao}
         aberto={confirmacao === "cancelar"}
         onAbertoChange={(aberto) =>
@@ -39,7 +39,7 @@ export function AcoesDaReserva({
       />
 
       <ExcluirReserva
-        bookingId={bookingId}
+        reservaId={reservaId}
         descricao={descricao}
         cancelada={cancelada}
         aberto={confirmacao === "excluir"}

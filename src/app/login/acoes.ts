@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { destinoAposLogin } from "@/domain/auth/destino-apos-login";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { criarClienteDoServidor } from "@/lib/supabase/servidor";
 import { registrarEventoDeAutenticacao } from "@/lib/auditoria";
 
 const schema = z.object({
@@ -13,15 +13,15 @@ const schema = z.object({
   proximo: z.string().optional(),
 });
 
-export type LoginState =
-  | { status: "idle" }
-  | { status: "success"; destino: string }
-  | { status: "error"; message: string };
+export type EstadoDoLogin =
+  | { status: "inicial" }
+  | { status: "sucesso"; destino: string }
+  | { status: "erro"; message: string };
 
 export async function entrar(
-  _prevState: LoginState,
-  formData: FormData
-): Promise<LoginState> {
+  _estadoAnterior: EstadoDoLogin,
+  formData: FormData,
+): Promise<EstadoDoLogin> {
   const parsed = schema.safeParse({
     email: formData.get("email"),
     senha: formData.get("senha"),
@@ -29,10 +29,10 @@ export async function entrar(
   });
 
   if (!parsed.success) {
-    return { status: "error", message: "Informe e-mail e senha." };
+    return { status: "erro", message: "Informe e-mail e senha." };
   }
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = await criarClienteDoServidor();
 
   const { data, error } = await supabase.auth.signInWithPassword({
     email: parsed.data.email,
@@ -44,19 +44,19 @@ export async function entrar(
       email: parsed.data.email,
     });
 
-    return { status: "error", message: "E-mail ou senha incorretos." };
+    return { status: "erro", message: "E-mail ou senha incorretos." };
   }
 
   await registrarEventoDeAutenticacao("login", data.user.id);
 
   return {
-    status: "success",
+    status: "sucesso",
     destino: destinoAposLogin(parsed.data.proximo),
   };
 }
 
 export async function sair() {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await criarClienteDoServidor();
 
   const {
     data: { user },

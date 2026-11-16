@@ -5,7 +5,7 @@ import {
   listarBloqueios,
   listarPeriodos,
 } from "@/lib/repositories/repositorio-do-calendario";
-import { listRooms } from "@/lib/repositories/repositorio-de-espacos";
+import { listarEspacos } from "@/lib/repositories/repositorio-de-espacos";
 import { exigirSessao } from "@/lib/sessao";
 
 import { CalendarioLetivo } from "./calendario-letivo";
@@ -20,14 +20,14 @@ export default async function CalendarioPage() {
   const [periodos, bloqueios, espacos] = await Promise.all([
     listarPeriodos(),
     listarBloqueios(),
-    listRooms(),
+    listarEspacos(),
   ]);
 
   return (
     <CalendarioLetivo
       periodos={periodos}
       bloqueios={bloqueios}
-      espacos={espacos.map((e) => ({ id: e.id, nome: e.name }))}
+      espacos={espacos.map((e) => ({ id: e.id, nome: e.nome }))}
     />
   );
 }

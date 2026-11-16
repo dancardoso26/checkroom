@@ -16,20 +16,20 @@ function exigirVariavel(nome: string): string {
 }
 
 const url = exigirVariavel("NEXT_PUBLIC_SUPABASE_URL");
-const publishableKey = exigirVariavel("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY");
-const secretKey = exigirVariavel("SUPABASE_SECRET_KEY");
+const chavePublica = exigirVariavel("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY");
+const chaveSecreta = exigirVariavel("SUPABASE_SECRET_KEY");
 
-export async function createSupabaseServerClient() {
+export async function criarClienteDoServidor() {
   const cookieStore = await cookies();
 
-  return createServerClient<Database>(url, publishableKey, {
+  return createServerClient<Database>(url, chavePublica, {
     cookieOptions: OPCOES_DO_COOKIE_DE_SESSAO,
     cookies: {
       getAll: () => cookieStore.getAll(),
       setAll: (cookiesToSet) => {
         try {
-          for (const { name, value, options } of cookiesToSet) {
-            cookieStore.set(name, value, options);
+          for (const { name, value: valor, options: opcoes } of cookiesToSet) {
+            cookieStore.set(name, valor, opcoes);
           }
         } catch {}
       },
@@ -37,6 +37,6 @@ export async function createSupabaseServerClient() {
   });
 }
 
-export const supabaseAdmin = createClient<Database>(url, secretKey, {
+export const clienteAdministrativo = createClient<Database>(url, chaveSecreta, {
   auth: { persistSession: false, autoRefreshToken: false },
 });

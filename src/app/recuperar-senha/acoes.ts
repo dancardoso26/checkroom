@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { criarClienteDoServidor } from "@/lib/supabase/servidor";
 import { registrarEventoDeAutenticacao } from "@/lib/auditoria";
 import { enderecoDoSite } from "@/lib/endereco-do-site";
 import { podeTrocarSenha } from "@/domain/auth/troca-de-senha";
@@ -13,24 +13,24 @@ import {
 
 const schema = z.object({ email: z.email("Informe um e-mail válido.") });
 
-export type RecuperacaoState =
-  | { status: "idle" }
+export type EstadoDaRecuperacao =
+  | { status: "inicial" }
   | { status: "enviado" }
-  | { status: "error"; message: string };
+  | { status: "erro"; message: string };
 
 export async function pedirRecuperacao(
-  _prevState: RecuperacaoState,
-  formData: FormData
-): Promise<RecuperacaoState> {
+  _estadoAnterior: EstadoDaRecuperacao,
+  formData: FormData,
+): Promise<EstadoDaRecuperacao> {
   const parsed = schema.safeParse({ email: formData.get("email") });
 
   if (!parsed.success) {
-    return { status: "error", message: "Informe um e-mail válido." };
+    return { status: "erro", message: "Informe um e-mail válido." };
   }
 
   const origem = enderecoDoSite();
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = await criarClienteDoServidor();
 
   await supabase.auth.resetPasswordForEmail(parsed.data.email, {
     redirectTo: `${origem}/auth/confirmar?proximo=/nova-senha`,
@@ -49,7 +49,7 @@ const schemaDeSenha = z
       .string()
       .max(
         TAMANHO_MAXIMO_DA_SENHA,
-        `A senha pode ter no máximo ${TAMANHO_MAXIMO_DA_SENHA} caracteres.`
+        `A senha pode ter no máximo ${TAMANHO_MAXIMO_DA_SENHA} caracteres.`,
       )
       .superRefine((senha, contexto) => {
         const faltando = regrasNaoCumpridas(senha);
@@ -67,15 +67,15 @@ const schemaDeSenha = z
     path: ["confirmacao"],
   });
 
-export type NovaSenhaState =
-  | { status: "idle" }
-  | { status: "success" }
-  | { status: "error"; message: string };
+export type EstadoDaNovaSenha =
+  | { status: "inicial" }
+  | { status: "sucesso" }
+  | { status: "erro"; message: string };
 
 export async function definirNovaSenha(
-  _prevState: NovaSenhaState,
-  formData: FormData
-): Promise<NovaSenhaState> {
+  _estadoAnterior: EstadoDaNovaSenha,
+  formData: FormData,
+): Promise<EstadoDaNovaSenha> {
   const parsed = schemaDeSenha.safeParse({
     senha: formData.get("senha"),
     confirmacao: formData.get("confirmacao"),
@@ -83,12 +83,12 @@ export async function definirNovaSenha(
 
   if (!parsed.success) {
     return {
-      status: "error",
+      status: "erro",
       message: parsed.error.issues.at(0)?.message ?? "Senha inválida.",
     };
   }
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = await criarClienteDoServidor();
 
   const {
     data: { user },
@@ -96,7 +96,7 @@ export async function definirNovaSenha(
 
   if (!user) {
     return {
-      status: "error",
+      status: "erro",
       message: "O link expirou. Peça uma nova recuperação de senha.",
     };
   }
@@ -104,7 +104,7 @@ export async function definirNovaSenha(
   const { data: token } = await supabase.auth.getClaims();
   if (!podeTrocarSenha(token?.claims)) {
     return {
-      status: "error",
+      status: "erro",
       message: "Para trocar a senha, use o link enviado por e-mail.",
     };
   }
@@ -115,7 +115,7 @@ export async function definirNovaSenha(
 
   if (error) {
     return {
-      status: "error",
+      status: "erro",
       message: "Não foi possível trocar a senha agora.",
     };
   }
@@ -124,5 +124,5 @@ export async function definirNovaSenha(
 
   await supabase.auth.signOut({ scope: "global" });
 
-  return { status: "success" };
+  return { status: "sucesso" };
 }

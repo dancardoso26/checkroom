@@ -1,7 +1,7 @@
 import {
   ABERTURA_EM_MINUTOS,
   FECHAMENTO_EM_MINUTOS,
-} from "@/domain/booking/businessHours";
+} from "@/domain/reservas/expediente";
 
 import type { OcupacaoBruta } from "./tipos";
 import { diasLetivos, horasDentro, type Periodo } from "./periodo";
@@ -18,7 +18,7 @@ export type OcupacaoDoEspaco = {
 export function ocupacaoPorEspaco(
   espacos: { id: string; nome: string }[],
   ocupacoes: OcupacaoBruta[],
-  periodo: Periodo
+  periodo: Periodo,
 ): OcupacaoDoEspaco[] {
   const disponivel = diasLetivos(periodo) * HORAS_POR_DIA;
 
@@ -45,7 +45,9 @@ export function taxaMediaDeOcupacao(ocupacao: OcupacaoDoEspaco[]): number {
 
 export function espacosOciosos(
   ocupacao: OcupacaoDoEspaco[],
-  limite = 0.05
+  limite = 0.05,
 ): OcupacaoDoEspaco[] {
-  return ocupacao.filter((o) => o.taxa < limite).sort((a, b) => a.horas - b.horas);
+  return ocupacao
+    .filter((o) => o.taxa < limite)
+    .sort((a, b) => a.horas - b.horas);
 }

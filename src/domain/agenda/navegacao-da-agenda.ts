@@ -3,8 +3,12 @@ import {
   FECHAMENTO_EM_MINUTOS,
   minutosParaHora,
   horaParaMinutos,
-} from "@/domain/booking/businessHours";
-import { combineDateTime, localDayKey, localMinutesOfDay } from "@/lib/datetime";
+} from "@/domain/reservas/expediente";
+import {
+  combinarDataEHora,
+  chaveDoDiaLocal,
+  minutosDoDiaLocal,
+} from "@/lib/datas";
 
 export type Visao = "calendario" | "tabela";
 export type Escala = "dia" | "semana" | "mes";
@@ -87,20 +91,20 @@ export function diasDoPeriodo(escala: Escala, chave: string): string[] {
 
 export function intervaloDoPeriodo(
   escala: Escala,
-  chave: string
+  chave: string,
 ): { inicio: Date; fim: Date } {
   const dias = diasDoPeriodo(escala, chave);
 
   return {
-    inicio: combineDateTime(dias[0], "00:00"),
-    fim: combineDateTime(somarDias(dias[dias.length - 1], 1), "00:00"),
+    inicio: combinarDataEHora(dias[0], "00:00"),
+    fim: combinarDataEHora(somarDias(dias[dias.length - 1], 1), "00:00"),
   };
 }
 
 export function periodoVizinho(
   escala: Escala,
   chave: string,
-  direcao: 1 | -1
+  direcao: 1 | -1,
 ): string {
   if (escala === "dia") return somarDias(chave, direcao);
   if (escala === "semana") return somarDias(chave, 7 * direcao);
@@ -170,11 +174,11 @@ export function faixasDoExpediente(passo = 30): string[] {
 
 export function sugerirTermino(inicio: string, duracao = 100): string {
   return minutosParaHora(
-    Math.min(horaParaMinutos(inicio) + duracao, FECHAMENTO_EM_MINUTOS)
+    Math.min(horaParaMinutos(inicio) + duracao, FECHAMENTO_EM_MINUTOS),
   );
 }
 
-type ComIntervalo = { id: string; startsAt: Date; endsAt: Date };
+type ComIntervalo = { id: string; inicio: Date; fim: Date };
 
 export type Posicao<T> = {
   item: T;
@@ -186,13 +190,16 @@ export type Posicao<T> = {
 
 export function posicionarNoDia<T extends ComIntervalo>(
   reservas: T[],
-  chaveDoDia: string
+  chaveDoDia: string,
 ): Posicao<T>[] {
   const doDia = reservas
-    .filter((r) => localDayKey(r.startsAt) === chaveDoDia)
+    .filter((r) => chaveDoDiaLocal(r.inicio) === chaveDoDia)
     .map((item) => {
-      const inicio = Math.max(localMinutesOfDay(item.startsAt), ABERTURA_EM_MINUTOS);
-      const fim = Math.min(localMinutesOfDay(item.endsAt), FECHAMENTO_EM_MINUTOS);
+      const inicio = Math.max(
+        minutosDoDiaLocal(item.inicio),
+        ABERTURA_EM_MINUTOS,
+      );
+      const fim = Math.min(minutosDoDiaLocal(item.fim), FECHAMENTO_EM_MINUTOS);
       return { item, inicio, fim: Math.max(fim, inicio + 15) };
     })
     .sort((a, b) => a.inicio - b.inicio || b.fim - a.fim);
@@ -236,18 +243,18 @@ export function posicionarNoDia<T extends ComIntervalo>(
 export function intervaloArrastado(
   minutoA: number,
   minutoB: number,
-  passo = 15
+  passo = 15,
 ): { inicio: string; fim: string } {
   const menor = Math.min(minutoA, minutoB);
   const maior = Math.max(minutoA, minutoB);
 
   const inicio = Math.min(
     Math.max(ABERTURA_EM_MINUTOS, Math.floor(menor / passo) * passo),
-    FECHAMENTO_EM_MINUTOS - passo
+    FECHAMENTO_EM_MINUTOS - passo,
   );
   const fim = Math.min(
     FECHAMENTO_EM_MINUTOS,
-    Math.max(inicio + passo, Math.ceil(maior / passo) * passo)
+    Math.max(inicio + passo, Math.ceil(maior / passo) * passo),
   );
 
   return { inicio: minutosParaHora(inicio), fim: minutosParaHora(fim) };

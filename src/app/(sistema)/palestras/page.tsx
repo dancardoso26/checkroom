@@ -6,7 +6,7 @@ import {
   podeVerPalestras,
 } from "@/domain/auth/permissoes";
 import { situacaoParaOAluno } from "@/domain/palestras/palestra";
-import { toDateInputValue } from "@/lib/datetime";
+import { valorDoCampoDeData } from "@/lib/datas";
 import {
   listarPalestras,
   minhasInscricoes,
@@ -29,7 +29,7 @@ export default async function PalestrasPage() {
   const cadastra = podeCadastrarPalestra(sessao);
   const inscreve = podeInscreverEmPalestra(sessao);
 
-  const hoje = toDateInputValue(agora);
+  const hoje = valorDoCampoDeData(agora);
 
   const [palestras, inscricoes, catalogos] = await Promise.all([
     listarPalestras({ aPartirDe: null }),

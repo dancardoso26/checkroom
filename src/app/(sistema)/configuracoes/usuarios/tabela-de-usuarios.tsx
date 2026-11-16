@@ -22,7 +22,7 @@ import { FiltroMultiplo, passaNoFiltro } from "@/components/filtro-multiplo";
 import { ConfirmarExclusao } from "@/components/formulario";
 import { RodapeDaTabela } from "@/components/paginacao";
 import { executarEmLote, usePaginacao, useSelecao } from "@/hooks/use-tabela";
-import { StatusBadge } from "@/components/status-badge";
+import { SeloDeSituacao } from "@/components/selo-de-situacao";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -48,11 +48,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ROTULO_DO_PAPEL } from "@/domain/auth/permissoes";
-import { formatDateTime } from "@/lib/datetime";
+import { formatarDataEHora } from "@/lib/datas";
 import type { TurmaOpcao } from "@/lib/repositories/repositorio-de-turmas";
-import type {
-  UsuarioItem,
-} from "@/lib/repositories/repositorio-de-usuarios";
+import type { UsuarioItem } from "@/lib/repositories/repositorio-de-usuarios";
 import { usePesquisa } from "@/hooks/use-pesquisa";
 import { CabecalhoOrdenavel } from "@/components/cabecalho-ordenavel";
 import { useOrdenacao } from "@/hooks/use-ordenacao";
@@ -334,15 +332,15 @@ export function TabelaDeUsuarios({
                   )}
                 </TableCell>
                 <TableCell className="whitespace-nowrap">
-                  {formatDateTime(usuario.criadoEm)}
+                  {formatarDataEHora(usuario.criadoEm)}
                 </TableCell>
                 <TableCell className="whitespace-nowrap">
                   {usuario.ultimoAcessoEm
-                    ? formatDateTime(usuario.ultimoAcessoEm)
+                    ? formatarDataEHora(usuario.ultimoAcessoEm)
                     : "Nunca acessou"}
                 </TableCell>
                 <TableCell>
-                  <StatusBadge
+                  <SeloDeSituacao
                     status={
                       !usuario.ativo
                         ? "inativo"

@@ -36,7 +36,7 @@ function exibir(chave: string): string {
 
 export function SeletorDeData({
   id,
-  value,
+  value: valor,
   onChange,
   minimo,
   hoje,
@@ -48,10 +48,10 @@ export function SeletorDeData({
   hoje: string;
 }) {
   const [aberto, setAberto] = useState(false);
-  const [mes, setMes] = useState(value || hoje);
+  const [mes, setMes] = useState(valor || hoje);
 
   function alternar(abrir: boolean) {
-    if (abrir) setMes(ehChaveValida(value) ? value : hoje);
+    if (abrir) setMes(ehChaveValida(valor) ? valor : hoje);
     setAberto(abrir);
   }
 
@@ -74,10 +74,10 @@ export function SeletorDeData({
           aria-expanded={aberto}
           className={cn(
             "w-full justify-between font-normal",
-            !value && "text-muted-foreground"
+            !valor && "text-muted-foreground",
           )}
         >
-          {exibir(value)}
+          {exibir(valor)}
           <CalendarDays className="size-4 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -126,7 +126,7 @@ export function SeletorDeData({
 
           {gradeDoMes(mes).map((dia) => {
             const bloqueado = minimo !== undefined && dia < minimo;
-            const selecionado = dia === value;
+            const selecionado = dia === valor;
             const noMes = mesmoMes(dia, mes);
 
             return (
@@ -148,7 +148,7 @@ export function SeletorDeData({
                     dia === hoje &&
                     "text-primary font-semibold ring-1 ring-primary",
                   bloqueado &&
-                    "cursor-not-allowed opacity-30 hover:bg-transparent"
+                    "cursor-not-allowed opacity-30 hover:bg-transparent",
                 )}
               >
                 {numeroDoDia(dia)}

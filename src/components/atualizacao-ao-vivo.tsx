@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { criarClienteDoNavegador } from "@/lib/supabase/navegador";
 
 type TabelaAoVivo = "bookings" | "lectures" | "lecture_enrollments" | "tickets";
 
@@ -15,7 +15,7 @@ export function AtualizacaoAoVivo({ tabelas }: { tabelas: TabelaAoVivo[] }) {
   const [conectado, setConectado] = useState(false);
 
   useEffect(() => {
-    const supabase = createSupabaseBrowserClient();
+    const supabase = criarClienteDoNavegador();
     let agendada: ReturnType<typeof setTimeout> | null = null;
 
     const atualizar = () => {
@@ -45,5 +45,7 @@ export function AtualizacaoAoVivo({ tabelas }: { tabelas: TabelaAoVivo[] }) {
     };
   }, [chave, router]);
 
-  return <span hidden data-ao-vivo={conectado ? "conectado" : "desconectado"} />;
+  return (
+    <span hidden data-ao-vivo={conectado ? "conectado" : "desconectado"} />
+  );
 }

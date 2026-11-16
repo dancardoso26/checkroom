@@ -12,7 +12,7 @@ function lerEnv(): Record<string, string> {
       .map((linha) => {
         const separador = linha.indexOf("=");
         return [linha.slice(0, separador), linha.slice(separador + 1)];
-      })
+      }),
   );
 }
 
@@ -49,7 +49,7 @@ async function pedir(caminho: string, init?: RequestInit) {
 
 export async function listarReservas(): Promise<LinhaReserva[]> {
   const { corpo } = await pedir(
-    "bookings?select=id,room_id,professor_id,class_id,purpose,starts_at,ends_at,status,cancelled_at,cancellation_reason&order=starts_at"
+    "bookings?select=id,room_id,professor_id,class_id,purpose,starts_at,ends_at,status,cancelled_at,cancellation_reason&order=starts_at",
   );
   return corpo;
 }
@@ -83,7 +83,7 @@ async function algumPerfil(): Promise<string> {
 
   if (corpo.length === 0) {
     throw new Error(
-      'Nenhum perfil no banco. Rode "npm run seed:usuarios" antes.'
+      'Nenhum perfil no banco. Rode "npm run seed:usuarios" antes.',
     );
   }
 
@@ -140,26 +140,29 @@ export async function apagarReserva(id: string) {
 
 export async function buscarReserva(id: string): Promise<LinhaReserva | null> {
   const { corpo } = await pedir(
-    `bookings?id=eq.${id}&select=id,room_id,professor_id,class_id,purpose,starts_at,ends_at,status,cancelled_at,cancellation_reason`
+    `bookings?id=eq.${id}&select=id,room_id,professor_id,class_id,purpose,starts_at,ends_at,status,cancelled_at,cancellation_reason`,
   );
   return corpo.length > 0 ? corpo[0] : null;
 }
 
 export async function contarRecursosDaReserva(id: string): Promise<number> {
   const { corpo } = await pedir(
-    `booking_resources?booking_id=eq.${id}&select=resource_id`
+    `booking_resources?booking_id=eq.${id}&select=resource_id`,
   );
   return corpo.length;
 }
 
 export async function vincularRecursos(
-  bookingId: string,
-  resourceIds: string[]
+  reservaId: string,
+  resourceIds: string[],
 ) {
   await pedir("booking_resources", {
     method: "POST",
     body: JSON.stringify(
-      resourceIds.map((resource_id) => ({ booking_id: bookingId, resource_id }))
+      resourceIds.map((resource_id) => ({
+        booking_id: reservaId,
+        resource_id,
+      })),
     ),
   });
 }
@@ -181,11 +184,13 @@ export const AULA_DE_REFERENCIA = {
 
 async function idPeloNome(tabela: string, nome: string): Promise<string> {
   const { corpo } = await pedir(
-    `${tabela}?name=eq.${encodeURIComponent(nome)}&select=id`
+    `${tabela}?name=eq.${encodeURIComponent(nome)}&select=id`,
   );
 
   if (corpo.length !== 1) {
-    throw new Error(`Esperava um único "${nome}" em ${tabela}; achei ${corpo.length}.`);
+    throw new Error(
+      `Esperava um único "${nome}" em ${tabela}; achei ${corpo.length}.`,
+    );
   }
   return corpo[0].id as string;
 }
@@ -193,7 +198,7 @@ async function idPeloNome(tabela: string, nome: string): Promise<string> {
 export async function criarAulaDeReferencia(
   dia: string,
   inicio = "13:00",
-  fim = "14:00"
+  fim = "14:00",
 ): Promise<string> {
   const [professor, turma, disciplina, salas] = await Promise.all([
     idPeloNome("professors", AULA_DE_REFERENCIA.professor),
@@ -203,9 +208,10 @@ export async function criarAulaDeReferencia(
   ]);
 
   const { corpo: perfis } = await pedir(
-    `profiles?professor_id=eq.${professor}&select=id&limit=1`
+    `profiles?professor_id=eq.${professor}&select=id&limit=1`,
   );
-  const autor = perfis.length === 1 ? (perfis[0].id as string) : await algumPerfil();
+  const autor =
+    perfis.length === 1 ? (perfis[0].id as string) : await algumPerfil();
 
   for (const sala of salas) {
     const { ok, corpo } = await pedir("bookings", {
@@ -224,7 +230,9 @@ export async function criarAulaDeReferencia(
 
     if (ok) return corpo[0].id as string;
     if (!String(corpo?.message).includes("bookings_no_room_overlap")) {
-      throw new Error(`Não foi possível criar a aula de referência: ${corpo?.message}`);
+      throw new Error(
+        `Não foi possível criar a aula de referência: ${corpo?.message}`,
+      );
     }
   }
 
@@ -243,11 +251,17 @@ export async function limparReservasDeTeste() {
 const COMECA_COM_PREFIXO = `like.${encodeURIComponent(PREFIXO_TESTE)}*`;
 
 export async function limparCadastrosDeTeste() {
-  await pedir(`calendar_blocks?reason=${COMECA_COM_PREFIXO}`, { method: "DELETE" });
+  await pedir(`calendar_blocks?reason=${COMECA_COM_PREFIXO}`, {
+    method: "DELETE",
+  });
   await pedir(`academic_terms?code=eq.2099.1`, { method: "DELETE" });
   await pedir(`lectures?title=${COMECA_COM_PREFIXO}`, { method: "DELETE" });
-  await pedir(`tickets?description=${COMECA_COM_PREFIXO}`, { method: "DELETE" });
-  await pedir(`rooms?building_number=eq.${PREDIO_DE_TESTE}`, { method: "DELETE" });
+  await pedir(`tickets?description=${COMECA_COM_PREFIXO}`, {
+    method: "DELETE",
+  });
+  await pedir(`rooms?building_number=eq.${PREDIO_DE_TESTE}`, {
+    method: "DELETE",
+  });
   await pedir(`resources?name=${COMECA_COM_PREFIXO}`, { method: "DELETE" });
   await pedir(`teaching_assignments?term=eq.2099.1`, { method: "DELETE" });
   await pedir(`classes?name=${COMECA_COM_PREFIXO}`, { method: "DELETE" });

@@ -5,7 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { ROTULO_DO_PAPEL } from "@/domain/auth/permissoes";
 import { exigirSessao } from "@/lib/sessao";
-import { formatDateTime } from "@/lib/datetime";
+import { formatarDataEHora } from "@/lib/datas";
 import { ExcluirConta } from "./excluir-conta";
 
 export const metadata = { title: "Minha conta | CheckRoom" };
@@ -56,7 +56,7 @@ export default async function ContaPage() {
               </dt>
               <dd className="font-medium">
                 {sessao.aceitouTermosEm
-                  ? formatDateTime(new Date(sessao.aceitouTermosEm))
+                  ? formatarDataEHora(new Date(sessao.aceitouTermosEm))
                   : "Pendente"}
               </dd>
             </div>

@@ -1,15 +1,15 @@
 import "server-only";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { TeachingAssignmentSnapshot } from "@/domain/booking/types";
+import { criarClienteDoServidor } from "@/lib/supabase/servidor";
+import type { VinculoDocente } from "@/domain/reservas/tipos";
 
-export type SubjectOption = {
+export type OpcaoDeDisciplina = {
   id: string;
-  name: string;
-  courseId: string;
+  nome: string;
+  cursoId: string;
 };
 
-export async function listSubjects(): Promise<SubjectOption[]> {
-  const supabase = await createSupabaseServerClient();
+export async function listarDisciplinas(): Promise<OpcaoDeDisciplina[]> {
+  const supabase = await criarClienteDoServidor();
 
   const { data, error } = await supabase
     .from("subjects")
@@ -20,19 +20,19 @@ export async function listSubjects(): Promise<SubjectOption[]> {
     throw new Error(`Falha ao listar as disciplinas: ${error.message}`);
   }
 
-  return data.map((s) => ({ id: s.id, name: s.name, courseId: s.course_id }));
+  return data.map((s) => ({ id: s.id, nome: s.name, cursoId: s.course_id }));
 }
 
-export type TeachingAssignmentOption = {
+export type OpcaoDeVinculo = {
   professorId: string;
-  subjectId: string;
-  classId: string;
+  disciplinaId: string;
+  turmaId: string;
 };
 
-export type ParDeDocencia = { professorId: string; classId: string };
+export type ParDeDocencia = { professorId: string; turmaId: string };
 
 export async function listarParesDeDocencia(): Promise<ParDeDocencia[]> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await criarClienteDoServidor();
 
   const { data, error } = await supabase
     .from("teaching_assignments")
@@ -48,20 +48,20 @@ export async function listarParesDeDocencia(): Promise<ParDeDocencia[]> {
     const chave = `${linha.professor_id}:${linha.class_id}`;
     if (vistos.has(chave)) continue;
     vistos.add(chave);
-    pares.push({ professorId: linha.professor_id, classId: linha.class_id });
+    pares.push({ professorId: linha.professor_id, turmaId: linha.class_id });
   }
   return pares;
 }
 
-export async function listTeachingAssignments(
-  term: string,
-): Promise<TeachingAssignmentOption[]> {
-  const supabase = await createSupabaseServerClient();
+export async function listarVinculosDoPeriodo(
+  periodo: string,
+): Promise<OpcaoDeVinculo[]> {
+  const supabase = await criarClienteDoServidor();
 
   const { data, error } = await supabase
     .from("teaching_assignments")
     .select("professor_id, subject_id, class_id")
-    .eq("term", term);
+    .eq("term", periodo);
 
   if (error) {
     throw new Error(`Falha ao consultar as atribuições: ${error.message}`);
@@ -69,40 +69,42 @@ export async function listTeachingAssignments(
 
   return data.map((linha) => ({
     professorId: linha.professor_id,
-    subjectId: linha.subject_id,
-    classId: linha.class_id,
+    disciplinaId: linha.subject_id,
+    turmaId: linha.class_id,
   }));
 }
 
-export async function findTeachingAssignment(params: {
+export async function buscarVinculoDocente(parametros: {
   professorId: string;
-  subjectId: string | null;
-  classId: string;
-  term: string;
-}): Promise<TeachingAssignmentSnapshot | null> {
-  const supabase = await createSupabaseServerClient();
+  disciplinaId: string | null;
+  turmaId: string;
+  periodo: string;
+}): Promise<VinculoDocente | null> {
+  const supabase = await criarClienteDoServidor();
 
-  if (params.subjectId === null) return null;
+  if (parametros.disciplinaId === null) return null;
 
   const { data, error } = await supabase
     .from("teaching_assignments")
     .select("professor_id, subject_id, class_id, term")
-    .eq("professor_id", params.professorId)
-    .eq("subject_id", params.subjectId)
-    .eq("class_id", params.classId)
-    .eq("term", params.term)
+    .eq("professor_id", parametros.professorId)
+    .eq("subject_id", parametros.disciplinaId)
+    .eq("class_id", parametros.turmaId)
+    .eq("term", parametros.periodo)
     .maybeSingle();
 
   if (error) {
-    throw new Error(`Falha ao verificar o vínculo de professor: ${error.message}`);
+    throw new Error(
+      `Falha ao verificar o vínculo de professor: ${error.message}`,
+    );
   }
 
   if (!data) return null;
 
   return {
     professorId: data.professor_id,
-    subjectId: data.subject_id,
-    classId: data.class_id,
-    term: data.term,
+    disciplinaId: data.subject_id,
+    turmaId: data.class_id,
+    periodo: data.term,
   };
 }

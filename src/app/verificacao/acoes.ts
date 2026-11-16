@@ -1,10 +1,10 @@
 "use server";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { criarClienteDoServidor } from "@/lib/supabase/servidor";
 import { registrarEventoDeAutenticacao } from "@/lib/auditoria";
 
 export async function registrarCadastroDeSegundoFator(): Promise<void> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await criarClienteDoServidor();
 
   const {
     data: { user },

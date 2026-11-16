@@ -44,7 +44,7 @@ import {
   rotuloDoAndar,
   TIPOS_DE_ESPACO,
 } from "@/domain/espacos/espaco";
-import type { ResourceOption } from "@/lib/repositories/repositorio-de-recursos";
+import type { OpcaoDeRecurso } from "@/lib/repositories/repositorio-de-recursos";
 import type { EspacoGerenciado } from "@/lib/repositories/repositorio-de-espacos";
 import { usePesquisa } from "@/hooks/use-pesquisa";
 import { CabecalhoOrdenavel } from "@/components/cabecalho-ordenavel";
@@ -57,14 +57,14 @@ export function CadastroDeEspacos({
   recursos,
 }: {
   espacos: EspacoGerenciado[];
-  recursos: ResourceOption[];
+  recursos: OpcaoDeRecurso[];
 }) {
   const [editando, setEditando] = useState<EspacoGerenciado | "novo" | null>(
     null,
   );
   const [excluindo, setExcluindo] = useState<EspacoGerenciado | null>(null);
 
-  const nomeDoRecurso = new Map(recursos.map((r) => [r.id, r.name]));
+  const nomeDoRecurso = new Map(recursos.map((r) => [r.id, r.nome]));
   const nomesDosRecursos = (espaco: EspacoGerenciado) =>
     espaco.recursoIds.map((id) => nomeDoRecurso.get(id)).filter(Boolean);
 
@@ -138,7 +138,7 @@ export function CadastroDeEspacos({
             />
             <FiltroMultiplo
               rotulo="Recursos"
-              opcoes={recursos.map((r) => ({ id: r.id, nome: r.name }))}
+              opcoes={recursos.map((r) => ({ id: r.id, nome: r.nome }))}
               valor={recursosEscolhidos}
               onChange={setRecursosEscolhidos}
             />
@@ -282,7 +282,7 @@ function FormularioDoEspaco({
   onFechar,
 }: {
   espaco: EspacoGerenciado | null;
-  recursos: ResourceOption[];
+  recursos: OpcaoDeRecurso[];
   onFechar: () => void;
 }) {
   const [predio, setPredio] = useState(espaco ? String(espaco.predio) : "");
@@ -414,7 +414,7 @@ function FormularioDoEspaco({
                     value={recurso.id}
                     defaultChecked={espaco?.recursoIds.includes(recurso.id)}
                   />
-                  {recurso.name}
+                  {recurso.nome}
                 </label>
               ))}
             </div>

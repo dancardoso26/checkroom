@@ -1,5 +1,8 @@
-import { ABERTURA, FECHAMENTO } from "@/domain/booking/businessHours";
-import { dentroDoExpediente, overlaps } from "@/domain/booking/validateBooking";
+import { ABERTURA, FECHAMENTO } from "@/domain/reservas/expediente";
+import {
+  dentroDoExpediente,
+  seSobrepoem,
+} from "@/domain/reservas/validar-reserva";
 import type { ErrosPorCampo } from "@/domain/formulario/validacao";
 
 export type DadosDaPalestra = {
@@ -23,11 +26,12 @@ export type ContextoDaPalestra = {
 
 export function validarPalestra(
   dados: DadosDaPalestra,
-  contexto: ContextoDaPalestra
+  contexto: ContextoDaPalestra,
 ): ErrosPorCampo {
   const erros: ErrosPorCampo = {};
 
-  if (dados.titulo.trim() === "") erros.titulo = ["Informe o tema da palestra."];
+  if (dados.titulo.trim() === "")
+    erros.titulo = ["Informe o tema da palestra."];
   if (dados.palestrante.trim() === "") {
     erros.palestrante = ["Informe o nome do palestrante."];
   }
@@ -40,7 +44,7 @@ export function validarPalestra(
 
   if (!periodoValido) {
     erros.fim = ["O término deve ser depois do início."];
-  } else if (!dentroDoExpediente({ startsAt: dados.inicio, endsAt: dados.fim })) {
+  } else if (!dentroDoExpediente({ inicio: dados.inicio, fim: dados.fim })) {
     erros.inicio = [
       `A palestra deve acontecer num mesmo dia, entre ${ABERTURA} e ${FECHAMENTO}.`,
     ];
@@ -62,10 +66,10 @@ export function validarPalestra(
 
   if (periodoValido && contexto.capacidadeDoEspaco !== null) {
     const conflito = contexto.ocupacoes.find((o) =>
-      overlaps(
-        { startsAt: dados.inicio, endsAt: dados.fim },
-        { startsAt: o.inicio, endsAt: o.fim }
-      )
+      seSobrepoem(
+        { inicio: dados.inicio, fim: dados.fim },
+        { inicio: o.inicio, fim: o.fim },
+      ),
     );
 
     if (conflito) {
@@ -76,7 +80,7 @@ export function validarPalestra(
   }
 
   const bloqueio = contexto.bloqueios?.find(
-    (b) => b.espacoId === null || b.espacoId === dados.espacoId
+    (b) => b.espacoId === null || b.espacoId === dados.espacoId,
   );
 
   if (bloqueio) {
@@ -108,7 +112,7 @@ export type PalestraParaInscricao = {
 export function validarInscricao(
   palestra: PalestraParaInscricao,
   aluno: { cursoId: string | null; jaInscrito: boolean },
-  agora: Date
+  agora: Date,
 ): RecusaDaInscricao | null {
   if (aluno.cursoId === null || !palestra.cursoIds.includes(aluno.cursoId)) {
     return "CURSO_NAO_ATENDIDO";
@@ -131,7 +135,7 @@ export const MENSAGEM_DA_INSCRICAO: Record<RecusaDaInscricao, string> = {
 };
 
 export function recusaDaInscricaoNoBanco(
-  codigo: string
+  codigo: string,
 ): RecusaDaInscricao | "ERRO" | null {
   switch (codigo) {
     case "enrolled":
@@ -154,16 +158,12 @@ export function recusaDaInscricaoNoBanco(
 }
 
 export type SituacaoParaOAluno =
-  | "inscrito"
-  | "disponivel"
-  | "lotada"
-  | "encerrada"
-  | "fora_do_curso";
+  "inscrito" | "disponivel" | "lotada" | "encerrada" | "fora_do_curso";
 
 export function situacaoParaOAluno(
   palestra: PalestraParaInscricao,
   aluno: { cursoId: string | null; jaInscrito: boolean },
-  agora: Date
+  agora: Date,
 ): SituacaoParaOAluno {
   if (aluno.jaInscrito) return "inscrito";
 
@@ -179,6 +179,9 @@ export function situacaoParaOAluno(
   }
 }
 
-export function vagasRestantes(palestra: { vagas: number; inscritos: number }): number {
+export function vagasRestantes(palestra: {
+  vagas: number;
+  inscritos: number;
+}): number {
   return Math.max(0, palestra.vagas - palestra.inscritos);
 }

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { podeGerenciarCadastros } from "@/domain/auth/permissoes";
-import { listResources } from "@/lib/repositories/repositorio-de-recursos";
+import { listarRecursos } from "@/lib/repositories/repositorio-de-recursos";
 import { listarEspacosParaGestao } from "@/lib/repositories/repositorio-de-espacos";
 import { exigirSessao } from "@/lib/sessao";
 
@@ -16,7 +16,7 @@ export default async function EspacosPage() {
 
   const [espacos, recursos] = await Promise.all([
     listarEspacosParaGestao(),
-    listResources(),
+    listarRecursos(),
   ]);
 
   return <CadastroDeEspacos espacos={espacos} recursos={recursos} />;

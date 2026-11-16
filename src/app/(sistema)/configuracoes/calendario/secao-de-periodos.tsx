@@ -28,7 +28,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { PeriodoLetivo } from "@/domain/calendario/calendario";
-import { localDayKey } from "@/lib/datetime";
+import { chaveDoDiaLocal } from "@/lib/datas";
 import { useOrdenacao } from "@/hooks/use-ordenacao";
 import { usePesquisa } from "@/hooks/use-pesquisa";
 import { executarEmLote, usePaginacao, useSelecao } from "@/hooks/use-tabela";
@@ -46,7 +46,7 @@ export function SecaoDePeriodos({ periodos }: { periodos: PeriodoLetivo[] }) {
 
   const periodoEmEdicao = editando === "novo" ? null : editando;
 
-  const hoje = localDayKey(new Date());
+  const hoje = chaveDoDiaLocal(new Date());
   const situacaoDoPeriodo = (p: PeriodoLetivo) =>
     hoje < p.inicio ? "futuro" : hoje > p.fim ? "encerrado" : "andamento";
 

@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { AvisoDeConflito } from "@/components/aviso-de-conflito";
-import { StatusBadge } from "@/components/status-badge";
+import { SeloDeSituacao } from "@/components/selo-de-situacao";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,10 +16,10 @@ import {
 } from "@/components/ui/dialog";
 import { MENSAGEM_DA_INSCRICAO } from "@/domain/palestras/palestra";
 import { statusDaReserva } from "@/domain/status/status";
-import { formatFullDate, formatPeriod } from "@/lib/datetime";
+import { formatarDataPorExtenso, formatarPeriodo } from "@/lib/datas";
 import { RotuloDeCampo } from "@/components/rotulo-de-campo";
 import { Loader2, Trash2, X } from "lucide-react";
-import type { BookingListItem } from "@/lib/repositories/repositorio-de-reservas";
+import type { ReservaDaLista } from "@/lib/repositories/repositorio-de-reservas";
 
 import { cancelarInscricao, inscreverEmPalestra } from "../../palestras/acoes";
 import { ROTULO_DA_ATIVIDADE } from "../formulario/campos";
@@ -33,7 +33,7 @@ export function DetalheDaReserva({
   onCancelar,
   onExcluir,
 }: {
-  reserva: BookingListItem;
+  reserva: ReservaDaLista;
   agora: Date;
   vePalestras: boolean;
   podeExcluirPalestra: boolean;
@@ -73,45 +73,47 @@ export function DetalheDaReserva({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle
-            className={reserva.cancelled ? "line-through" : undefined}
+            className={reserva.cancelada ? "line-through" : undefined}
           >
-            {reserva.purpose}
+            {reserva.finalidade}
           </DialogTitle>
 
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="outline" className="font-normal">
-              {ROTULO_DA_ATIVIDADE[reserva.activityType]}
+              {ROTULO_DA_ATIVIDADE[reserva.tipoDeAtividade]}
             </Badge>
-            <StatusBadge status={statusDaReserva(reserva, agora)} />
+            <SeloDeSituacao status={statusDaReserva(reserva, agora)} />
           </div>
 
           <DialogDescription className="sr-only first-letter:uppercase">
-            {formatFullDate(reserva.startsAt)}
+            {formatarDataPorExtenso(reserva.inicio)}
           </DialogDescription>
         </DialogHeader>
 
         <dl className="space-y-3 text-sm">
           <Linha termo="Data e hora">
-            {formatPeriod(reserva.startsAt, reserva.endsAt)}
+            {formatarPeriodo(reserva.inicio, reserva.fim)}
           </Linha>
-          <Linha termo="Espaço">{reserva.roomName}</Linha>
+          <Linha termo="Espaço">{reserva.nomeDoEspaco}</Linha>
           <Linha termo={reserva.ehPalestra ? "Palestrante" : "Professor"}>
-            {reserva.professorName}
+            {reserva.nomeDoProfessor}
           </Linha>
           <Linha termo={reserva.ehPalestra ? "Cursos" : "Turma"}>
-            {reserva.className}
+            {reserva.nomeDaTurma}
           </Linha>
-          {reserva.subjectName && (
-            <Linha termo="Disciplina">{reserva.subjectName}</Linha>
+          {reserva.nomeDaDisciplina && (
+            <Linha termo="Disciplina">{reserva.nomeDaDisciplina}</Linha>
           )}
-          {reserva.resourceNames.length > 0 && (
-            <Linha termo="Recursos">{reserva.resourceNames.join(", ")}</Linha>
+          {reserva.nomesDosRecursos.length > 0 && (
+            <Linha termo="Recursos">
+              {reserva.nomesDosRecursos.join(", ")}
+            </Linha>
           )}
         </dl>
 
-        {reserva.cancelled && reserva.cancellationReason && (
+        {reserva.cancelada && reserva.motivoDoCancelamento && (
           <p className="text-muted-foreground text-sm italic">
-            Motivo do cancelamento: {reserva.cancellationReason}
+            Motivo do cancelamento: {reserva.motivoDoCancelamento}
           </p>
         )}
 
@@ -145,7 +147,12 @@ export function DetalheDaReserva({
               {podeInscrever && (
                 <Button
                   disabled={pendente}
-                  onClick={() => alterarInscricao(inscreverEmPalestra, "Inscrição realizada.")}
+                  onClick={() =>
+                    alterarInscricao(
+                      inscreverEmPalestra,
+                      "Inscrição realizada.",
+                    )
+                  }
                 >
                   {pendente && <Loader2 className="animate-spin" aria-hidden />}
                   Inscrever-se
@@ -155,7 +162,9 @@ export function DetalheDaReserva({
                 <Button
                   variant="outline"
                   disabled={pendente}
-                  onClick={() => alterarInscricao(cancelarInscricao, "Inscrição cancelada.")}
+                  onClick={() =>
+                    alterarInscricao(cancelarInscricao, "Inscrição cancelada.")
+                  }
                 >
                   {pendente ? (
                     <Loader2 className="animate-spin" aria-hidden />
@@ -169,7 +178,7 @@ export function DetalheDaReserva({
           )
         ) : reserva.gerenciavel ? (
           <div className="flex justify-end gap-2 border-t pt-3">
-            {!reserva.cancelled && (
+            {!reserva.cancelada && (
               <Button variant="outline" onClick={onCancelar}>
                 <X />
                 Cancelar reserva

@@ -5,7 +5,7 @@ import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 import Link from "next/link";
 
-import { StatusBadge } from "@/components/status-badge";
+import { SeloDeSituacao } from "@/components/selo-de-situacao";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -51,10 +51,15 @@ export function SerieTemporal({
   comTabela?: boolean;
 }) {
   const config = Object.fromEntries(
-    series.map((serie) => [serie.chave, { label: serie.rotulo, color: serie.cor }])
+    series.map((serie) => [
+      serie.chave,
+      { label: serie.rotulo, color: serie.cor },
+    ]),
   ) satisfies ChartConfig;
 
-  const vazio = pontos.every((ponto) => series.every((s) => ponto[s.chave] === 0));
+  const vazio = pontos.every((ponto) =>
+    series.every((s) => ponto[s.chave] === 0),
+  );
   const prefixo = useId().replace(/:/g, "");
 
   return (
@@ -81,8 +86,16 @@ export function SerieTemporal({
                     x2="0"
                     y2="1"
                   >
-                    <stop offset="0%" stopColor={`var(--color-${serie.chave})`} stopOpacity={0.35} />
-                    <stop offset="100%" stopColor={`var(--color-${serie.chave})`} stopOpacity={0.02} />
+                    <stop
+                      offset="0%"
+                      stopColor={`var(--color-${serie.chave})`}
+                      stopOpacity={0.35}
+                    />
+                    <stop
+                      offset="100%"
+                      stopColor={`var(--color-${serie.chave})`}
+                      stopOpacity={0.02}
+                    />
                   </linearGradient>
                 ))}
               </defs>
@@ -94,9 +107,16 @@ export function SerieTemporal({
                 interval="preserveStartEnd"
                 minTickGap={28}
               />
-              <YAxis allowDecimals={false} tickLine={false} axisLine={false} width={28} />
+              <YAxis
+                allowDecimals={false}
+                tickLine={false}
+                axisLine={false}
+                width={28}
+              />
               <ChartTooltip content={<ChartTooltipContent />} />
-              {series.length > 1 && <ChartLegend content={<ChartLegendContent />} />}
+              {series.length > 1 && (
+                <ChartLegend content={<ChartLegendContent />} />
+              )}
               {series.map((serie) => (
                 <Area
                   key={serie.chave}
@@ -150,7 +170,9 @@ export function MapaDeCalorDeReservas({
           <div className="space-y-1" role="table" aria-label={titulo}>
             <div
               className="grid items-center gap-1"
-              style={{ gridTemplateColumns: `2.5rem repeat(${mapa.horas.length}, minmax(0, 1fr))` }}
+              style={{
+                gridTemplateColumns: `2.5rem repeat(${mapa.horas.length}, minmax(0, 1fr))`,
+              }}
               role="row"
             >
               <span />
@@ -168,10 +190,15 @@ export function MapaDeCalorDeReservas({
               <div
                 key={linha.dia}
                 className="grid items-center gap-1"
-                style={{ gridTemplateColumns: `2.5rem repeat(${mapa.horas.length}, minmax(0, 1fr))` }}
+                style={{
+                  gridTemplateColumns: `2.5rem repeat(${mapa.horas.length}, minmax(0, 1fr))`,
+                }}
                 role="row"
               >
-                <span className="text-muted-foreground text-xs" role="rowheader">
+                <span
+                  className="text-muted-foreground text-xs"
+                  role="rowheader"
+                >
                   {linha.dia}
                 </span>
                 {linha.valores.map((valor, i) => {
@@ -196,7 +223,8 @@ export function MapaDeCalorDeReservas({
               <span
                 className="h-2 w-24 rounded-full"
                 style={{
-                  backgroundImage: "linear-gradient(to right, var(--chart-trilha), var(--chart-1))",
+                  backgroundImage:
+                    "linear-gradient(to right, var(--chart-trilha), var(--chart-1))",
                 }}
               />
               <span>Mais</span>
@@ -234,7 +262,9 @@ export function RankingDeBarras({
       </CardHeader>
       <CardContent>
         {itens.length === 0 ? (
-          <p className="text-muted-foreground py-6 text-center text-sm">{vazio}</p>
+          <p className="text-muted-foreground py-6 text-center text-sm">
+            {vazio}
+          </p>
         ) : (
           <ul className="space-y-3">
             {itens.map((item) => (
@@ -242,7 +272,9 @@ export function RankingDeBarras({
                 <div className="flex items-baseline justify-between gap-3 text-sm">
                   <span className="truncate font-medium">{item.nome}</span>
                   <span className="text-muted-foreground shrink-0 tabular-nums">
-                    {numero.format(item.total)} {item.total === 1 ? unidade[0] : unidade[1]} ({participacao(item.total, base)})
+                    {numero.format(item.total)}{" "}
+                    {item.total === 1 ? unidade[0] : unidade[1]} (
+                    {participacao(item.total, base)})
                   </span>
                 </div>
                 <div
@@ -256,7 +288,10 @@ export function RankingDeBarras({
                 >
                   <div
                     className="h-full rounded-full"
-                    style={{ width: `${(item.total / maximo) * 100}%`, backgroundColor: "var(--chart-1)" }}
+                    style={{
+                      width: `${(item.total / maximo) * 100}%`,
+                      backgroundColor: "var(--chart-1)",
+                    }}
                   />
                 </div>
               </li>
@@ -273,7 +308,9 @@ export function EspacosOciosos({ espacos }: { espacos: OcupacaoDoEspaco[] }) {
     <Card>
       <CardHeader>
         <CardTitle>Espaços ociosos</CardTitle>
-        <CardDescription>Espaços com menos de 5% do expediente ocupado no período.</CardDescription>
+        <CardDescription>
+          Espaços com menos de 5% do expediente ocupado no período.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         {espacos.length === 0 ? (
@@ -289,7 +326,8 @@ export function EspacosOciosos({ espacos }: { espacos: OcupacaoDoEspaco[] }) {
               >
                 <span className="truncate font-medium">{espaco.nome}</span>
                 <span className="text-muted-foreground shrink-0 tabular-nums">
-                  {horas.format(espaco.horas)} h ({porcentagem.format(espaco.taxa)})
+                  {horas.format(espaco.horas)} h (
+                  {porcentagem.format(espaco.taxa)})
                 </span>
               </li>
             ))}
@@ -315,7 +353,8 @@ export function FilaDeChamados({ itens }: { itens: ItemDaFila[] }) {
       <CardHeader>
         <CardTitle>Chamados não resolvidos</CardTitle>
         <CardDescription>
-          Abertos e em atendimento, dos mais antigos para os mais recentes, sem depender do período escolhido.
+          Abertos e em atendimento, dos mais antigos para os mais recentes, sem
+          depender do período escolhido.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -326,17 +365,27 @@ export function FilaDeChamados({ itens }: { itens: ItemDaFila[] }) {
         ) : (
           <ul className="divide-y">
             {itens.map((item) => (
-              <li key={item.id} className="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0">
+              <li
+                key={item.id}
+                className="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0"
+              >
                 <div className="min-w-0 space-y-1">
-                  <p className="truncate text-sm font-medium">{item.descricao}</p>
+                  <p className="truncate text-sm font-medium">
+                    {item.descricao}
+                  </p>
                   <p className="text-muted-foreground text-xs">
-                    {item.espaco} · {ROTULO_DA_SITUACAO[item.situacao]} · aberto há {item.idade}
+                    {item.espaco} · {ROTULO_DA_SITUACAO[item.situacao]} · aberto
+                    há {item.idade}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <StatusBadge status={STATUS_DA_PRIORIDADE[item.prioridade]} />
+                  <SeloDeSituacao
+                    status={STATUS_DA_PRIORIDADE[item.prioridade]}
+                  />
                   <Button asChild size="sm" variant="outline">
-                    <Link href={`/chamados?chamado=${item.id}`}>Ver chamado</Link>
+                    <Link href={`/chamados?chamado=${item.id}`}>
+                      Ver chamado
+                    </Link>
                   </Button>
                 </div>
               </li>

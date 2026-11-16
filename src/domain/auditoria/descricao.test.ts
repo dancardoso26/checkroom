@@ -22,33 +22,33 @@ describe("descrição de reservas", () => {
   it("diz o que, onde, quando e de quem", () => {
     const { acao, detalhe } = descreverEvento(
       {
-        action: "insert",
-        entity: "bookings",
-        beforeState: null,
-        afterState: reserva,
+        acao: "insert",
+        entidade: "bookings",
+        estadoAnterior: null,
+        estadoPosterior: reserva,
       },
-      catalogo
+      catalogo,
     );
 
     expect(acao).toBe("Criou");
     expect(detalhe).toBe(
-      'Reserva "Aula de Engenharia de Software", 1T-01, 28/09/2026, 19:00 às 20:40, professor Ana Beatriz Moura'
+      'Reserva "Aula de Engenharia de Software", 1T-01, 28/09/2026, 19:00 às 20:40, professor Ana Beatriz Moura',
     );
   });
 
   it("reconhece o cancelamento e cita o motivo", () => {
     const { acao, detalhe } = descreverEvento(
       {
-        action: "update",
-        entity: "bookings",
-        beforeState: reserva,
-        afterState: {
+        acao: "update",
+        entidade: "bookings",
+        estadoAnterior: reserva,
+        estadoPosterior: {
           ...reserva,
           status: "cancelled",
           cancellation_reason: "Professor afastado",
         },
       },
-      catalogo
+      catalogo,
     );
 
     expect(acao).toBe("Cancelou");
@@ -58,12 +58,12 @@ describe("descrição de reservas", () => {
   it("usa o estado anterior na exclusão", () => {
     const { acao, detalhe } = descreverEvento(
       {
-        action: "delete",
-        entity: "bookings",
-        beforeState: reserva,
-        afterState: null,
+        acao: "delete",
+        entidade: "bookings",
+        estadoAnterior: reserva,
+        estadoPosterior: null,
       },
-      catalogo
+      catalogo,
     );
 
     expect(acao).toBe("Excluiu");
@@ -73,12 +73,12 @@ describe("descrição de reservas", () => {
   it("não quebra quando o espaço ou o professor não existem mais", () => {
     const { detalhe } = descreverEvento(
       {
-        action: "insert",
-        entity: "bookings",
-        beforeState: null,
-        afterState: { ...reserva, room_id: "x", professor_id: "y" },
+        acao: "insert",
+        entidade: "bookings",
+        estadoAnterior: null,
+        estadoPosterior: { ...reserva, room_id: "x", professor_id: "y" },
       },
-      catalogo
+      catalogo,
     );
 
     expect(detalhe).not.toContain("undefined");
@@ -87,17 +87,17 @@ describe("descrição de reservas", () => {
 });
 
 describe("descrição de eventos de conta", () => {
-  const evento = (action: string, afterState: unknown = null) => ({
-    action,
-    entity: "auth",
-    beforeState: null,
-    afterState,
+  const evento = (acao: string, estadoPosterior: unknown = null) => ({
+    acao,
+    entidade: "auth",
+    estadoAnterior: null,
+    estadoPosterior,
   });
 
   it("nomeia a tentativa de acesso recusada com o e-mail usado", () => {
     expect(
       descreverEvento(evento("login_failed", { email: "a@b.com" }), catalogo)
-        .detalhe
+        .detalhe,
     ).toBe("Tentativa de entrada com o e-mail a@b.com");
   });
 
@@ -105,9 +105,9 @@ describe("descrição de eventos de conta", () => {
     const { acao, detalhe } = descreverEvento(
       {
         ...evento("user_deactivated", { alvo: "conta-1" }),
-        entity: "profiles",
+        entidade: "profiles",
       },
-      catalogo
+      catalogo,
     );
 
     expect(acao).toBe("Desativou usuário");
@@ -117,12 +117,12 @@ describe("descrição de eventos de conta", () => {
   it("nomeia a troca de papel, de onde para onde", () => {
     const { acao, detalhe } = descreverEvento(
       {
-        action: "user_role_changed",
-        entity: "profiles",
-        beforeState: { role: "professor" },
-        afterState: { role: "student", alvo: "conta-1" },
+        acao: "user_role_changed",
+        entidade: "profiles",
+        estadoAnterior: { role: "professor" },
+        estadoPosterior: { role: "student", alvo: "conta-1" },
       },
-      catalogo
+      catalogo,
     );
 
     expect(acao).toBe("Alterou papel");
@@ -132,7 +132,7 @@ describe("descrição de eventos de conta", () => {
   it("nomeia quem foi convidado e com qual perfil", () => {
     const { acao, detalhe } = descreverEvento(
       evento("user_invited", { email: "novo@umc.br", role: "professor" }),
-      catalogo
+      catalogo,
     );
 
     expect(acao).toBe("Convidou usuário");
@@ -142,7 +142,7 @@ describe("descrição de eventos de conta", () => {
   it("registra a versão dos termos aceitos", () => {
     expect(
       descreverEvento(evento("terms_accepted", { versao: "2026-09" }), catalogo)
-        .detalhe
+        .detalhe,
     ).toBe("Aceitou os termos de uso, versão 2026-09");
   });
 });
@@ -163,59 +163,72 @@ describe("descrição dos cadastros, chamados e palestras", () => {
     expect(
       descreverEvento(
         {
-          action: "insert",
-          entity: "rooms",
-          beforeState: null,
-          afterState: { name: "3T-12", building: "Prédio 3" },
+          acao: "insert",
+          entidade: "rooms",
+          estadoAnterior: null,
+          estadoPosterior: { name: "3T-12", building: "Prédio 3" },
         },
-        completo
-      )
+        completo,
+      ),
     ).toEqual({ acao: "Cadastrou", detalhe: "Espaço 3T-12" });
   });
 
   it("lista os recursos antes e depois da troca", () => {
     const { detalhe } = descreverEvento(
       {
-        action: "room_resources_changed",
-        entity: "rooms",
-        entityId: "sala-1",
-        beforeState: { resource_ids: ["r1"] },
-        afterState: { resource_ids: ["r1", "r2"] },
+        acao: "room_resources_changed",
+        entidade: "rooms",
+        entidadeId: "sala-1",
+        estadoAnterior: { resource_ids: ["r1"] },
+        estadoPosterior: { resource_ids: ["r1", "r2"] },
       },
-      completo
+      completo,
     );
 
     expect(detalhe).toBe(
-      "Recursos de 1T-01: de Projetor para Projetor, Microscópio"
+      "Recursos de 1T-01: de Projetor para Projetor, Microscópio",
     );
   });
 
   it("descreve o vínculo de professor pelos nomes", () => {
     const { detalhe } = descreverEvento(
       {
-        action: "delete",
-        entity: "teaching_assignments",
-        beforeState: {
+        acao: "delete",
+        entidade: "teaching_assignments",
+        estadoAnterior: {
           professor_id: "prof-1",
           subject_id: "d1",
           class_id: "t1",
           term: "2026.2",
         },
-        afterState: null,
+        estadoPosterior: null,
       },
-      completo
+      completo,
     );
 
     expect(detalhe).toBe(
-      "Vínculo de professor: Ana Beatriz Moura, Banco de Dados II, SI 8º semestre A, período 2026.2"
+      "Vínculo de professor: Ana Beatriz Moura, Banco de Dados II, SI 8º semestre A, período 2026.2",
     );
   });
 
   it("distingue abrir, assumir e resolver um chamado", () => {
-    const aberto = { room_id: "sala-1", description: "Projetor não liga", priority: "high", status: "open" };
+    const aberto = {
+      room_id: "sala-1",
+      description: "Projetor não liga",
+      priority: "high",
+      status: "open",
+    };
 
     expect(
-      descreverEvento({ action: "insert", entity: "tickets", beforeState: null, afterState: aberto }, completo)
+      descreverEvento(
+        {
+          acao: "insert",
+          entidade: "tickets",
+          estadoAnterior: null,
+          estadoPosterior: aberto,
+        },
+        completo,
+      ),
     ).toEqual({
       acao: "Abriu chamado",
       detalhe: "Chamado em 1T-01, prioridade alta: Projetor não liga",
@@ -224,23 +237,27 @@ describe("descrição dos cadastros, chamados e palestras", () => {
     expect(
       descreverEvento(
         {
-          action: "update",
-          entity: "tickets",
-          beforeState: aberto,
-          afterState: { ...aberto, status: "in_progress" },
+          acao: "update",
+          entidade: "tickets",
+          estadoAnterior: aberto,
+          estadoPosterior: { ...aberto, status: "in_progress" },
         },
-        completo
-      ).acao
+        completo,
+      ).acao,
     ).toBe("Assumiu chamado");
 
     const resolvido = descreverEvento(
       {
-        action: "update",
-        entity: "tickets",
-        beforeState: { ...aberto, status: "in_progress" },
-        afterState: { ...aberto, status: "resolved", resolution_note: "Cabo trocado" },
+        acao: "update",
+        entidade: "tickets",
+        estadoAnterior: { ...aberto, status: "in_progress" },
+        estadoPosterior: {
+          ...aberto,
+          status: "resolved",
+          resolution_note: "Cabo trocado",
+        },
       },
-      completo
+      completo,
     );
 
     expect(resolvido.acao).toBe("Resolveu chamado");
@@ -250,16 +267,29 @@ describe("descrição dos cadastros, chamados e palestras", () => {
   it("descreve inscrição e cancelamento pela palestra", () => {
     expect(
       descreverEvento(
-        { action: "insert", entity: "lecture_enrollments", beforeState: null, afterState: { lecture_id: "l1" } },
-        completo
-      )
-    ).toEqual({ acao: "Inscreveu-se", detalhe: 'Inscrição na palestra "IA na saúde"' });
+        {
+          acao: "insert",
+          entidade: "lecture_enrollments",
+          estadoAnterior: null,
+          estadoPosterior: { lecture_id: "l1" },
+        },
+        completo,
+      ),
+    ).toEqual({
+      acao: "Inscreveu-se",
+      detalhe: 'Inscrição na palestra "IA na saúde"',
+    });
 
     expect(
       descreverEvento(
-        { action: "delete", entity: "lecture_enrollments", beforeState: { lecture_id: "l1" }, afterState: null },
-        completo
-      ).acao
+        {
+          acao: "delete",
+          entidade: "lecture_enrollments",
+          estadoAnterior: { lecture_id: "l1" },
+          estadoPosterior: null,
+        },
+        completo,
+      ).acao,
     ).toBe("Cancelou inscrição");
   });
 
@@ -267,13 +297,17 @@ describe("descrição dos cadastros, chamados e palestras", () => {
     expect(
       descreverEvento(
         {
-          action: "user_role_changed",
-          entity: "profiles",
-          beforeState: { role: "student", course_id: "c1" },
-          afterState: { role: "student", course_id: "c2", alvo: "conta-1" },
+          acao: "user_role_changed",
+          entidade: "profiles",
+          estadoAnterior: { role: "student", course_id: "c1" },
+          estadoPosterior: {
+            role: "student",
+            course_id: "c2",
+            alvo: "conta-1",
+          },
         },
-        completo
-      ).detalhe
+        completo,
+      ).detalhe,
     ).toBe("Alterou o curso de Carlos Lima");
   });
 });

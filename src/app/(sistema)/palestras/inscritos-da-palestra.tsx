@@ -15,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatDateTime } from "@/lib/datetime";
+import { formatarDataEHora } from "@/lib/datas";
 import { CabecalhoOrdenavel } from "@/components/cabecalho-ordenavel";
 import { useOrdenacao } from "@/hooks/use-ordenacao";
 import { usePesquisa } from "@/hooks/use-pesquisa";
@@ -40,7 +40,12 @@ export function InscritosDaPalestra({
 }) {
   const { filtrados, pesquisa } = usePesquisa(
     inscritos ?? [],
-    (i) => [i.nome, i.email, i.curso, formatDateTime(new Date(i.inscritoEm))],
+    (i) => [
+      i.nome,
+      i.email,
+      i.curso,
+      formatarDataEHora(new Date(i.inscritoEm)),
+    ],
     "Pesquisar inscritos",
   );
 
@@ -135,7 +140,7 @@ export function InscritosDaPalestra({
                     <TableCell>{inscrito.email ?? "-"}</TableCell>
                     <TableCell>{inscrito.curso ?? "-"}</TableCell>
                     <TableCell className="whitespace-nowrap">
-                      {formatDateTime(new Date(inscrito.inscritoEm))}
+                      {formatarDataEHora(new Date(inscrito.inscritoEm))}
                     </TableCell>
                   </TableRow>
                 ))}

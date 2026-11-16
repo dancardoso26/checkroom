@@ -6,7 +6,7 @@ import { Check, CheckCircle2, Circle, X } from "lucide-react";
 
 import {
   definirNovaSenha,
-  type NovaSenhaState,
+  type EstadoDaNovaSenha,
 } from "../recuperar-senha/acoes";
 import { TAMANHO_MAXIMO_DA_SENHA, avaliarSenha } from "@/domain/auth/senha";
 import { TelaDeEntrada } from "@/components/tela-de-entrada";
@@ -15,10 +15,10 @@ import { CampoDeSenha } from "@/components/campo-de-senha";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
-const ESTADO_INICIAL: NovaSenhaState = { status: "idle" };
+const ESTADO_INICIAL: EstadoDaNovaSenha = { status: "inicial" };
 
 export function FormularioDeNovaSenha({ convite }: { convite: boolean }) {
-  const [state, formAction, salvando] = useActionState(
+  const [estado, acaoDoFormulario, salvando] = useActionState(
     definirNovaSenha,
     ESTADO_INICIAL,
   );
@@ -33,7 +33,7 @@ export function FormularioDeNovaSenha({ convite }: { convite: boolean }) {
   function enviar(evento: React.FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     const dados = new FormData(evento.currentTarget);
-    startTransition(() => formAction(dados));
+    startTransition(() => acaoDoFormulario(dados));
   }
 
   return (
@@ -45,7 +45,7 @@ export function FormularioDeNovaSenha({ convite }: { convite: boolean }) {
           : "Escolha uma nova senha para sua conta."
       }
     >
-      {state.status === "success" ? (
+      {estado.status === "sucesso" ? (
         <div className="space-y-4 text-center">
           <CheckCircle2 aria-hidden className="text-primary mx-auto size-8" />
           <p className="text-sm font-medium">
@@ -143,9 +143,9 @@ export function FormularioDeNovaSenha({ convite }: { convite: boolean }) {
             </p>
           </div>
 
-          {state.status === "error" && (
+          {estado.status === "erro" && (
             <p className="text-destructive text-sm" role="alert">
-              {state.message}
+              {estado.message}
             </p>
           )}
 

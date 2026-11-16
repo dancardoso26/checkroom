@@ -1,11 +1,14 @@
 import "server-only";
 import {
-  createSupabaseServerClient,
-  supabaseAdmin,
-} from "@/lib/supabase/server";
-import type { ActivityType, ExistingBooking } from "@/domain/booking/types";
+  criarClienteDoServidor,
+  clienteAdministrativo,
+} from "@/lib/supabase/servidor";
+import type {
+  TipoDeAtividade,
+  OcupacaoExistente,
+} from "@/domain/reservas/tipos";
 import { correspondeABusca } from "@/domain/tabela/busca";
-import { formatPeriod } from "@/lib/datetime";
+import { formatarPeriodo } from "@/lib/datas";
 import {
   condicaoDeStatus,
   FILTROS_PADRAO,
@@ -14,7 +17,7 @@ import {
 import { palestrasComoOcupacao } from "./repositorio-de-palestras";
 import type { Ordenacao, Sentido } from "@/domain/tabela/tabela";
 
-function toDate(valor: string): Date {
+function paraData(valor: string): Date {
   return new Date(valor);
 }
 
@@ -30,11 +33,11 @@ type LinhaDeOcupacao = {
 
 async function comoOcupacoes(
   linhas: LinhaDeOcupacao[],
-): Promise<ExistingBooking[]> {
+): Promise<OcupacaoExistente[]> {
   const visiveis = new Set<string>();
 
   if (linhas.length > 0) {
-    const supabase = await createSupabaseServerClient();
+    const supabase = await criarClienteDoServidor();
     const { data, error } = await supabase
       .from("bookings")
       .select("id")
@@ -52,38 +55,38 @@ async function comoOcupacoes(
 
   return linhas.map((linha) => ({
     id: linha.id,
-    roomId: linha.room_id,
+    espacoId: linha.room_id,
     professorId: linha.professor_id,
-    classId: linha.class_id,
-    purpose: visiveis.has(linha.id) ? linha.purpose : null,
-    startsAt: toDate(linha.starts_at),
-    endsAt: toDate(linha.ends_at),
+    turmaId: linha.class_id,
+    finalidade: visiveis.has(linha.id) ? linha.purpose : null,
+    inicio: paraData(linha.starts_at),
+    fim: paraData(linha.ends_at),
   }));
 }
 
-export async function findConflictCandidates(params: {
-  roomId: string;
+export async function buscarCandidatosAConflito(parametros: {
+  espacoId: string;
   professorId: string;
-  classId: string;
-  startsAt: Date;
-  endsAt: Date;
-}): Promise<ExistingBooking[]> {
-  const query = supabaseAdmin
+  turmaId: string;
+  inicio: Date;
+  fim: Date;
+}): Promise<OcupacaoExistente[]> {
+  const consulta = clienteAdministrativo
     .from("bookings")
     .select("id, room_id, professor_id, class_id, purpose, starts_at, ends_at")
     .or(
-      `room_id.eq.${params.roomId},professor_id.eq.${params.professorId},class_id.eq.${params.classId}`,
+      `room_id.eq.${parametros.espacoId},professor_id.eq.${parametros.professorId},class_id.eq.${parametros.turmaId}`,
     )
     .eq("status", "active")
-    .lt("starts_at", params.endsAt.toISOString())
-    .gt("ends_at", params.startsAt.toISOString());
+    .lt("starts_at", parametros.fim.toISOString())
+    .gt("ends_at", parametros.inicio.toISOString());
 
   const [{ data, error }, palestras] = await Promise.all([
-    query,
+    consulta,
     palestrasComoOcupacao({
-      inicio: params.startsAt,
-      fim: params.endsAt,
-      espacoId: params.roomId,
+      inicio: parametros.inicio,
+      fim: parametros.fim,
+      espacoId: parametros.espacoId,
     }),
   ]);
 
@@ -94,20 +97,20 @@ export async function findConflictCandidates(params: {
   return [...(await comoOcupacoes(data)), ...palestras];
 }
 
-export async function findBookingsInPeriod(params: {
-  startsAt: Date;
-  endsAt: Date;
-}): Promise<ExistingBooking[]> {
+export async function buscarOcupacoesNoPeriodo(parametros: {
+  inicio: Date;
+  fim: Date;
+}): Promise<OcupacaoExistente[]> {
   const [{ data, error }, palestras] = await Promise.all([
-    supabaseAdmin
+    clienteAdministrativo
       .from("bookings")
       .select(
         "id, room_id, professor_id, class_id, purpose, starts_at, ends_at",
       )
       .eq("status", "active")
-      .lt("starts_at", params.endsAt.toISOString())
-      .gt("ends_at", params.startsAt.toISOString()),
-    palestrasComoOcupacao({ inicio: params.startsAt, fim: params.endsAt }),
+      .lt("starts_at", parametros.fim.toISOString())
+      .gt("ends_at", parametros.inicio.toISOString()),
+    palestrasComoOcupacao({ inicio: parametros.inicio, fim: parametros.fim }),
   ]);
 
   if (error) {
@@ -117,30 +120,31 @@ export async function findBookingsInPeriod(params: {
   return [...(await comoOcupacoes(data)), ...palestras];
 }
 
-export type CreateBookingOutcome =
-  | { status: "created"; bookingId: string }
+export type DesfechoDaCriacao =
+  | { status: "criada"; reservaId: string }
   | {
-      status: "conflict";
-      code: "ROOM_CONFLICT" | "PROFESSOR_CONFLICT" | "CLASS_CONFLICT";
+      status: "conflito";
+      codigo:
+        "CONFLITO_DE_ESPACO" | "CONFLITO_DE_PROFESSOR" | "CONFLITO_DE_TURMA";
     }
-  | { status: "error"; message: string };
+  | { status: "erro"; mensagem: string };
 
-const CONSTRAINT_TO_VIOLATION = {
-  bookings_no_room_overlap: "ROOM_CONFLICT",
-  bookings_no_professor_overlap: "PROFESSOR_CONFLICT",
-  bookings_no_class_overlap: "CLASS_CONFLICT",
-  booking_lecture_overlap: "ROOM_CONFLICT",
+const VIOLACAO_POR_RESTRICAO = {
+  bookings_no_room_overlap: "CONFLITO_DE_ESPACO",
+  bookings_no_professor_overlap: "CONFLITO_DE_PROFESSOR",
+  bookings_no_class_overlap: "CONFLITO_DE_TURMA",
+  booking_lecture_overlap: "CONFLITO_DE_ESPACO",
 } as const;
 
-export async function findBookingOwnership(
-  bookingId: string,
-): Promise<{ createdBy: string; professorId: string } | null> {
-  const supabase = await createSupabaseServerClient();
+export async function buscarDonoDaReserva(
+  reservaId: string,
+): Promise<{ criadaPor: string; professorId: string } | null> {
+  const supabase = await criarClienteDoServidor();
 
   const { data, error } = await supabase
     .from("bookings")
     .select("created_by, professor_id")
-    .eq("id", bookingId)
+    .eq("id", reservaId)
     .maybeSingle();
 
   if (error) {
@@ -149,7 +153,7 @@ export async function findBookingOwnership(
 
   if (!data) return null;
 
-  return { createdBy: data.created_by, professorId: data.professor_id };
+  return { criadaPor: data.created_by, professorId: data.professor_id };
 }
 
 export type DadosParaNotificacao = {
@@ -158,16 +162,16 @@ export type DadosParaNotificacao = {
   finalidade: string;
   espaco: string;
   turma: string;
-  startsAt: Date;
-  endsAt: Date;
+  inicio: Date;
+  fim: Date;
   motivo: string | null;
   ativa: boolean;
 };
 
-export async function findBookingNotificationData(
-  bookingId: string,
+export async function buscarDadosParaAvisoDaReserva(
+  reservaId: string,
 ): Promise<DadosParaNotificacao | null> {
-  const supabase = supabaseAdmin;
+  const supabase = clienteAdministrativo;
 
   const { data, error } = await supabase
     .from("bookings")
@@ -177,7 +181,7 @@ export async function findBookingNotificationData(
        professors(name, email),
        classes(name)`,
     )
-    .eq("id", bookingId)
+    .eq("id", reservaId)
     .maybeSingle();
 
   if (error || !data) return null;
@@ -188,70 +192,70 @@ export async function findBookingNotificationData(
     finalidade: data.purpose,
     espaco: data.rooms.name,
     turma: data.classes.name,
-    startsAt: new Date(data.starts_at),
-    endsAt: new Date(data.ends_at),
+    inicio: new Date(data.starts_at),
+    fim: new Date(data.ends_at),
     motivo: data.cancellation_reason,
     ativa: data.status === "active",
   };
 }
 
-export async function createBooking(input: {
-  roomId: string;
+export async function gravarReserva(entrada: {
+  espacoId: string;
   professorId: string;
-  classId: string;
-  activityType: ActivityType;
-  subjectId: string | null;
-  purpose: string;
-  startsAt: Date;
-  endsAt: Date;
-  resourceIds: string[];
-  createdBy: string;
-}): Promise<CreateBookingOutcome> {
-  const supabase = await createSupabaseServerClient();
+  turmaId: string;
+  tipoDeAtividade: TipoDeAtividade;
+  disciplinaId: string | null;
+  finalidade: string;
+  inicio: Date;
+  fim: Date;
+  recursoIds: string[];
+  criadaPor: string;
+}): Promise<DesfechoDaCriacao> {
+  const supabase = await criarClienteDoServidor();
 
   const { data, error } = await supabase.rpc("create_booking", {
-    p_room_id: input.roomId,
-    p_professor_id: input.professorId,
-    p_class_id: input.classId,
-    p_activity_type: input.activityType,
-    p_subject_id: input.subjectId ?? undefined,
-    p_purpose: input.purpose.trim(),
-    p_starts_at: input.startsAt.toISOString(),
-    p_ends_at: input.endsAt.toISOString(),
-    p_resource_ids: input.resourceIds,
-    p_created_by: input.createdBy,
+    p_room_id: entrada.espacoId,
+    p_professor_id: entrada.professorId,
+    p_class_id: entrada.turmaId,
+    p_activity_type: entrada.tipoDeAtividade,
+    p_subject_id: entrada.disciplinaId ?? undefined,
+    p_purpose: entrada.finalidade.trim(),
+    p_starts_at: entrada.inicio.toISOString(),
+    p_ends_at: entrada.fim.toISOString(),
+    p_resource_ids: entrada.recursoIds,
+    p_created_by: entrada.criadaPor,
   });
 
   if (!error) {
-    return { status: "created", bookingId: data };
+    return { status: "criada", reservaId: data };
   }
 
   if (error.code === "23P01") {
     const texto = `${error.message} ${error.details ?? ""}`;
 
-    for (const [constraint, code] of Object.entries(CONSTRAINT_TO_VIOLATION)) {
-      if (texto.includes(constraint)) {
-        return { status: "conflict", code };
+    for (const [restricao, codigo] of Object.entries(VIOLACAO_POR_RESTRICAO)) {
+      if (texto.includes(restricao)) {
+        return { status: "conflito", codigo };
       }
     }
 
     return {
-      status: "error",
-      message: "A reserva conflita com outra já existente.",
+      status: "erro",
+      mensagem: "A reserva conflita com outra já existente.",
     };
   }
 
   if (error.code === "23514") {
     return {
-      status: "error",
-      message: "O período informado é inválido.",
+      status: "erro",
+      mensagem: "O período informado é inválido.",
     };
   }
 
   if (error.code === "23503") {
     return {
-      status: "error",
-      message:
+      status: "erro",
+      mensagem:
         "Espaço, professor ou turma não existe mais. Recarregue a página e tente de novo.",
     };
   }
@@ -259,28 +263,28 @@ export async function createBooking(input: {
   console.error("Falha inesperada ao gravar reserva:", error);
 
   return {
-    status: "error",
-    message:
+    status: "erro",
+    mensagem:
       "Não foi possível gravar a reserva. Tente novamente em alguns instantes.",
   };
 }
 
-export type BookingListItem = {
+export type ReservaDaLista = {
   id: string;
-  purpose: string;
-  activityType: ActivityType;
-  startsAt: Date;
-  endsAt: Date;
-  roomId: string;
-  roomName: string;
-  building: string;
-  professorName: string;
-  className: string;
-  subjectName: string | null;
-  resourceNames: string[];
-  cancelled: boolean;
-  cancellationReason: string | null;
-  createdBy: string;
+  finalidade: string;
+  tipoDeAtividade: TipoDeAtividade;
+  inicio: Date;
+  fim: Date;
+  espacoId: string;
+  nomeDoEspaco: string;
+  predio: string;
+  nomeDoProfessor: string;
+  nomeDaTurma: string;
+  nomeDaDisciplina: string | null;
+  nomesDosRecursos: string[];
+  cancelada: boolean;
+  motivoDoCancelamento: string | null;
+  criadaPor: string;
   professorId: string;
   gerenciavel?: boolean;
   ehPalestra?: boolean;
@@ -291,25 +295,25 @@ export type BookingListItem = {
 const LIMITE_DA_BUSCA = 2000;
 
 export function reservaCorrespondeABusca(
-  reserva: BookingListItem,
+  reserva: ReservaDaLista,
   busca: string,
 ): boolean {
   return correspondeABusca(
     [
-      reserva.purpose,
-      reserva.roomName,
-      reserva.building,
-      reserva.professorName,
-      reserva.className,
-      reserva.subjectName,
-      formatPeriod(reserva.startsAt, reserva.endsAt),
-      ...reserva.resourceNames,
+      reserva.finalidade,
+      reserva.nomeDoEspaco,
+      reserva.predio,
+      reserva.nomeDoProfessor,
+      reserva.nomeDaTurma,
+      reserva.nomeDaDisciplina,
+      formatarPeriodo(reserva.inicio, reserva.fim),
+      ...reserva.nomesDosRecursos,
     ],
     busca,
   );
 }
 
-const SELECT_DA_LISTAGEM =
+const COLUNAS_DA_LISTAGEM =
   `id, purpose, activity_type, starts_at, ends_at, status, cancellation_reason,
        room_id, created_by, professor_id,
        rooms(name, building),
@@ -321,7 +325,7 @@ const SELECT_DA_LISTAGEM =
 type LinhaDaListagem = {
   id: string;
   purpose: string;
-  activity_type: ActivityType;
+  activity_type: TipoDeAtividade;
   starts_at: string;
   ends_at: string;
   status: string;
@@ -336,25 +340,25 @@ type LinhaDaListagem = {
   booking_resources: { resources: { name: string } }[];
 };
 
-function paraItemDaListagem(linha: LinhaDaListagem): BookingListItem {
+function paraItemDaListagem(linha: LinhaDaListagem): ReservaDaLista {
   return {
     id: linha.id,
-    purpose: linha.purpose,
-    activityType: linha.activity_type,
-    startsAt: toDate(linha.starts_at),
-    endsAt: toDate(linha.ends_at),
-    roomId: linha.room_id,
-    roomName: linha.rooms.name,
-    building: linha.rooms.building,
-    professorName: linha.professors.name,
-    className: linha.classes.name,
-    subjectName: linha.subjects?.name ?? null,
-    resourceNames: linha.booking_resources.map(
+    finalidade: linha.purpose,
+    tipoDeAtividade: linha.activity_type,
+    inicio: paraData(linha.starts_at),
+    fim: paraData(linha.ends_at),
+    espacoId: linha.room_id,
+    nomeDoEspaco: linha.rooms.name,
+    predio: linha.rooms.building,
+    nomeDoProfessor: linha.professors.name,
+    nomeDaTurma: linha.classes.name,
+    nomeDaDisciplina: linha.subjects?.name ?? null,
+    nomesDosRecursos: linha.booking_resources.map(
       (vinculo) => vinculo.resources.name,
     ),
-    cancelled: linha.status === "cancelled",
-    cancellationReason: linha.cancellation_reason,
-    createdBy: linha.created_by,
+    cancelada: linha.status === "cancelled",
+    motivoDoCancelamento: linha.cancellation_reason,
+    criadaPor: linha.created_by,
     professorId: linha.professor_id,
   };
 }
@@ -368,12 +372,12 @@ function aplicarFiltros<
     or(condicao: string): Q;
   },
 >(
-  query: Q,
+  consulta: Q,
   filtros: Filtros,
   escopo: EscopoDoAluno | null,
   distinguirConcluidas: boolean,
 ): Q {
-  let filtrada = query;
+  let filtrada = consulta;
 
   if (escopo) filtrada = filtrada.in("class_id", escopo.turmaIds);
 
@@ -395,7 +399,7 @@ function aplicarFiltros<
   return filtrada;
 }
 
-export async function listBookingsInRange({
+export async function listarReservasNoIntervalo({
   inicio,
   fim,
   filtros = FILTROS_PADRAO,
@@ -405,17 +409,22 @@ export async function listBookingsInRange({
   fim: Date;
   filtros?: Filtros;
   escopo?: EscopoDoAluno | null;
-}): Promise<BookingListItem[]> {
-  const supabase = await createSupabaseServerClient();
+}): Promise<ReservaDaLista[]> {
+  const supabase = await criarClienteDoServidor();
 
-  const query = supabase
+  const consulta = supabase
     .from("bookings")
-    .select(SELECT_DA_LISTAGEM)
+    .select(COLUNAS_DA_LISTAGEM)
     .lt("starts_at", fim.toISOString())
     .gt("ends_at", inicio.toISOString())
     .order("starts_at");
 
-  const { data, error } = await aplicarFiltros(query, filtros, escopo, false);
+  const { data, error } = await aplicarFiltros(
+    consulta,
+    filtros,
+    escopo,
+    false,
+  );
 
   if (error) {
     throw new Error(`Falha ao listar as reservas: ${error.message}`);
@@ -434,7 +443,7 @@ const COLUNA_DA_ORDENACAO: Record<Ordenacao, string> = {
   situacao: "status",
 };
 
-export async function listBookingsPage({
+export async function listarPaginaDeReservas({
   de,
   ate,
   ordenar,
@@ -450,20 +459,20 @@ export async function listBookingsPage({
   filtros?: Filtros;
   busca?: string;
   escopo?: EscopoDoAluno | null;
-}): Promise<{ reservas: BookingListItem[]; total: number }> {
-  const supabase = await createSupabaseServerClient();
+}): Promise<{ reservas: ReservaDaLista[]; total: number }> {
+  const supabase = await criarClienteDoServidor();
 
-  let query = supabase
+  let consulta = supabase
     .from("bookings")
-    .select(SELECT_DA_LISTAGEM, { count: "exact" })
+    .select(COLUNAS_DA_LISTAGEM, { count: "exact" })
     .order(COLUNA_DA_ORDENACAO[ordenar], { ascending: sentido === "asc" });
 
   if (ordenar !== "data")
-    query = query.order("starts_at", { ascending: false });
+    consulta = consulta.order("starts_at", { ascending: false });
 
   if (busca.trim()) {
     const { data, error } = await aplicarFiltros(
-      query,
+      consulta,
       filtros,
       escopo,
       true,
@@ -484,7 +493,7 @@ export async function listBookingsPage({
   }
 
   const { data, error, count } = await aplicarFiltros(
-    query,
+    consulta,
     filtros,
     escopo,
     true,
@@ -497,18 +506,18 @@ export async function listBookingsPage({
   return { reservas: data.map(paraItemDaListagem), total: count ?? 0 };
 }
 
-export type CancelBookingOutcome =
+export type DesfechoDoCancelamento =
   "cancelled" | "not_found" | "already_cancelled" | "already_finished";
 
-export async function cancelBooking(
-  bookingId: string,
-  reason: string | null,
-): Promise<CancelBookingOutcome> {
-  const supabase = await createSupabaseServerClient();
+export async function cancelarReservaNoBanco(
+  reservaId: string,
+  motivo: string | null,
+): Promise<DesfechoDoCancelamento> {
+  const supabase = await criarClienteDoServidor();
 
   const { data, error } = await supabase.rpc("cancel_booking", {
-    p_booking_id: bookingId,
-    p_reason: reason ?? undefined,
+    p_booking_id: reservaId,
+    p_reason: motivo ?? undefined,
   });
 
   if (error) {
@@ -516,20 +525,20 @@ export async function cancelBooking(
     throw new Error("Não foi possível cancelar a reserva.");
   }
 
-  return data as CancelBookingOutcome;
+  return data as DesfechoDoCancelamento;
 }
 
-export type DeleteBookingOutcome = "deleted" | "not_found";
+export type DesfechoDaExclusao = "deleted" | "not_found";
 
-export async function deleteBooking(
-  bookingId: string,
-): Promise<DeleteBookingOutcome> {
-  const supabase = await createSupabaseServerClient();
+export async function excluirReservaNoBanco(
+  reservaId: string,
+): Promise<DesfechoDaExclusao> {
+  const supabase = await criarClienteDoServidor();
 
   const { data, error } = await supabase
     .from("bookings")
     .delete()
-    .eq("id", bookingId)
+    .eq("id", reservaId)
     .select("id");
 
   if (error) {

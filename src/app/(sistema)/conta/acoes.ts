@@ -3,15 +3,15 @@
 import { redirect } from "next/navigation";
 
 import {
-  createSupabaseServerClient,
-  supabaseAdmin,
-} from "@/lib/supabase/server";
+  criarClienteDoServidor,
+  clienteAdministrativo,
+} from "@/lib/supabase/servidor";
 
-export type ExclusaoDeContaState =
-  { status: "idle" } | { status: "error"; message: string };
+export type EstadoDaExclusaoDeConta =
+  { status: "inicial" } | { status: "erro"; message: string };
 
-export async function excluirConta(): Promise<ExclusaoDeContaState> {
-  const supabase = await createSupabaseServerClient();
+export async function excluirConta(): Promise<EstadoDaExclusaoDeConta> {
+  const supabase = await criarClienteDoServidor();
 
   const {
     data: { user },
@@ -23,12 +23,12 @@ export async function excluirConta(): Promise<ExclusaoDeContaState> {
 
   if (error) {
     return {
-      status: "error",
+      status: "erro",
       message: "Não foi possível remover a conta agora. Tente novamente.",
     };
   }
 
-  await supabaseAdmin.auth.admin.updateUserById(user.id, {
+  await clienteAdministrativo.auth.admin.updateUserById(user.id, {
     email: `removido-${user.id}@checkroom.invalid`,
     ban_duration: "876000h",
   });

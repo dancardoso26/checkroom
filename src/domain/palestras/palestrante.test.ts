@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import { mesmoNome, professorDoPalestrante } from "./palestrante";
 
 const PROFESSORES = [
-  { id: "1", name: "Daniel Cardoso Leão" },
-  { id: "2", name: "Carlos Eduardo Lima" },
+  { id: "1", nome: "Daniel Cardoso Leão" },
+  { id: "2", nome: "Carlos Eduardo Lima" },
 ];
 
 describe("professorDoPalestrante", () => {
@@ -30,8 +30,8 @@ describe("professorDoPalestrante", () => {
 
   it("não escolhe quando dois professores têm o mesmo nome", () => {
     const repetidos = [
-      { id: "1", name: "Ana Souza" },
-      { id: "2", name: "Ana Souza" },
+      { id: "1", nome: "Ana Souza" },
+      { id: "2", nome: "Ana Souza" },
     ];
     expect(professorDoPalestrante("Ana Souza", repetidos)).toBeNull();
   });

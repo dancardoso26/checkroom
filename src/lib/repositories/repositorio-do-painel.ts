@@ -2,8 +2,16 @@ import "server-only";
 
 import type { Prioridade, SituacaoDoChamado } from "@/domain/chamados/chamado";
 import type { Periodo } from "@/domain/painel/periodo";
-import type { ChamadoDoPainel, InscricaoDoPainel, PalestraDoPainel, ReservaDoPainel } from "@/domain/painel/tipos";
-import { createSupabaseServerClient, supabaseAdmin } from "@/lib/supabase/server";
+import type {
+  ChamadoDoPainel,
+  InscricaoDoPainel,
+  PalestraDoPainel,
+  ReservaDoPainel,
+} from "@/domain/painel/tipos";
+import {
+  criarClienteDoServidor,
+  clienteAdministrativo,
+} from "@/lib/supabase/servidor";
 
 export type EspacoDoPainel = { id: string; nome: string; predio: number };
 
@@ -29,9 +37,9 @@ export type DadosDoPainel = {
 };
 
 export async function carregarDadosDoPainel(
-  periodo: Periodo
+  periodo: Periodo,
 ): Promise<DadosDoPainel> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await criarClienteDoServidor();
   const de = periodo.inicio.toISOString();
   const ate = periodo.fim.toISOString();
 
@@ -55,17 +63,15 @@ export async function carregarDadosDoPainel(
     supabase
       .from("bookings")
       .select(
-        "room_id, starts_at, ends_at, status, professor_id, class_id, activity_type"
+        "room_id, starts_at, ends_at, status, professor_id, class_id, activity_type",
       )
       .gte("starts_at", de)
       .lt("starts_at", ate),
     supabase
       .from("tickets")
-      .select(
-        "room_id, status, priority, created_at, started_at, resolved_at"
-      )
+      .select("room_id, status, priority, created_at, started_at, resolved_at")
       .or(
-        `and(created_at.gte.${de},created_at.lt.${ate}),and(resolved_at.gte.${de},resolved_at.lt.${ate})`
+        `and(created_at.gte.${de},created_at.lt.${ate}),and(resolved_at.gte.${de},resolved_at.lt.${ate})`,
       ),
     supabase
       .from("tickets")
@@ -79,7 +85,7 @@ export async function carregarDadosDoPainel(
       .gte("starts_at", de)
       .lt("starts_at", ate)
       .order("starts_at"),
-    supabaseAdmin
+    clienteAdministrativo
       .from("lecture_enrollments")
       .select("enrolled_at, profiles(course_id)")
       .gte("enrolled_at", de)
@@ -110,7 +116,8 @@ export async function carregarDadosDoPainel(
     const { data, error } = await supabase.rpc("inscritos_por_palestra", {
       p_palestras: ids,
     });
-    if (error) throw new Error(`Falha ao contar os inscritos: ${error.message}`);
+    if (error)
+      throw new Error(`Falha ao contar os inscritos: ${error.message}`);
     for (const linha of data) inscritos.set(linha.lecture_id, linha.inscritos);
   }
 
@@ -160,7 +167,7 @@ export async function carregarDadosDoPainel(
     })),
     professores: new Map(professores.data!.map((p) => [p.id, p.name])),
     turmas: new Map(
-      turmas.data!.map((t) => [t.id, { nome: t.name, cursoId: t.course_id }])
+      turmas.data!.map((t) => [t.id, { nome: t.name, cursoId: t.course_id }]),
     ),
     cursos: new Map(cursos.data!.map((c) => [c.id, c.name])),
   };

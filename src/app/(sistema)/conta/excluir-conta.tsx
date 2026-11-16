@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { startTransition, useActionState, useState } from "react";
 
-import { excluirConta, type ExclusaoDeContaState } from "./acoes";
+import { excluirConta, type EstadoDaExclusaoDeConta } from "./acoes";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,15 +17,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const ESTADO_INICIAL: ExclusaoDeContaState = { status: "idle" };
+const ESTADO_INICIAL: EstadoDaExclusaoDeConta = { status: "inicial" };
 const CONFIRMACAO = "CANCELAR";
 
 export function ExcluirConta() {
   const [aberto, setAberto] = useState(false);
   const [digitado, setDigitado] = useState("");
-  const [state, formAction, removendo] = useActionState(
+  const [estado, acaoDoFormulario, removendo] = useActionState(
     excluirConta,
-    ESTADO_INICIAL
+    ESTADO_INICIAL,
   );
 
   return (
@@ -47,7 +47,7 @@ export function ExcluirConta() {
           onSubmit={(evento) => {
             evento.preventDefault();
             if (digitado === CONFIRMACAO && !removendo) {
-              startTransition(() => formAction());
+              startTransition(() => acaoDoFormulario());
             }
           }}
           className="space-y-4"
@@ -85,9 +85,9 @@ export function ExcluirConta() {
             />
           </div>
 
-          {state.status === "error" && (
+          {estado.status === "erro" && (
             <p className="text-destructive text-sm" role="alert">
-              {state.message}
+              {estado.message}
             </p>
           )}
         </form>

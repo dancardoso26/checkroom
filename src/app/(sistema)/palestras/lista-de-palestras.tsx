@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/table";
 import { vagasRestantes } from "@/domain/palestras/palestra";
 import { STATUS } from "@/domain/status/status";
-import { formatPeriod } from "@/lib/datetime";
+import { formatarPeriodo } from "@/lib/datas";
 import { RodapeDaTabela } from "@/components/paginacao";
 import { useOrdenacao } from "@/hooks/use-ordenacao";
 import { usePesquisa } from "@/hooks/use-pesquisa";
@@ -115,7 +115,7 @@ export function ListaDePalestras({
       palestra.titulo,
       palestra.palestrante,
       palestra.espaco,
-      formatPeriod(palestra.inicio, palestra.fim),
+      formatarPeriodo(palestra.inicio, palestra.fim),
       ...palestra.cursos,
     ],
     "Pesquisar palestras",
@@ -353,7 +353,7 @@ export function ListaDePalestras({
           professorFixo={null}
           permitePalestra
           somentePalestra
-          preenchimento={{ activityType: "lecture", date: hoje }}
+          preenchimento={{ tipoDeAtividade: "lecture", data: hoje }}
           onFechar={fecharCadastro}
           onConcluir={fecharCadastro}
           onRascunho={semRascunho}

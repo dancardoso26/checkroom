@@ -52,7 +52,7 @@ const aluno: Ator = {
 };
 
 describe("podeGerenciarReserva", () => {
-  const aulaDaAna = { createdBy: PERFIL_ANA, professorId: PROFESSOR_ANA };
+  const aulaDaAna = { criadaPor: PERFIL_ANA, professorId: PROFESSOR_ANA };
 
   it("permite ao professor gerenciar a própria reserva", () => {
     expect(podeGerenciarReserva(ana, aulaDaAna)).toBe(true);
@@ -68,7 +68,7 @@ describe("podeGerenciarReserva", () => {
 
   it("permite ao professor gerenciar a reserva que a administração registrou para ele", () => {
     const registradaPelaSecretaria = {
-      createdBy: PERFIL_ADMIN,
+      criadaPor: PERFIL_ADMIN,
       professorId: PROFESSOR_ANA,
     };
 
@@ -77,7 +77,7 @@ describe("podeGerenciarReserva", () => {
 
   it("permite a quem registrou, mesmo que a aula seja de outro", () => {
     const registradaPelaAna = {
-      createdBy: PERFIL_ANA,
+      criadaPor: PERFIL_ANA,
       professorId: PROFESSOR_CARLOS,
     };
 
@@ -85,7 +85,7 @@ describe("podeGerenciarReserva", () => {
   });
 
   it("não trata ausência de vínculo como vínculo em comum", () => {
-    const semDono = { createdBy: "outro-perfil", professorId: PROFESSOR_ANA };
+    const semDono = { criadaPor: "outro-perfil", professorId: PROFESSOR_ANA };
 
     expect(podeGerenciarReserva(aluno, semDono)).toBe(false);
   });

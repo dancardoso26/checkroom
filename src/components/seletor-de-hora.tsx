@@ -15,7 +15,7 @@ import {
   FECHAMENTO_EM_MINUTOS,
   PASSO_EM_MINUTOS,
   horaParaMinutos,
-} from "@/domain/booking/businessHours";
+} from "@/domain/reservas/expediente";
 
 type SeletorDeHoraProps = {
   id: string;
@@ -27,7 +27,7 @@ type SeletorDeHoraProps = {
 
 function horasDisponiveis(
   minimoEmMinutos: number,
-  maximoEmMinutos: number
+  maximoEmMinutos: number,
 ): string[] {
   const horas: string[] = [];
 
@@ -53,7 +53,7 @@ function horasDisponiveis(
 function minutosDisponiveis(
   hora: string | null,
   minimoEmMinutos: number,
-  maximoEmMinutos: number
+  maximoEmMinutos: number,
 ): string[] {
   if (hora === null) return [];
 
@@ -74,7 +74,7 @@ function minutosDisponiveis(
 
 export function SeletorDeHora({
   id,
-  value,
+  value: valor,
   onChange,
   minimo,
   maximo,
@@ -88,8 +88,8 @@ export function SeletorDeHora({
     ? horaParaMinutos(maximo)
     : FECHAMENTO_EM_MINUTOS;
 
-  const horaSelecionada = value ? value.slice(0, 2) : null;
-  const minutoSelecionado = value ? value.slice(3, 5) : null;
+  const horaSelecionada = valor ? valor.slice(0, 2) : null;
+  const minutoSelecionado = valor ? valor.slice(3, 5) : null;
 
   const horaEmFoco = horaParcial ?? horaSelecionada;
 
@@ -100,14 +100,14 @@ export function SeletorDeHora({
   const minutos = minutosDisponiveis(
     horaEmFoco,
     minimoEmMinutos,
-    maximoEmMinutos
+    maximoEmMinutos,
   );
 
   function escolherHora(hora: string) {
     const candidatos = minutosDisponiveis(
       hora,
       minimoEmMinutos,
-      maximoEmMinutos
+      maximoEmMinutos,
     );
 
     if (minutoSelecionado && candidatos.includes(minutoSelecionado)) {
@@ -145,10 +145,10 @@ export function SeletorDeHora({
           aria-expanded={aberto}
           className={cn(
             "w-full justify-between font-normal",
-            !value && "text-muted-foreground"
+            !valor && "text-muted-foreground",
           )}
         >
-          {value || "--:--"}
+          {valor || "--:--"}
           <Clock className="size-4 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -229,7 +229,7 @@ function Coluna({
                 "w-full rounded-sm px-2 py-1.5 text-center text-sm transition-colors",
                 ativa
                   ? "bg-primary text-primary-foreground"
-                  : "hover:bg-accent hover:text-accent-foreground"
+                  : "hover:bg-accent hover:text-accent-foreground",
               )}
             >
               {opcao}

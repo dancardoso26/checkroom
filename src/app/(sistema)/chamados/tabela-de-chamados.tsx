@@ -14,7 +14,7 @@ import {
 import { CabecalhoOrdenavel } from "@/components/cabecalho-ordenavel";
 import { ConfirmarExclusao } from "@/components/formulario";
 import { RodapeDaTabela } from "@/components/paginacao";
-import { StatusBadge } from "@/components/status-badge";
+import { SeloDeSituacao } from "@/components/selo-de-situacao";
 import {
   Table,
   TableBody,
@@ -28,7 +28,7 @@ import {
   STATUS_DA_PRIORIDADE,
   STATUS_DA_SITUACAO,
 } from "@/domain/chamados/chamado";
-import { formatDateTime } from "@/lib/datetime";
+import { formatarDataEHora } from "@/lib/datas";
 import { useOrdenacao } from "@/hooks/use-ordenacao";
 import { executarEmLote, usePaginacao, useSelecao } from "@/hooks/use-tabela";
 
@@ -240,16 +240,18 @@ export function TabelaDeChamados({
                   {chamado.descricao}
                 </TableCell>
                 <TableCell className="whitespace-nowrap">
-                  {formatDateTime(chamado.abertoEm)}
+                  {formatarDataEHora(chamado.abertoEm)}
                 </TableCell>
                 <TableCell className="font-medium whitespace-nowrap">
                   {chamado.espaco}
                 </TableCell>
                 <TableCell>
-                  <StatusBadge status={STATUS_DA_SITUACAO[chamado.situacao]} />
+                  <SeloDeSituacao
+                    status={STATUS_DA_SITUACAO[chamado.situacao]}
+                  />
                 </TableCell>
                 <TableCell>
-                  <StatusBadge
+                  <SeloDeSituacao
                     status={STATUS_DA_PRIORIDADE[chamado.prioridade]}
                   />
                 </TableCell>

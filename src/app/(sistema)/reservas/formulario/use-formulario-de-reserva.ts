@@ -9,25 +9,25 @@ import {
   useTransition,
 } from "react";
 
-import type { ActivityType } from "@/domain/booking/types";
+import type { TipoDeAtividade } from "@/domain/reservas/tipos";
 import { ESTADO_INICIAL as PALESTRA_OCIOSA } from "@/lib/formulario";
 
 import { cadastrarPalestra } from "../../palestras/acoes";
-import { criarReserva, type BookingFormState } from "../acoes/criar";
+import { criarReserva, type EstadoDoFormularioDeReserva } from "../acoes/criar";
 import {
   analisarPalestra,
   analisarReserva,
-  type AnaliseResult,
+  type ResultadoDaAnalise,
 } from "./analise";
 import { CAMPOS_VAZIOS, ehPeriodoValido, type CamposDaReserva } from "./campos";
 
-const ESTADO_INICIAL: BookingFormState = { status: "idle" };
+const ESTADO_INICIAL: EstadoDoFormularioDeReserva = { status: "inicial" };
 
 export type Preenchimento = {
-  date?: string;
-  startTime?: string;
-  endTime?: string;
-  activityType?: ActivityType;
+  data?: string;
+  horaDeInicio?: string;
+  horaDeTermino?: string;
+  tipoDeAtividade?: TipoDeAtividade;
 };
 
 export type CamposDaPalestra = {
@@ -36,7 +36,7 @@ export type CamposDaPalestra = {
   cursoIds: string[];
 };
 
-export type Conclusao = { bookingId: string | null };
+export type Conclusao = { reservaId: string | null };
 
 function vagasValidas(vagas: string): number | null {
   const numero = Number(vagas);
@@ -49,9 +49,9 @@ export function useFormularioDeReserva({
   hoje,
   professorFixo,
   preenchimento,
-  rooms,
+  espacos: rooms,
 }: {
-  rooms: { id: string; capacity: number }[];
+  espacos: { id: string; capacidade: number }[];
   hoje: string;
   professorFixo: string | null;
   preenchimento: Preenchimento;
@@ -59,7 +59,7 @@ export function useFormularioDeReserva({
   const [campos, setCampos] = useState<CamposDaReserva>(() => ({
     ...CAMPOS_VAZIOS(hoje),
     ...Object.fromEntries(
-      Object.entries(preenchimento).filter(([, valor]) => valor !== undefined)
+      Object.entries(preenchimento).filter(([, valor]) => valor !== undefined),
     ),
     professorId: professorFixo ?? "",
   }));
@@ -71,19 +71,19 @@ export function useFormularioDeReserva({
   });
 
   const [recursos, setRecursos] = useState<string[]>([]);
-  const [analise, setAnalise] = useState<AnaliseResult | null>(null);
+  const [analise, setAnalise] = useState<ResultadoDaAnalise | null>(null);
   const [analisando, iniciarAnalise] = useTransition();
 
   const [estadoDaReserva, acaoDaReserva, reservando] = useActionState(
     criarReserva,
-    ESTADO_INICIAL
+    ESTADO_INICIAL,
   );
   const [estadoDaPalestra, acaoDaPalestra, cadastrando] = useActionState(
     cadastrarPalestra,
-    PALESTRA_OCIOSA
+    PALESTRA_OCIOSA,
   );
 
-  const ehPalestra = campos.activityType === "lecture";
+  const ehPalestra = campos.tipoDeAtividade === "lecture";
   const vagas = vagasValidas(palestra.vagas);
 
   function alterar(campo: keyof CamposDaReserva, valor: string) {
@@ -92,23 +92,25 @@ export function useFormularioDeReserva({
 
   function alterarPalestra<C extends keyof CamposDaPalestra>(
     campo: C,
-    valor: CamposDaPalestra[C]
+    valor: CamposDaPalestra[C],
   ) {
     setPalestra((atuais) => ({ ...atuais, [campo]: valor }));
   }
 
   function alternarRecurso(id: string, marcado: boolean) {
     setRecursos((atuais) =>
-      marcado ? [...atuais, id] : atuais.filter((r) => r !== id)
+      marcado ? [...atuais, id] : atuais.filter((r) => r !== id),
     );
   }
 
   const periodoPreenchido =
-    campos.date !== "" && campos.startTime !== "" && campos.endTime !== "";
+    campos.data !== "" &&
+    campos.horaDeInicio !== "" &&
+    campos.horaDeTermino !== "";
 
   const dadosParaAnalise = ehPalestra
     ? periodoPreenchido
-    : campos.professorId !== "" && campos.classId !== "" && periodoPreenchido;
+    : campos.professorId !== "" && campos.turmaId !== "" && periodoPreenchido;
 
   useEffect(() => {
     if (!dadosParaAnalise) return;
@@ -118,21 +120,21 @@ export function useFormularioDeReserva({
     iniciarAnalise(async () => {
       const resultado = ehPalestra
         ? await analisarPalestra({
-            date: campos.date,
-            startTime: campos.startTime,
-            endTime: campos.endTime,
+            data: campos.data,
+            horaDeInicio: campos.horaDeInicio,
+            horaDeTermino: campos.horaDeTermino,
             vagas: 1,
-            resourceIds: recursos,
+            recursoIds: recursos,
           })
         : await analisarReserva({
             professorId: campos.professorId,
-            classId: campos.classId,
-            date: campos.date,
-            startTime: campos.startTime,
-            endTime: campos.endTime,
-            activityType: campos.activityType,
-            subjectId: campos.subjectId,
-            resourceIds: recursos,
+            turmaId: campos.turmaId,
+            data: campos.data,
+            horaDeInicio: campos.horaDeInicio,
+            horaDeTermino: campos.horaDeTermino,
+            tipoDeAtividade: campos.tipoDeAtividade,
+            disciplinaId: campos.disciplinaId,
+            recursoIds: recursos,
           });
 
       if (atual) setAnalise(resultado);
@@ -145,48 +147,48 @@ export function useFormularioDeReserva({
     dadosParaAnalise,
     ehPalestra,
     campos.professorId,
-    campos.classId,
-    campos.subjectId,
-    campos.activityType,
-    campos.date,
-    campos.startTime,
-    campos.endTime,
+    campos.turmaId,
+    campos.disciplinaId,
+    campos.tipoDeAtividade,
+    campos.data,
+    campos.horaDeInicio,
+    campos.horaDeTermino,
     recursos,
   ]);
 
   const analiseAtual = dadosParaAnalise ? analise : null;
 
-  const roomIdValido =
-    campos.roomId !== "" &&
+  const espacoIdValido =
+    campos.espacoId !== "" &&
     analiseAtual?.status === "ok" &&
-    analiseAtual.rooms.find((r) => r.roomId === campos.roomId)?.compatible
-      ? campos.roomId
+    analiseAtual.espacos.find((r) => r.espacoId === campos.espacoId)?.compativel
+      ? campos.espacoId
       : "";
 
   const atividadeCompleta = ehPalestra
-    ? campos.purpose.trim() !== "" &&
+    ? campos.finalidade.trim() !== "" &&
       palestra.palestrante.trim() !== "" &&
       palestra.cursoIds.length > 0 &&
       vagas !== null
     : campos.professorId !== "" &&
-      campos.classId !== "" &&
-      campos.purpose.trim() !== "" &&
-      (campos.activityType !== "class" || campos.subjectId !== "");
+      campos.turmaId !== "" &&
+      campos.finalidade.trim() !== "" &&
+      (campos.tipoDeAtividade !== "class" || campos.disciplinaId !== "");
 
   const agendaLivre =
     !analisando &&
     analiseAtual?.status === "ok" &&
-    analiseAtual.scheduleMessages.length === 0;
+    analiseAtual.mensagensDeHorario.length === 0;
 
   const prontoParaEspacos =
     atividadeCompleta && ehPeriodoValido(campos) && agendaLivre;
 
   const capacidadeDoEspaco =
-    rooms.find((r) => r.id === roomIdValido)?.capacity ?? null;
+    rooms.find((r) => r.id === espacoIdValido)?.capacidade ?? null;
 
   const prontoParaConfirmar =
     prontoParaEspacos &&
-    roomIdValido !== "" &&
+    espacoIdValido !== "" &&
     (!ehPalestra ||
       (vagas !== null &&
         capacidadeDoEspaco !== null &&
@@ -195,31 +197,31 @@ export function useFormularioDeReserva({
   const formulario = useRef<HTMLFormElement>(null);
 
   const motivosDaRecusa = ehPalestra
-    ? estadoDaPalestra.status === "error"
+    ? estadoDaPalestra.status === "erro"
       ? [
           ...(estadoDaPalestra.mensagem ? [estadoDaPalestra.mensagem] : []),
           ...Object.values(estadoDaPalestra.erros).flat(),
         ]
       : []
-    : estadoDaReserva.status === "error"
+    : estadoDaReserva.status === "erro"
       ? [
-          ...estadoDaReserva.messages,
-          ...Object.values(estadoDaReserva.fieldErrors).flat(),
+          ...estadoDaReserva.mensagens,
+          ...Object.values(estadoDaReserva.errosPorCampo).flat(),
         ]
       : [];
 
   const conclusao: Conclusao | null =
-    estadoDaReserva.status === "success"
-      ? { bookingId: estadoDaReserva.bookingId }
-      : estadoDaPalestra.status === "success"
-        ? { bookingId: null }
+    estadoDaReserva.status === "sucesso"
+      ? { reservaId: estadoDaReserva.reservaId }
+      : estadoDaPalestra.status === "sucesso"
+        ? { reservaId: null }
         : null;
 
   function enviar(evento: React.FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     const dados = new FormData(evento.currentTarget);
     startTransition(() =>
-      ehPalestra ? acaoDaPalestra(dados) : acaoDaReserva(dados)
+      ehPalestra ? acaoDaPalestra(dados) : acaoDaReserva(dados),
     );
   }
 
@@ -233,7 +235,7 @@ export function useFormularioDeReserva({
     alternarRecurso,
     analise: analiseAtual,
     analisando,
-    roomIdValido,
+    espacoIdValido,
     atividadeCompleta,
     prontoParaEspacos,
     prontoParaConfirmar,

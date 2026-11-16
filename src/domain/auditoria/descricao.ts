@@ -1,12 +1,12 @@
 import { ROTULO_DO_PAPEL, type Papel } from "@/domain/auth/permissoes";
-import { formatDate, formatTime } from "@/lib/datetime";
+import { formatarData, formatarHora } from "@/lib/datas";
 
 export type EventoDeAuditoria = {
-  action: string;
-  entity: string;
-  entityId?: string | null;
-  beforeState: unknown;
-  afterState: unknown;
+  acao: string;
+  entidade: string;
+  entidadeId?: string | null;
+  estadoAnterior: unknown;
+  estadoPosterior: unknown;
 };
 
 export type Catalogo = {
@@ -56,20 +56,24 @@ function rotulo(estado: unknown): string {
 function periodo(inicio: string | null, fim: string | null): string | null {
   if (!inicio || !fim) return null;
   const [de, ate] = [new Date(inicio), new Date(fim)];
-  return `${formatDate(de)}, ${formatTime(de)} às ${formatTime(ate)}`;
+  return `${formatarData(de)}, ${formatarHora(de)} às ${formatarHora(ate)}`;
 }
 
 function descreverReserva(
   evento: EventoDeAuditoria,
-  catalogo: Catalogo
+  catalogo: Catalogo,
 ): Descricao {
-  const { action, beforeState, afterState } = evento;
+  const {
+    acao: action,
+    estadoAnterior: beforeState,
+    estadoPosterior: afterState,
+  } = evento;
   const estado = afterState ?? beforeState;
 
   const finalidade = campo(estado, "purpose") ?? "sem finalidade";
   const espaco = catalogo.espacos.get(campo(estado, "room_id") ?? "");
   const professor = catalogo.professores.get(
-    campo(estado, "professor_id") ?? ""
+    campo(estado, "professor_id") ?? "",
   );
   const quando = periodo(campo(estado, "starts_at"), campo(estado, "ends_at"));
 
@@ -99,10 +103,10 @@ function descreverReserva(
 
 function descreverEventoDeConta(
   evento: EventoDeAuditoria,
-  catalogo: Catalogo
+  catalogo: Catalogo,
 ): Descricao {
-  const acao = ACAO_DE_AUTENTICACAO[evento.action] ?? evento.action;
-  const estado = evento.afterState;
+  const acao = ACAO_DE_AUTENTICACAO[evento.acao] ?? evento.acao;
+  const estado = evento.estadoPosterior;
 
   const email = campo(estado, "email");
   const alvo = catalogo.contas.get(campo(estado, "alvo") ?? "");
@@ -121,12 +125,12 @@ function descreverEventoDeConta(
     user_reactivated: `Reativou o usuário ${alvo ?? "removido"}`,
     user_invited: `Convidou ${email ?? "um usuário"} como ${rotulo(estado)}`,
     user_role_changed:
-      rotulo(evento.beforeState) === rotulo(estado)
+      rotulo(evento.estadoAnterior) === rotulo(estado)
         ? `Alterou o curso de ${alvo ?? "um usuário"}`
-        : `Mudou ${alvo ?? "um usuário"} de ${rotulo(evento.beforeState)} para ${rotulo(estado)}`,
+        : `Mudou ${alvo ?? "um usuário"} de ${rotulo(evento.estadoAnterior)} para ${rotulo(estado)}`,
   };
 
-  return { acao, detalhe: detalhes[evento.action] ?? evento.action };
+  return { acao, detalhe: detalhes[evento.acao] ?? evento.acao };
 }
 
 const VERBO: Record<string, string> = {
@@ -148,9 +152,14 @@ function resumir(texto: string | null, limite = 80): string {
 
 function descreverCadastro(
   evento: EventoDeAuditoria,
-  catalogo: Catalogo
+  catalogo: Catalogo,
 ): Descricao | null {
-  const { action, entity, beforeState, afterState } = evento;
+  const {
+    acao: action,
+    entidade: entity,
+    estadoAnterior: beforeState,
+    estadoPosterior: afterState,
+  } = evento;
   const estado = afterState ?? beforeState;
   const nome = campo(estado, "name");
   const acao = VERBO[action] ?? action;
@@ -160,14 +169,21 @@ function descreverCadastro(
       if (action === "room_resources_changed") {
         const nomes = (lista: unknown) =>
           Array.isArray(lista) && lista.length > 0
-            ? lista.map((id) => catalogo.recursos?.get(String(id)) ?? "recurso removido").join(", ")
+            ? lista
+                .map(
+                  (id) =>
+                    catalogo.recursos?.get(String(id)) ?? "recurso removido",
+                )
+                .join(", ")
             : "nenhum";
-        const antes = (beforeState as { resource_ids?: unknown } | null)?.resource_ids;
-        const depois = (afterState as { resource_ids?: unknown } | null)?.resource_ids;
+        const antes = (beforeState as { resource_ids?: unknown } | null)
+          ?.resource_ids;
+        const depois = (afterState as { resource_ids?: unknown } | null)
+          ?.resource_ids;
 
         return {
           acao: "Alterou recursos",
-          detalhe: `Recursos de ${catalogo.espacos.get(evento.entityId ?? "") ?? "um espaço"}: de ${nomes(antes)} para ${nomes(depois)}`,
+          detalhe: `Recursos de ${catalogo.espacos.get(evento.entidadeId ?? "") ?? "um espaço"}: de ${nomes(antes)} para ${nomes(depois)}`,
         };
       }
       return { acao, detalhe: `Espaço ${nome ?? ""}` };
@@ -179,8 +195,12 @@ function descreverCadastro(
     case "subjects":
       return { acao, detalhe: `Disciplina ${nome ?? ""}` };
     case "classes": {
-      const alunos = (estado as { student_count?: number } | null)?.student_count;
-      return { acao, detalhe: `Turma ${nome ?? ""}${alunos ? `, ${alunos} alunos` : ""}` };
+      const alunos = (estado as { student_count?: number } | null)
+        ?.student_count;
+      return {
+        acao,
+        detalhe: `Turma ${nome ?? ""}${alunos ? `, ${alunos} alunos` : ""}`,
+      };
     }
     case "professors":
       return { acao, detalhe: `Professor ${nome ?? "removido"}` };
@@ -198,7 +218,8 @@ function descreverCadastro(
     }
     case "teaching_assignments": {
       const partes = [
-        catalogo.professores.get(campo(estado, "professor_id") ?? "") ?? "professor removido",
+        catalogo.professores.get(campo(estado, "professor_id") ?? "") ??
+          "professor removido",
         catalogo.disciplinas?.get(campo(estado, "subject_id") ?? ""),
         catalogo.turmas?.get(campo(estado, "class_id") ?? ""),
         campo(estado, "term") && `período ${campo(estado, "term")}`,
@@ -210,10 +231,18 @@ function descreverCadastro(
   }
 }
 
-function descreverChamado(evento: EventoDeAuditoria, catalogo: Catalogo): Descricao {
-  const { action, beforeState, afterState } = evento;
+function descreverChamado(
+  evento: EventoDeAuditoria,
+  catalogo: Catalogo,
+): Descricao {
+  const {
+    acao: action,
+    estadoAnterior: beforeState,
+    estadoPosterior: afterState,
+  } = evento;
   const estado = afterState ?? beforeState;
-  const espaco = catalogo.espacos.get(campo(estado, "room_id") ?? "") ?? "espaço removido";
+  const espaco =
+    catalogo.espacos.get(campo(estado, "room_id") ?? "") ?? "espaço removido";
   const problema = resumir(campo(estado, "description"));
   const antes = campo(beforeState, "status");
   const depois = campo(afterState, "status");
@@ -227,22 +256,40 @@ function descreverChamado(evento: EventoDeAuditoria, catalogo: Catalogo): Descri
 
   if (action === "update" && antes !== depois) {
     const acao =
-      { in_progress: "Assumiu chamado", resolved: "Resolveu chamado", cancelled: "Cancelou chamado" }[
-        depois ?? ""
-      ] ?? "Alterou chamado";
-    const nota = depois === "resolved" ? `. Solução: ${resumir(campo(afterState, "resolution_note"))}` : "";
+      {
+        in_progress: "Assumiu chamado",
+        resolved: "Resolveu chamado",
+        cancelled: "Cancelou chamado",
+      }[depois ?? ""] ?? "Alterou chamado";
+    const nota =
+      depois === "resolved"
+        ? `. Solução: ${resumir(campo(afterState, "resolution_note"))}`
+        : "";
     return { acao, detalhe: `Chamado em ${espaco}: ${problema}${nota}` };
   }
 
-  return { acao: VERBO[action] ?? action, detalhe: `Chamado em ${espaco}: ${problema}` };
+  return {
+    acao: VERBO[action] ?? action,
+    detalhe: `Chamado em ${espaco}: ${problema}`,
+  };
 }
 
-function descreverPalestra(evento: EventoDeAuditoria, catalogo: Catalogo): Descricao {
-  const { action, entity, beforeState, afterState } = evento;
+function descreverPalestra(
+  evento: EventoDeAuditoria,
+  catalogo: Catalogo,
+): Descricao {
+  const {
+    acao: action,
+    entidade: entity,
+    estadoAnterior: beforeState,
+    estadoPosterior: afterState,
+  } = evento;
   const estado = afterState ?? beforeState;
 
   if (entity === "lecture_enrollments") {
-    const titulo = catalogo.palestras?.get(campo(estado, "lecture_id") ?? "") ?? "palestra excluída";
+    const titulo =
+      catalogo.palestras?.get(campo(estado, "lecture_id") ?? "") ??
+      "palestra excluída";
     return {
       acao: action === "delete" ? "Cancelou inscrição" : "Inscreveu-se",
       detalhe: `Inscrição na palestra "${titulo}"`,
@@ -255,14 +302,17 @@ function descreverPalestra(evento: EventoDeAuditoria, catalogo: Catalogo): Descr
     periodo(campo(estado, "starts_at"), campo(estado, "ends_at")),
   ].filter(Boolean);
 
-  return { acao: VERBO[action] ?? action, detalhe: `Palestra ${partes.join(", ")}` };
+  return {
+    acao: VERBO[action] ?? action,
+    detalhe: `Palestra ${partes.join(", ")}`,
+  };
 }
 
 export function descreverEvento(
   evento: EventoDeAuditoria,
-  catalogo: Catalogo
+  catalogo: Catalogo,
 ): Descricao {
-  switch (evento.entity) {
+  switch (evento.entidade) {
     case "bookings":
       return descreverReserva(evento, catalogo);
     case "tickets":
@@ -271,6 +321,9 @@ export function descreverEvento(
     case "lecture_enrollments":
       return descreverPalestra(evento, catalogo);
     default:
-      return descreverCadastro(evento, catalogo) ?? descreverEventoDeConta(evento, catalogo);
+      return (
+        descreverCadastro(evento, catalogo) ??
+        descreverEventoDeConta(evento, catalogo)
+      );
   }
 }

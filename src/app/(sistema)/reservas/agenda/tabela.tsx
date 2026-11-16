@@ -25,7 +25,7 @@ import { ConfirmarExclusao } from "@/components/formulario";
 import { useSelecao } from "@/hooks/use-tabela";
 
 import { Paginacao as PaginacaoDaTabela } from "@/components/paginacao";
-import { StatusBadge } from "@/components/status-badge";
+import { SeloDeSituacao } from "@/components/selo-de-situacao";
 import {
   Table,
   TableBody,
@@ -35,9 +35,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { statusDaReserva } from "@/domain/status/status";
-import { formatDate, formatTimeRange } from "@/lib/datetime";
-import type { BookingListItem } from "@/lib/repositories/repositorio-de-reservas";
-import type { EstadoDaTabela, Ordenacao, Paginacao } from "@/domain/tabela/tabela";
+import { formatarData, formatarIntervaloDeHoras } from "@/lib/datas";
+import type { ReservaDaLista } from "@/lib/repositories/repositorio-de-reservas";
+import type {
+  EstadoDaTabela,
+  Ordenacao,
+  Paginacao,
+} from "@/domain/tabela/tabela";
 import { cn } from "@/lib/utils";
 
 import { AcoesDaReserva } from "./acoes-da-reserva";
@@ -101,7 +105,7 @@ export function Tabela({
   onOrdenar,
   selecionavel,
 }: {
-  reservas: BookingListItem[];
+  reservas: ReservaDaLista[];
   paginacao: Paginacao;
   ordenacao: EstadoDaTabela;
   agora: Date;
@@ -119,7 +123,7 @@ export function Tabela({
     gerenciaveis.map((r) => r.id),
   );
   const marcadas = gerenciaveis.filter((r) => selecao.estaMarcado(r.id));
-  const aCancelar = marcadas.filter((r) => !r.cancelled);
+  const aCancelar = marcadas.filter((r) => !r.cancelada);
   const [emLote, setEmLote] = useState<"cancelar" | "excluir" | null>(null);
 
   return (
@@ -210,7 +214,10 @@ export function Tabela({
         <TableBody>
           {reservas.length === 0 && (
             <TableRow>
-              <TableCell colSpan={selecionavel ? 9 : 7} className="py-10 text-center">
+              <TableCell
+                colSpan={selecionavel ? 9 : 7}
+                className="py-10 text-center"
+              >
                 <p className="font-medium">
                   {pesquisando
                     ? "Nenhuma reserva corresponde à pesquisa"
@@ -230,7 +237,7 @@ export function Tabela({
               key={reserva.id}
               data-reserva={reserva.id}
               className={cn(
-                reserva.cancelled && "text-muted-foreground",
+                reserva.cancelada && "text-muted-foreground",
                 destaque === reserva.id && "bg-primary-subtle",
               )}
             >
@@ -238,7 +245,7 @@ export function Tabela({
                 <CelulaDaSelecao
                   selecao={selecao}
                   id={reserva.id}
-                  descricao={`${reserva.purpose}, ${reserva.roomName}`}
+                  descricao={`${reserva.finalidade}, ${reserva.nomeDoEspaco}`}
                   desabilitada={!reserva.gerenciavel}
                 />
               )}
@@ -246,14 +253,14 @@ export function Tabela({
                 <p
                   className={cn(
                     "font-medium",
-                    reserva.cancelled && "line-through",
+                    reserva.cancelada && "line-through",
                   )}
                 >
-                  {reserva.purpose}
+                  {reserva.finalidade}
                 </p>
-                {reserva.subjectName && (
+                {reserva.nomeDaDisciplina && (
                   <p className="text-muted-foreground text-xs">
-                    {reserva.subjectName}
+                    {reserva.nomeDaDisciplina}
                   </p>
                 )}
               </TableCell>
@@ -263,31 +270,31 @@ export function Tabela({
                     aria-hidden
                     className={cn(
                       "size-2.5 shrink-0 rounded-full",
-                      PONTO_DA_ATIVIDADE[reserva.activityType],
+                      PONTO_DA_ATIVIDADE[reserva.tipoDeAtividade],
                     )}
                   />
-                  {ROTULO_DA_ATIVIDADE[reserva.activityType]}
+                  {ROTULO_DA_ATIVIDADE[reserva.tipoDeAtividade]}
                 </span>
               </TableCell>
               <TableCell className="whitespace-nowrap">
-                {formatDate(reserva.startsAt)},{" "}
-                {formatTimeRange(reserva.startsAt, reserva.endsAt)}
+                {formatarData(reserva.inicio)},{" "}
+                {formatarIntervaloDeHoras(reserva.inicio, reserva.fim)}
               </TableCell>
               <TableCell className="whitespace-nowrap">
-                {reserva.roomName}
+                {reserva.nomeDoEspaco}
               </TableCell>
-              <TableCell>{reserva.professorName}</TableCell>
-              <TableCell>{reserva.className}</TableCell>
+              <TableCell>{reserva.nomeDoProfessor}</TableCell>
+              <TableCell>{reserva.nomeDaTurma}</TableCell>
               <TableCell>
-                <StatusBadge status={statusDaReserva(reserva, agora)} />
+                <SeloDeSituacao status={statusDaReserva(reserva, agora)} />
               </TableCell>
               {selecionavel && (
                 <TableCell>
                   {reserva.gerenciavel && (
                     <AcoesDaReserva
-                      bookingId={reserva.id}
-                      descricao={`${reserva.purpose}, ${reserva.roomName}`}
-                      cancelada={reserva.cancelled}
+                      reservaId={reserva.id}
+                      descricao={`${reserva.finalidade}, ${reserva.nomeDoEspaco}`}
+                      cancelada={reserva.cancelada}
                     />
                   )}
                 </TableCell>
@@ -318,7 +325,7 @@ export function Tabela({
         <ConfirmarExclusao
           titulo={`Excluir ${marcadas.length} ${marcadas.length === 1 ? "reserva" : "reservas"} permanentemente?`}
           descricao={marcadas
-            .map((r) => `${r.purpose}, ${r.roomName}`)
+            .map((r) => `${r.finalidade}, ${r.nomeDoEspaco}`)
             .join("; ")}
           aviso="A exclusão não pode ser desfeita. Para manter o histórico, prefira cancelar."
           acao={() => excluirReservasEmLote(marcadas)}

@@ -140,7 +140,7 @@ recusa cancelar o que já terminou.
 
 1. **Zod**, na Server Action. Verificação de _forma_: o campo veio, tem o
    formato certo. Recusa entrada inválida antes de qualquer consulta.
-2. **`validateBooking`**, no domínio. Verificação de _regra_: a reserva é
+2. **`validarReserva`**, no domínio. Verificação de _regra_: a reserva é
    possível. É uma função pura, sem banco e sem relógio.
 3. **Constraints de exclusão do PostgreSQL**. Garantia de _integridade_. É a
    única camada que sobrevive a duas requisições simultâneas, porque é avaliada
@@ -299,7 +299,7 @@ CHECKROOM_PORT=3002 npm run test:e2e
 
 ```
 src/
-  domain/booking/          a regra da reserva, sem I/O e sem framework
+  domain/reservas/          a regra da reserva, sem I/O e sem framework
   domain/chamados/         a máquina de estados do chamado
   domain/palestras/        cadastro e inscrição em palestras
   domain/calendario/       períodos letivos e bloqueios
@@ -325,7 +325,7 @@ tests/e2e/            navegador e banco reais
 Para achar a regra, a tela e o teste de um requisito (RF08, RN09...), use a
 tabela em [docs/rastreabilidade.md](docs/rastreabilidade.md).
 
-A separação entre `domain` e o restante é o ponto central. `validateBooking` não
+A separação entre `domain` e o restante é o ponto central. `validarReserva` não
 importa o Supabase, não lê o relógio e não conhece HTTP: recebe o pedido e um
 contexto já carregado. É isso que permite testá-la sem infraestrutura e
 reaproveitá-la sem duplicação em uma futura API pública.

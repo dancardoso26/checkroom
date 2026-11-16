@@ -4,7 +4,10 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { podeGerenciarCadastros } from "@/domain/auth/permissoes";
-import { validarBloqueio, validarPeriodo } from "@/domain/calendario/calendario";
+import {
+  validarBloqueio,
+  validarPeriodo,
+} from "@/domain/calendario/calendario";
 import { semErros } from "@/domain/formulario/validacao";
 import {
   falha,
@@ -35,24 +38,29 @@ async function autorizado(): Promise<boolean> {
 
 export async function salvarPeriodo(
   _estado: EstadoDoFormulario,
-  formData: FormData
+  dadosDoFormulario: FormData,
 ): Promise<EstadoDoFormulario> {
   if (!(await autorizado())) return falha(SEM_PERMISSAO);
 
-  const parsed = z
-    .object({ id, codigo: z.string().trim(), inicio: z.string(), fim: z.string() })
+  const validado = z
+    .object({
+      id,
+      codigo: z.string().trim(),
+      inicio: z.string(),
+      fim: z.string(),
+    })
     .safeParse({
-      id: texto(formData.get("id")),
-      codigo: texto(formData.get("codigo")),
-      inicio: texto(formData.get("inicio")),
-      fim: texto(formData.get("fim")),
+      id: texto(dadosDoFormulario.get("id")),
+      codigo: texto(dadosDoFormulario.get("codigo")),
+      inicio: texto(dadosDoFormulario.get("inicio")),
+      fim: texto(dadosDoFormulario.get("fim")),
     });
-  if (!parsed.success) return falhaDeValidacao(parsed.error);
+  if (!validado.success) return falhaDeValidacao(validado.error);
 
-  const erros = validarPeriodo(parsed.data, await listarPeriodos());
+  const erros = validarPeriodo(validado.data, await listarPeriodos());
   if (!semErros(erros)) return falha(null, erros);
 
-  const resultado = await salvarPeriodoNoBanco(parsed.data);
+  const resultado = await salvarPeriodoNoBanco(validado.data);
 
   if (!resultado.ok) {
     if (resultado.falha === "duplicado") {
@@ -70,11 +78,11 @@ export async function salvarPeriodo(
 
 export async function salvarBloqueio(
   _estado: EstadoDoFormulario,
-  formData: FormData
+  dadosDoFormulario: FormData,
 ): Promise<EstadoDoFormulario> {
   if (!(await autorizado())) return falha(SEM_PERMISSAO);
 
-  const parsed = z
+  const validado = z
     .object({
       id,
       inicio: z.string(),
@@ -85,41 +93,48 @@ export async function salvarBloqueio(
       motivo: z.string(),
     })
     .safeParse({
-      id: texto(formData.get("id")),
-      inicio: texto(formData.get("inicio")),
-      fim: texto(formData.get("fim")),
-      espacoId: texto(formData.get("espacoId")),
-      motivo: texto(formData.get("motivo")),
+      id: texto(dadosDoFormulario.get("id")),
+      inicio: texto(dadosDoFormulario.get("inicio")),
+      fim: texto(dadosDoFormulario.get("fim")),
+      espacoId: texto(dadosDoFormulario.get("espacoId")),
+      motivo: texto(dadosDoFormulario.get("motivo")),
     });
-  if (!parsed.success) return falhaDeValidacao(parsed.error);
+  if (!validado.success) return falhaDeValidacao(validado.error);
 
-  const erros = validarBloqueio(parsed.data);
+  const erros = validarBloqueio(validado.data);
   if (!semErros(erros)) return falha(null, erros);
 
-  const resultado = await salvarBloqueioNoBanco(parsed.data);
+  const resultado = await salvarBloqueioNoBanco(validado.data);
   if (!resultado.ok) return falha("Não foi possível salvar o bloqueio agora.");
 
   revalidatePath("/configuracoes/calendario");
   return SUCESSO;
 }
 
-export async function excluirPeriodo(registroId: string): Promise<ResultadoDaAcao> {
+export async function excluirPeriodo(
+  registroId: string,
+): Promise<ResultadoDaAcao> {
   return excluir("academic_terms", registroId);
 }
 
-export async function excluirBloqueio(registroId: string): Promise<ResultadoDaAcao> {
+export async function excluirBloqueio(
+  registroId: string,
+): Promise<ResultadoDaAcao> {
   return excluir("calendar_blocks", registroId);
 }
 
 async function excluir(
   tabela: "academic_terms" | "calendar_blocks",
-  registroId: string
+  registroId: string,
 ): Promise<ResultadoDaAcao> {
   if (!(await autorizado())) return { ok: false, mensagem: SEM_PERMISSAO };
 
   const resultado = await excluirDoCalendario(tabela, registroId);
   if (!resultado.ok) {
-    return { ok: false, mensagem: "Não foi possível excluir agora. Atualize a página." };
+    return {
+      ok: false,
+      mensagem: "Não foi possível excluir agora. Atualize a página.",
+    };
   }
 
   revalidatePath("/configuracoes/calendario");

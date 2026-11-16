@@ -42,24 +42,24 @@ const schema = z.object({
 
 export async function salvarEspaco(
   _estado: EstadoDoFormulario,
-  formData: FormData
+  dadosDoFormulario: FormData,
 ): Promise<EstadoDoFormulario> {
   const sessao = await sessaoAtual();
   if (!sessao || !podeGerenciarCadastros(sessao)) return falha(SEM_PERMISSAO);
 
-  const parsed = schema.safeParse({
-    id: texto(formData.get("id")),
-    predio: texto(formData.get("predio")),
-    andar: texto(formData.get("andar")),
-    sala: texto(formData.get("sala")),
-    capacidade: texto(formData.get("capacidade")),
-    tipo: texto(formData.get("tipo")),
-    recursoIds: formData.getAll("recursoIds").map(texto),
+  const validado = schema.safeParse({
+    id: texto(dadosDoFormulario.get("id")),
+    predio: texto(dadosDoFormulario.get("predio")),
+    andar: texto(dadosDoFormulario.get("andar")),
+    sala: texto(dadosDoFormulario.get("sala")),
+    capacidade: texto(dadosDoFormulario.get("capacidade")),
+    tipo: texto(dadosDoFormulario.get("tipo")),
+    recursoIds: dadosDoFormulario.getAll("recursoIds").map(texto),
   });
 
-  if (!parsed.success) return falhaDeValidacao(parsed.error);
+  if (!validado.success) return falhaDeValidacao(validado.error);
 
-  const dados = parsed.data;
+  const dados = validado.data;
   const erros = validarEspaco(dados, await listarEspacosParaGestao());
   if (!semErros(erros)) return falha(null, erros);
 

@@ -1,7 +1,7 @@
 import {
   ABERTURA_EM_MINUTOS,
   FECHAMENTO_EM_MINUTOS,
-} from "@/domain/booking/businessHours";
+} from "@/domain/reservas/expediente";
 
 import { chaveDoDia, dentro, FUSO, UMA_HORA, type Periodo } from "./periodo";
 
@@ -29,7 +29,7 @@ const LIMITE_DA_SERIE_DIARIA = 62;
 
 export function serieDoPeriodo(
   periodo: Periodo,
-  series: Record<string, Date[]>
+  series: Record<string, Date[]>,
 ): PontoDaSerie[] {
   const dias: string[] = [];
   for (
@@ -61,7 +61,7 @@ export function serieDoPeriodo(
         rotulo: rotuloDe(chave),
         ...Object.fromEntries(Object.keys(series).map((nome) => [nome, 0])),
       } as PontoDaSerie,
-    ])
+    ]),
   );
 
   for (const [nome, datas] of Object.entries(series)) {
@@ -87,18 +87,24 @@ export type MapaDeCalor = {
 
 export function mapaDeCalor(
   ocupacoes: { inicio: Date; fim: Date }[],
-  periodo: Periodo
+  periodo: Periodo,
 ): MapaDeCalor {
   const primeira = Math.floor(ABERTURA_EM_MINUTOS / 60);
   const ultima = Math.ceil(FECHAMENTO_EM_MINUTOS / 60);
-  const horas = Array.from({ length: ultima - primeira }, (_, i) => primeira + i);
+  const horas = Array.from(
+    { length: ultima - primeira },
+    (_, i) => primeira + i,
+  );
 
   const celulas = new Map<number, number[]>(
-    ORDEM_DOS_DIAS.map((dia) => [dia, horas.map(() => 0)])
+    ORDEM_DOS_DIAS.map((dia) => [dia, horas.map(() => 0)]),
   );
 
   for (const ocupacao of ocupacoes) {
-    const inicio = Math.max(ocupacao.inicio.getTime(), periodo.inicio.getTime());
+    const inicio = Math.max(
+      ocupacao.inicio.getTime(),
+      periodo.inicio.getTime(),
+    );
     const fim = Math.min(ocupacao.fim.getTime(), periodo.fim.getTime());
     if (fim <= inicio) continue;
 
@@ -122,7 +128,7 @@ export function mapaDeCalor(
   }));
 
   const linhas = todas.filter(
-    (l) => l.dia !== "Dom" || l.valores.some((v) => v > 0)
+    (l) => l.dia !== "Dom" || l.valores.some((v) => v > 0),
   );
 
   return {

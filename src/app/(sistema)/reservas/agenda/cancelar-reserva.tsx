@@ -4,7 +4,7 @@ import { RotuloDeCampo } from "@/components/rotulo-de-campo";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import { cancelarReserva, type CancelamentoState } from "../acoes/cancelar";
+import { cancelarReserva, type EstadoDoCancelamento } from "../acoes/cancelar";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,21 +17,20 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const ESTADO_INICIAL: CancelamentoState = { status: "idle" };
+const ESTADO_INICIAL: EstadoDoCancelamento = { status: "inicial" };
 
 export function CancelarReserva({
-  bookingId,
+  reservaId,
   descricao,
   aberto,
   onAbertoChange,
 }: {
-  bookingId: string;
+  reservaId: string;
   descricao: string;
   aberto: boolean;
   onAbertoChange: (aberto: boolean) => void;
 }) {
-
-  const [state, setState] = useState(ESTADO_INICIAL);
+  const [estado, setState] = useState(ESTADO_INICIAL);
   const [cancelando, startTransition] = useTransition();
 
   function enviar(evento: React.FormEvent<HTMLFormElement>) {
@@ -39,9 +38,9 @@ export function CancelarReserva({
     const dados = new FormData(evento.currentTarget);
 
     startTransition(async () => {
-      const resultado = await cancelarReserva(state, dados);
+      const resultado = await cancelarReserva(estado, dados);
       setState(resultado);
-      if (resultado.status === "success") {
+      if (resultado.status === "sucesso") {
         toast.success("Reserva cancelada.");
         onAbertoChange(false);
       }
@@ -57,21 +56,23 @@ export function CancelarReserva({
         </DialogHeader>
 
         <form onSubmit={enviar} className="space-y-4">
-          <input type="hidden" name="bookingId" value={bookingId} />
+          <input type="hidden" name="reservaId" value={reservaId} />
 
           <div className="space-y-2">
-            <Label htmlFor={`motivo-${bookingId}`}><RotuloDeCampo rotulo="Motivo" /></Label>
+            <Label htmlFor={`motivo-${reservaId}`}>
+              <RotuloDeCampo rotulo="Motivo" />
+            </Label>
             <Input
-              id={`motivo-${bookingId}`}
+              id={`motivo-${reservaId}`}
               name="reason"
               placeholder="Professor afastado"
               maxLength={200}
             />
           </div>
 
-          {state.status === "error" && (
+          {estado.status === "erro" && (
             <p className="text-destructive text-sm" role="alert">
-              {state.message}
+              {estado.message}
             </p>
           )}
 
@@ -83,11 +84,7 @@ export function CancelarReserva({
             >
               Voltar
             </Button>
-            <Button
-              type="submit"
-              variant="destructive"
-              disabled={cancelando}
-            >
+            <Button type="submit" variant="destructive" disabled={cancelando}>
               {cancelando ? "Cancelando..." : "Confirmar"}
             </Button>
           </DialogFooter>

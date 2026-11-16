@@ -5,11 +5,11 @@ import { SeletorDeData } from "@/components/seletor-de-data";
 import { SeletorDeHora } from "@/components/seletor-de-hora";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { ULTIMO_INICIO } from "@/domain/booking/businessHours";
-import type { ActivityType } from "@/domain/booking/types";
+import { ULTIMO_INICIO } from "@/domain/reservas/expediente";
+import type { TipoDeAtividade } from "@/domain/reservas/tipos";
 import { cn } from "@/lib/utils";
 
-import type { AnaliseResult } from "./analise";
+import type { ResultadoDaAnalise } from "./analise";
 import {
   ehPeriodoValido,
   ROTULO_DA_ATIVIDADE,
@@ -26,7 +26,10 @@ import { SeletorDeRecursos } from "./seletor-de-recursos";
 import { Aviso } from "./aviso";
 import type { CamposDaPalestra } from "./use-formulario-de-reserva";
 
-const TIPOS = Object.entries(ROTULO_DA_ATIVIDADE) as [ActivityType, string][];
+const TIPOS = Object.entries(ROTULO_DA_ATIVIDADE) as [
+  TipoDeAtividade,
+  string,
+][];
 
 export function DetalhesDaAtividade({
   campos,
@@ -51,7 +54,7 @@ export function DetalhesDaAtividade({
   hoje: string;
   recursos: string[];
   alternarRecurso: (id: string, marcado: boolean) => void;
-  analise: AnaliseResult | null;
+  analise: ResultadoDaAnalise | null;
   analisando: boolean;
   atividadeCompleta: boolean;
   permitePalestra: boolean;
@@ -59,34 +62,40 @@ export function DetalhesDaAtividade({
   palestra: CamposDaPalestra;
   alterarPalestra: <C extends keyof CamposDaPalestra>(
     campo: C,
-    valor: CamposDaPalestra[C]
+    valor: CamposDaPalestra[C],
   ) => void;
 }) {
   const tipos = TIPOS.filter(
-    ([valor]) => valor !== "lecture" || permitePalestra
+    ([valor]) => valor !== "lecture" || permitePalestra,
   );
-  const ehPalestra = campos.activityType === "lecture";
-  const { professors, classes, subjects, assignments, resources } = catalogos;
-  const ehAula = campos.activityType === "class";
+  const ehPalestra = campos.tipoDeAtividade === "lecture";
+  const {
+    professores: professors,
+    turmas: classes,
+    disciplinas: subjects,
+    vinculos: assignments,
+    recursos: resources,
+  } = catalogos;
+  const ehAula = campos.tipoDeAtividade === "class";
 
   const turmasPermitidas =
     ehAula && campos.professorId
       ? classes.filter((c) =>
           assignments.some(
-            (a) => a.professorId === campos.professorId && a.classId === c.id
-          )
+            (a) => a.professorId === campos.professorId && a.turmaId === c.id,
+          ),
         )
       : classes;
 
   const disciplinasPermitidas =
-    campos.professorId && campos.classId
+    campos.professorId && campos.turmaId
       ? subjects.filter((s) =>
           assignments.some(
             (a) =>
               a.professorId === campos.professorId &&
-              a.classId === campos.classId &&
-              a.subjectId === s.id
-          )
+              a.turmaId === campos.turmaId &&
+              a.disciplinaId === s.id,
+          ),
         )
       : [];
 
@@ -94,8 +103,8 @@ export function DetalhesDaAtividade({
 
   const espacosLivres =
     periodoValido && analise?.status === "ok"
-      ? catalogos.rooms.filter(
-          (r) => analise.rooms.find((v) => v.roomId === r.id)?.compatible
+      ? catalogos.espacos.filter(
+          (r) => analise.espacos.find((v) => v.espacoId === r.id)?.compativel,
         )
       : null;
 
@@ -107,8 +116,8 @@ export function DetalhesDaAtividade({
         </Label>
         <input
           id="purposeField"
-          value={campos.purpose}
-          onChange={(e) => alterar("purpose", e.target.value)}
+          value={campos.finalidade}
+          onChange={(e) => alterar("finalidade", e.target.value)}
           placeholder={ehPalestra ? "Tema da palestra" : "Adicionar título"}
           maxLength={200}
           className="border-input focus:border-primary placeholder:text-muted-foreground w-full border-b-2 bg-transparent pb-1 text-xl outline-none focus-visible:outline-none!"
@@ -117,11 +126,11 @@ export function DetalhesDaAtividade({
         {!somentePalestra && (
           <RadioGroup
             aria-label="Tipo de atividade"
-            value={campos.activityType}
+            value={campos.tipoDeAtividade}
             onValueChange={(v) => {
-              alterar("activityType", v);
-              alterar("subjectId", "");
-              if (v === "class") alterar("classId", "");
+              alterar("tipoDeAtividade", v);
+              alterar("disciplinaId", "");
+              if (v === "class") alterar("turmaId", "");
             }}
             className="flex flex-wrap gap-1.5"
           >
@@ -131,9 +140,9 @@ export function DetalhesDaAtividade({
                 htmlFor={`tipo-${valor}`}
                 className={cn(
                   "has-focus-visible:ring-ring/50 cursor-pointer rounded-md px-3 py-1.5 text-sm font-medium transition-colors has-focus-visible:ring-[3px]",
-                  campos.activityType === valor
+                  campos.tipoDeAtividade === valor
                     ? "bg-primary-subtle text-primary"
-                    : "text-muted-foreground hover:bg-accent"
+                    : "text-muted-foreground hover:bg-accent",
                 )}
               >
                 <RadioGroupItem
@@ -152,8 +161,8 @@ export function DetalhesDaAtividade({
         <div className="grid grid-cols-[minmax(0,1fr)_6.5rem_auto_6.5rem] items-center gap-2">
           <SeletorDeData
             id="dateField"
-            value={campos.date}
-            onChange={(v) => alterar("date", v)}
+            value={campos.data}
+            onChange={(v) => alterar("data", v)}
             minimo={hoje}
             hoje={hoje}
           />
@@ -162,8 +171,8 @@ export function DetalhesDaAtividade({
           </Label>
           <SeletorDeHora
             id="startField"
-            value={campos.startTime}
-            onChange={(v) => alterar("startTime", v)}
+            value={campos.horaDeInicio}
+            onChange={(v) => alterar("horaDeInicio", v)}
             maximo={ULTIMO_INICIO}
           />
           <span className="text-muted-foreground text-sm">às</span>
@@ -172,103 +181,108 @@ export function DetalhesDaAtividade({
           </Label>
           <SeletorDeHora
             id="endField"
-            value={campos.endTime}
-            onChange={(v) => alterar("endTime", v)}
-            minimo={campos.startTime || undefined}
+            value={campos.horaDeTermino}
+            onChange={(v) => alterar("horaDeTermino", v)}
+            minimo={campos.horaDeInicio || undefined}
           />
         </div>
-        {campos.startTime !== "" && campos.endTime !== "" && !periodoValido && (
-          <p className="text-destructive text-sm">
-            O término precisa ser posterior ao início.
-          </p>
-        )}
+        {campos.horaDeInicio !== "" &&
+          campos.horaDeTermino !== "" &&
+          !periodoValido && (
+            <p className="text-destructive text-sm">
+              O término precisa ser posterior ao início.
+            </p>
+          )}
       </LinhaDoFormulario>
 
       {ehPalestra ? (
         <CamposDaPalestraNoPainel
           palestra={palestra}
           alterarPalestra={alterarPalestra}
-          professores={professors.map((p) => ({ id: p.id, name: p.name }))}
+          professores={professors.map((p) => ({ id: p.id, nome: p.nome }))}
           cursos={catalogos.cursos}
         />
       ) : (
         <>
-        <LinhaDoFormulario rotulo="Professor"
-          htmlFor="professorField"
-        >
-          {professorFixo ? (
-            <div id="professorField" className="flex h-9 items-center text-sm">
-              {professors.find((p) => p.id === professorFixo)?.name ??
-                "Professor não identificado"}
-            </div>
-          ) : (
-            <SelecaoComPesquisa
-              id="professorField"
-              value={campos.professorId}
-              onChange={(v) => {
-                alterar("professorId", v);
-                alterar("classId", "");
-                alterar("subjectId", "");
-              }}
-              opcoes={professors.map((p) => ({ id: p.id, nome: p.name }))}
-              placeholder="Professor"
-              rotuloDaPesquisa="Pesquisar professores"
-            />
-          )}
-        </LinhaDoFormulario>
-
-        <LinhaDoFormulario rotulo="Turma" htmlFor="classField">
-          <SelecaoComPesquisa
-            id="classField"
-            value={campos.classId}
-            onChange={(v) => {
-              alterar("classId", v);
-              alterar("subjectId", "");
-            }}
-            disabled={ehAula && !campos.professorId}
-            opcoes={turmasPermitidas.map((t) => ({
-              id: t.id,
-              nome: `${t.name} · ${t.courseName}`,
-              detalhe: `${t.studentCount} alunos`,
-            }))}
-            placeholder={
-              ehAula && !campos.professorId
-                ? "Turma (escolha o professor primeiro)"
-                : "Turma"
-            }
-            rotuloDaPesquisa="Pesquisar turmas"
-          />
-
-          {ehAula && campos.professorId && turmasPermitidas.length === 0 && (
-            <Aviso tom="erro" titulo="Sem vínculo acadêmico">
-              Este professor não leciona para nenhuma turma no período letivo.
-              Escolha outro, ou registre como prova ou evento.
-            </Aviso>
-          )}
-        </LinhaDoFormulario>
-
-        {ehAula && (
-          <LinhaDoFormulario rotulo="Disciplina" htmlFor="subjectField">
-            <SelecaoComPesquisa
-              id="subjectField"
-              value={campos.subjectId}
-              onChange={(v) => alterar("subjectId", v)}
-              disabled={!campos.classId || disciplinasPermitidas.length === 0}
-              opcoes={disciplinasPermitidas.map((s) => ({ id: s.id, nome: s.name }))}
-              placeholder={
-                campos.classId ? "Disciplina" : "Disciplina (escolha a turma primeiro)"
-              }
-              rotuloDaPesquisa="Pesquisar disciplinas"
-            />
+          <LinhaDoFormulario rotulo="Professor" htmlFor="professorField">
+            {professorFixo ? (
+              <div
+                id="professorField"
+                className="flex h-9 items-center text-sm"
+              >
+                {professors.find((p) => p.id === professorFixo)?.nome ??
+                  "Professor não identificado"}
+              </div>
+            ) : (
+              <SelecaoComPesquisa
+                id="professorField"
+                value={campos.professorId}
+                onChange={(v) => {
+                  alterar("professorId", v);
+                  alterar("turmaId", "");
+                  alterar("disciplinaId", "");
+                }}
+                opcoes={professors.map((p) => ({ id: p.id, nome: p.nome }))}
+                placeholder="Professor"
+                rotuloDaPesquisa="Pesquisar professores"
+              />
+            )}
           </LinhaDoFormulario>
-        )}
 
+          <LinhaDoFormulario rotulo="Turma" htmlFor="classField">
+            <SelecaoComPesquisa
+              id="classField"
+              value={campos.turmaId}
+              onChange={(v) => {
+                alterar("turmaId", v);
+                alterar("disciplinaId", "");
+              }}
+              disabled={ehAula && !campos.professorId}
+              opcoes={turmasPermitidas.map((t) => ({
+                id: t.id,
+                nome: `${t.nome} · ${t.nomeDoCurso}`,
+                detalhe: `${t.quantidadeDeAlunos} alunos`,
+              }))}
+              placeholder={
+                ehAula && !campos.professorId
+                  ? "Turma (escolha o professor primeiro)"
+                  : "Turma"
+              }
+              rotuloDaPesquisa="Pesquisar turmas"
+            />
+
+            {ehAula && campos.professorId && turmasPermitidas.length === 0 && (
+              <Aviso tom="erro" titulo="Sem vínculo acadêmico">
+                Este professor não leciona para nenhuma turma no período letivo.
+                Escolha outro, ou registre como prova ou evento.
+              </Aviso>
+            )}
+          </LinhaDoFormulario>
+
+          {ehAula && (
+            <LinhaDoFormulario rotulo="Disciplina" htmlFor="subjectField">
+              <SelecaoComPesquisa
+                id="subjectField"
+                value={campos.disciplinaId}
+                onChange={(v) => alterar("disciplinaId", v)}
+                disabled={!campos.turmaId || disciplinasPermitidas.length === 0}
+                opcoes={disciplinasPermitidas.map((s) => ({
+                  id: s.id,
+                  nome: s.nome,
+                }))}
+                placeholder={
+                  campos.turmaId
+                    ? "Disciplina"
+                    : "Disciplina (escolha a turma primeiro)"
+                }
+                rotuloDaPesquisa="Pesquisar disciplinas"
+              />
+            </LinhaDoFormulario>
+          )}
         </>
       )}
 
-      <LinhaDoFormulario rotulo="Recursos"
-        htmlFor="resourcesField"
-      >
+      <LinhaDoFormulario rotulo="Recursos" htmlFor="resourcesField">
         <SeletorDeRecursos
           id="resourcesField"
           recursos={resources}
@@ -283,8 +297,8 @@ export function DetalhesDaAtividade({
           alterarPalestra={alterarPalestra}
           espacosLivres={espacosLivres}
           buscandoEspacos={periodoValido && analisando}
-          espacoId={campos.roomId}
-          aoEscolherEspaco={(id) => alterar("roomId", id)}
+          espacoId={campos.espacoId}
+          aoEscolherEspaco={(id) => alterar("espacoId", id)}
         />
       )}
 
@@ -294,7 +308,9 @@ export function DetalhesDaAtividade({
             analise={analise}
             analisando={analisando}
             ehPalestra={ehPalestra}
-            espacosDisponiveis={ehPalestra ? (espacosLivres?.length ?? null) : null}
+            espacosDisponiveis={
+              ehPalestra ? (espacosLivres?.length ?? null) : null
+            }
           />
         </div>
       )}

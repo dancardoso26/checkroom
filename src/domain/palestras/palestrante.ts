@@ -1,4 +1,4 @@
-export type ProfessorDaLista = { id: string; name: string };
+export type ProfessorDaLista = { id: string; nome: string };
 
 function normalizar(nome: string): string {
   return nome.trim().replace(/\s+/g, " ").toLowerCase();
@@ -14,6 +14,6 @@ export function professorDoPalestrante(
 ): ProfessorDaLista | null {
   if (normalizar(nome) === "") return null;
 
-  const iguais = professores.filter((p) => mesmoNome(p.name, nome));
+  const iguais = professores.filter((p) => mesmoNome(p.nome, nome));
   return iguais.length === 1 ? iguais[0] : null;
 }

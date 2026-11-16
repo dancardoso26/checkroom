@@ -3,10 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import {
-  podeAbrirChamado,
-  podeExcluirChamado,
-} from "@/domain/auth/permissoes";
+import { podeAbrirChamado, podeExcluirChamado } from "@/domain/auth/permissoes";
 import {
   MENSAGEM_DA_RECUSA,
   PRIORIDADES,
@@ -18,7 +15,7 @@ import {
 } from "@/domain/chamados/chamado";
 import { semErros } from "@/domain/formulario/validacao";
 import { avisarSobreChamadoResolvido } from "@/lib/email/enviar";
-import { formatDateTime } from "@/lib/datetime";
+import { formatarDataEHora } from "@/lib/datas";
 import {
   falha,
   falhaDeValidacao,
@@ -46,31 +43,31 @@ const schemaDaAbertura = z.object({
 
 export async function abrirChamado(
   _estado: EstadoDoFormulario,
-  formData: FormData
+  dadosDoFormulario: FormData,
 ): Promise<EstadoDoFormulario> {
   const sessao = await sessaoAtual();
   if (!sessao || !podeAbrirChamado(sessao)) {
     return falha("Apenas professores e a administração abrem chamados.");
   }
 
-  const parsed = schemaDaAbertura.safeParse({
-    espacoId: texto(formData.get("espacoId")),
-    descricao: texto(formData.get("descricao")),
-    prioridade: texto(formData.get("prioridade")),
+  const validado = schemaDaAbertura.safeParse({
+    espacoId: texto(dadosDoFormulario.get("espacoId")),
+    descricao: texto(dadosDoFormulario.get("descricao")),
+    prioridade: texto(dadosDoFormulario.get("prioridade")),
   });
 
-  if (!parsed.success) return falhaDeValidacao(parsed.error);
+  if (!validado.success) return falhaDeValidacao(validado.error);
 
-  const erros = validarAbertura(parsed.data);
+  const erros = validarAbertura(validado.data);
   if (!semErros(erros)) return falha(null, erros);
 
-  const resultado = await abrirNoBanco(parsed.data, sessao.profileId);
+  const resultado = await abrirNoBanco(validado.data, sessao.profileId);
 
   if (!resultado.ok) {
     return falha(
       resultado.falha === "em_uso"
         ? "Este espaço não existe mais. Atualize a página."
-        : "Não foi possível abrir o chamado agora."
+        : "Não foi possível abrir o chamado agora.",
     );
   }
 
@@ -81,13 +78,16 @@ export async function abrirChamado(
 async function transicionar(
   id: string,
   acao: AcaoDoChamado,
-  nota = ""
+  nota = "",
 ): Promise<ResultadoDaAcao> {
   const sessao = await sessaoAtual();
   const chamado = await buscarChamadoParaTransicao(id);
 
   if (!sessao || !chamado) {
-    return { ok: false, mensagem: "Chamado não encontrado. Atualize a página." };
+    return {
+      ok: false,
+      mensagem: "Chamado não encontrado. Atualize a página.",
+    };
   }
 
   const decisao = validarTransicao(chamado, acao, sessao, nota);
@@ -98,7 +98,10 @@ async function transicionar(
   const recusa = recusaDoBanco(await transicionarChamado(acao, id, nota));
 
   if (recusa === "NAO_ENCONTRADO") {
-    return { ok: false, mensagem: "Não foi possível atualizar o chamado agora." };
+    return {
+      ok: false,
+      mensagem: "Não foi possível atualizar o chamado agora.",
+    };
   }
   if (recusa) return { ok: false, mensagem: MENSAGEM_DA_RECUSA[recusa] };
 
@@ -128,7 +131,10 @@ export async function excluirChamado(id: string): Promise<ResultadoDaAcao> {
   const resultado = await excluirChamadoNoBanco(id);
 
   if (resultado === "not_found") {
-    return { ok: false, mensagem: "Chamado não encontrado. Atualize a página." };
+    return {
+      ok: false,
+      mensagem: "Chamado não encontrado. Atualize a página.",
+    };
   }
   if (resultado !== "ok") {
     return { ok: false, mensagem: "Não foi possível excluir o chamado agora." };
@@ -140,13 +146,15 @@ export async function excluirChamado(id: string): Promise<ResultadoDaAcao> {
 
 export async function resolverChamado(
   _estado: EstadoDoFormulario,
-  formData: FormData
+  dadosDoFormulario: FormData,
 ): Promise<EstadoDoFormulario> {
-  const id = texto(formData.get("id"));
-  const nota = texto(formData.get("nota")).trim();
+  const id = texto(dadosDoFormulario.get("id"));
+  const nota = texto(dadosDoFormulario.get("nota")).trim();
 
-  if (nota === "") return falha(null, { nota: [MENSAGEM_DA_RECUSA.NOTA_OBRIGATORIA] });
-  if (nota.length > 2000) return falha(null, { nota: ["Use no máximo 2000 caracteres."] });
+  if (nota === "")
+    return falha(null, { nota: [MENSAGEM_DA_RECUSA.NOTA_OBRIGATORIA] });
+  if (nota.length > 2000)
+    return falha(null, { nota: ["Use no máximo 2000 caracteres."] });
 
   const resultado = await transicionar(id, "resolver", nota);
   if (!resultado.ok) return falha(resultado.mensagem);
@@ -157,13 +165,15 @@ export async function resolverChamado(
 
 export async function resolverChamadosEmLote(
   _estado: EstadoDoFormulario,
-  formData: FormData
+  dadosDoFormulario: FormData,
 ): Promise<EstadoDoFormulario> {
-  const ids = formData.getAll("ids").map(texto).filter(Boolean);
-  const nota = texto(formData.get("nota")).trim();
+  const ids = dadosDoFormulario.getAll("ids").map(texto).filter(Boolean);
+  const nota = texto(dadosDoFormulario.get("nota")).trim();
 
-  if (nota === "") return falha(null, { nota: [MENSAGEM_DA_RECUSA.NOTA_OBRIGATORIA] });
-  if (nota.length > 2000) return falha(null, { nota: ["Use no máximo 2000 caracteres."] });
+  if (nota === "")
+    return falha(null, { nota: [MENSAGEM_DA_RECUSA.NOTA_OBRIGATORIA] });
+  if (nota.length > 2000)
+    return falha(null, { nota: ["Use no máximo 2000 caracteres."] });
   if (ids.length === 0) return falha("Selecione ao menos um chamado.");
 
   const falhas: string[] = [];
@@ -179,7 +189,7 @@ export async function resolverChamadosEmLote(
 
   if (falhas.length > 0) {
     return falha(
-      `${ids.length - falhas.length} de ${ids.length} resolvidos. ${[...new Set(falhas)].join(" ")}`
+      `${ids.length - falhas.length} de ${ids.length} resolvidos. ${[...new Set(falhas)].join(" ")}`,
     );
   }
 
@@ -196,6 +206,6 @@ async function avisarSolicitante(id: string) {
     descricao: dados.descricao,
     nota: dados.nota,
     resolvidoPor: dados.responsavelNome,
-    abertoEm: formatDateTime(dados.abertoEm),
+    abertoEm: formatarDataEHora(dados.abertoEm),
   });
 }

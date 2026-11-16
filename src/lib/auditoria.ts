@@ -1,6 +1,6 @@
 import "server-only";
 
-import { supabaseAdmin } from "@/lib/supabase/server";
+import { clienteAdministrativo } from "@/lib/supabase/servidor";
 import type { Json } from "@/lib/supabase/database.types";
 
 export type EventoDeAutenticacao =
@@ -18,11 +18,11 @@ export type EventoDeAutenticacao =
 
 export async function registrarEventoDeAutenticacao(
   acao: EventoDeAutenticacao,
-  actorId: string | null,
-  detalhes?: Json
+  autorId: string | null,
+  detalhes?: Json,
 ): Promise<void> {
-  const { error } = await supabaseAdmin.from("audit_logs").insert({
-    actor_id: actorId,
+  const { error } = await clienteAdministrativo.from("audit_logs").insert({
+    actor_id: autorId,
     action: acao,
     entity: "auth",
     after_state: detalhes ?? null,
