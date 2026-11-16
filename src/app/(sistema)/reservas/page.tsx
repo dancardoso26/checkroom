@@ -151,6 +151,11 @@ export default async function ReservasPage({
     turmasCarregando,
   ]);
 
+  const doProfessor =
+    sessao.papel === "professor"
+      ? recorteDoProfessor(docencia, sessao.professorId)
+      : null;
+
   const painel: Painel | null = catalogos && {
     catalogos: { ...catalogos, professors: professores },
     professorFixo: sessao.papel === "admin" ? null : sessao.professorId,
@@ -183,16 +188,46 @@ export default async function ReservasPage({
         tituloDaPagina={
           sessao.papel === "student" ? "Minha agenda" : "Reservas"
         }
-        professores={professores.map(({ id, name }) => ({ id, nome: name }))}
+        professores={professores
+          .filter(
+            (professor) =>
+              !doProfessor || doProfessor.professores.has(professor.id),
+          )
+          .map(({ id, name }) => ({ id, nome: name }))}
         turmas={(escopo
           ? todasAsTurmas.filter((turma) => escopo.turmaIds.includes(turma.id))
-          : todasAsTurmas
+          : doProfessor
+            ? todasAsTurmas.filter((turma) => doProfessor.turmas.has(turma.id))
+            : todasAsTurmas
         ).map(({ id, name }) => ({ id, nome: name }))}
         espacos={espacos.map(({ id, name }) => ({ id, nome: name }))}
-        docencia={docencia}
+        docencia={
+          doProfessor
+            ? docencia.filter((par) => doProfessor.turmas.has(par.classId))
+            : docencia
+        }
       />
     </>
   );
+}
+
+function recorteDoProfessor(
+  docencia: { professorId: string; classId: string }[],
+  professorId: string | null,
+) {
+  const turmas = new Set(
+    docencia
+      .filter((par) => par.professorId === professorId)
+      .map((par) => par.classId),
+  );
+  const professores = new Set(
+    docencia
+      .filter((par) => turmas.has(par.classId))
+      .map((par) => par.professorId),
+  );
+  if (professorId) professores.add(professorId);
+
+  return { turmas, professores };
 }
 
 async function carregarPeriodo(

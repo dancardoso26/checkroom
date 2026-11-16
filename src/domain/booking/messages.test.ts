@@ -27,6 +27,22 @@ describe("describeViolation", () => {
     expect(texto).toContain("Prova final");
   });
 
+  it("não cita a finalidade de uma reserva que a pessoa não pode ver", () => {
+    const oculto = { ...conflito, purpose: null };
+
+    for (const code of [
+      "ROOM_CONFLICT",
+      "PROFESSOR_CONFLICT",
+      "CLASS_CONFLICT",
+    ] as const) {
+      const texto = describeViolation({ code, conflict: oculto });
+
+      expect(texto).not.toContain("Prova final");
+      expect(texto).not.toContain("null");
+      expect(texto).toContain("19:00");
+    }
+  });
+
   it("distingue conflito de professor de conflito de turma", () => {
     const doProfessor = describeViolation({
       code: "PROFESSOR_CONFLICT",

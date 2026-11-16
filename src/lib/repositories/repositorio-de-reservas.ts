@@ -6,12 +6,59 @@ import {
 import type { ActivityType, ExistingBooking } from "@/domain/booking/types";
 import { correspondeABusca } from "@/domain/tabela/busca";
 import { formatPeriod } from "@/lib/datetime";
-import { condicaoDeStatus, FILTROS_PADRAO, type Filtros } from "@/domain/agenda/filtros-da-agenda";
+import {
+  condicaoDeStatus,
+  FILTROS_PADRAO,
+  type Filtros,
+} from "@/domain/agenda/filtros-da-agenda";
 import { palestrasComoOcupacao } from "./repositorio-de-palestras";
 import type { Ordenacao, Sentido } from "@/domain/tabela/tabela";
 
 function toDate(valor: string): Date {
   return new Date(valor);
+}
+
+type LinhaDeOcupacao = {
+  id: string;
+  room_id: string;
+  professor_id: string;
+  class_id: string;
+  purpose: string;
+  starts_at: string;
+  ends_at: string;
+};
+
+async function comoOcupacoes(
+  linhas: LinhaDeOcupacao[],
+): Promise<ExistingBooking[]> {
+  const visiveis = new Set<string>();
+
+  if (linhas.length > 0) {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase
+      .from("bookings")
+      .select("id")
+      .in(
+        "id",
+        linhas.map((linha) => linha.id),
+      );
+
+    if (error) {
+      throw new Error(`Falha ao consultar a agenda: ${error.message}`);
+    }
+
+    for (const linha of data) visiveis.add(linha.id);
+  }
+
+  return linhas.map((linha) => ({
+    id: linha.id,
+    roomId: linha.room_id,
+    professorId: linha.professor_id,
+    classId: linha.class_id,
+    purpose: visiveis.has(linha.id) ? linha.purpose : null,
+    startsAt: toDate(linha.starts_at),
+    endsAt: toDate(linha.ends_at),
+  }));
 }
 
 export async function findConflictCandidates(params: {
@@ -21,9 +68,7 @@ export async function findConflictCandidates(params: {
   startsAt: Date;
   endsAt: Date;
 }): Promise<ExistingBooking[]> {
-  const supabase = await createSupabaseServerClient();
-
-  const query = supabase
+  const query = supabaseAdmin
     .from("bookings")
     .select("id, room_id, professor_id, class_id, purpose, starts_at, ends_at")
     .or(
@@ -46,27 +91,15 @@ export async function findConflictCandidates(params: {
     throw new Error(`Falha ao verificar conflitos: ${error.message}`);
   }
 
-  const reservas: ExistingBooking[] = data.map((linha) => ({
-    id: linha.id,
-    roomId: linha.room_id,
-    professorId: linha.professor_id,
-    classId: linha.class_id,
-    purpose: linha.purpose,
-    startsAt: toDate(linha.starts_at),
-    endsAt: toDate(linha.ends_at),
-  }));
-
-  return [...reservas, ...palestras];
+  return [...(await comoOcupacoes(data)), ...palestras];
 }
 
 export async function findBookingsInPeriod(params: {
   startsAt: Date;
   endsAt: Date;
 }): Promise<ExistingBooking[]> {
-  const supabase = await createSupabaseServerClient();
-
   const [{ data, error }, palestras] = await Promise.all([
-    supabase
+    supabaseAdmin
       .from("bookings")
       .select(
         "id, room_id, professor_id, class_id, purpose, starts_at, ends_at",
@@ -81,17 +114,7 @@ export async function findBookingsInPeriod(params: {
     throw new Error(`Falha ao consultar a agenda: ${error.message}`);
   }
 
-  const reservas: ExistingBooking[] = data.map((linha) => ({
-    id: linha.id,
-    roomId: linha.room_id,
-    professorId: linha.professor_id,
-    classId: linha.class_id,
-    purpose: linha.purpose,
-    startsAt: toDate(linha.starts_at),
-    endsAt: toDate(linha.ends_at),
-  }));
-
-  return [...reservas, ...palestras];
+  return [...(await comoOcupacoes(data)), ...palestras];
 }
 
 export type CreateBookingOutcome =
@@ -439,9 +462,12 @@ export async function listBookingsPage({
     query = query.order("starts_at", { ascending: false });
 
   if (busca.trim()) {
-    const { data, error } = await aplicarFiltros(query, filtros, escopo, true).limit(
-      LIMITE_DA_BUSCA,
-    );
+    const { data, error } = await aplicarFiltros(
+      query,
+      filtros,
+      escopo,
+      true,
+    ).limit(LIMITE_DA_BUSCA);
 
     if (error) {
       throw new Error(`Falha ao listar as reservas: ${error.message}`);
@@ -457,10 +483,12 @@ export async function listBookingsPage({
     };
   }
 
-  const { data, error, count } = await aplicarFiltros(query, filtros, escopo, true).range(
-    de,
-    ate,
-  );
+  const { data, error, count } = await aplicarFiltros(
+    query,
+    filtros,
+    escopo,
+    true,
+  ).range(de, ate);
 
   if (error) {
     throw new Error(`Falha ao listar as reservas: ${error.message}`);

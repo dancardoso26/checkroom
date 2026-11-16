@@ -11,7 +11,7 @@ export type ViolationLabels = {
 
 export function describeViolation(
   violation: BookingViolation,
-  labels: ViolationLabels = {}
+  labels: ViolationLabels = {},
 ): string {
   switch (violation.code) {
     case "INVALID_PERIOD":
@@ -33,19 +33,25 @@ export function describeViolation(
       return `A instituição funciona das ${violation.opening} às ${violation.closing}, e a reserva precisa começar e terminar no mesmo dia.`;
 
     case "ROOM_CONFLICT":
-      return `O espaço já está reservado neste horário para "${
-        violation.conflict.purpose
-      }", em ${periodOf(violation.conflict)}.`;
+      return violation.conflict.purpose === null
+        ? `O espaço já está reservado em ${periodOf(violation.conflict)}.`
+        : `O espaço já está reservado neste horário para "${
+            violation.conflict.purpose
+          }", em ${periodOf(violation.conflict)}.`;
 
     case "PROFESSOR_CONFLICT":
-      return `O professor já tem uma reserva neste horário: "${
-        violation.conflict.purpose
-      }", em ${periodOf(violation.conflict)}.`;
+      return violation.conflict.purpose === null
+        ? `O professor já tem uma reserva em ${periodOf(violation.conflict)}.`
+        : `O professor já tem uma reserva neste horário: "${
+            violation.conflict.purpose
+          }", em ${periodOf(violation.conflict)}.`;
 
     case "CLASS_CONFLICT":
-      return `A turma já tem uma reserva neste horário: "${
-        violation.conflict.purpose
-      }", em ${periodOf(violation.conflict)}.`;
+      return violation.conflict.purpose === null
+        ? `A turma já tem uma reserva em ${periodOf(violation.conflict)}.`
+        : `A turma já tem uma reserva neste horário: "${
+            violation.conflict.purpose
+          }", em ${periodOf(violation.conflict)}.`;
 
     case "SUBJECT_REQUIRED":
       return "Informe a disciplina da aula.";
@@ -58,7 +64,7 @@ export function describeViolation(
 
     case "MISSING_RESOURCES": {
       const nomes = violation.missingResourceIds.map(
-        (id) => labels.resourceNames?.[id] ?? id
+        (id) => labels.resourceNames?.[id] ?? id,
       );
 
       return nomes.length === 1
@@ -79,7 +85,7 @@ export function describeViolation(
 
 export function describeViolations(
   violations: BookingViolation[],
-  labels: ViolationLabels = {}
+  labels: ViolationLabels = {},
 ): string[] {
   return violations.map((violation) => describeViolation(violation, labels));
 }

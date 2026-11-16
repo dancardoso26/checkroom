@@ -85,7 +85,10 @@ dependem da extensão.
 | 39 | `migrations/20261107000200_devolver_chamado.sql` | Cria `devolver_chamado`: quem assumiu (ou o master) devolve o chamado à fila |
 | 40 | `migrations/20261112000000_anonimizacao_limpa_curso_e_turma.sql` | A anonimização também desvincula o curso e a turma do aluno |
 | 41 | `migrations/20261112000100_palestras_do_curso_do_aluno.sql` | Cria `curso_atual()`; o aluno só lê as palestras do seu curso, também pela API |
-| 42 | `seed.sql` | Popula o mundo acadêmico (opcional, só em desenvolvimento) |
+| 42 | `migrations/20261116000000_agenda_do_professor_restrita.sql` | Cria `leciona_na_turma()`; o professor só lê as reservas dele, as que registrou e as das turmas em que leciona no período |
+| 43 | `migrations/20261116000100_segundo_fator_no_banco.sql` | Exige o segundo fator (`aal2`) no banco: gancho `exigir_segundo_fator` antes de toda chamada à API de dados e política restritiva em todas as tabelas, que vale também para o Realtime |
+| 44 | `migrations/20261116000200_resposta_403_do_segundo_fator.sql` | Corrige o erro do gancho para responder 403 em vez de 500 |
+| 45 | `seed.sql` | Popula o mundo acadêmico (opcional, só em desenvolvimento) |
 
 Depois do `seed.sql`, rode no terminal:
 

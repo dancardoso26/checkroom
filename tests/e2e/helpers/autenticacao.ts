@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import { generateSync } from "otplib";
 import { expect, type Page } from "@playwright/test";
 
+import { lerSegredos } from "./segredos-totp";
+
 function lerSenhaDoAmbiente(): string {
   for (const linha of readFileSync(".env.local", "utf8").split(/\r?\n/)) {
     const par = linha.match(/^SEED_USER_PASSWORD=(.*)$/);
@@ -20,9 +22,24 @@ export const CONTA_COM_SEGUNDO_FATOR = "teste.mfa@exemplo.edu.br";
 
 export const SENHA = lerSenhaDoAmbiente();
 
-const segredos = new Map<string, string>();
+const segredos = new Map<string, string>(
+  Object.entries(lerSegredos()).map(([email, { segredo }]) => [email, segredo])
+);
 
 async function informarCodigo(page: Page, segredo: string) {
+  await page.fill("#codigo", generateSync({ secret: segredo }));
+  await page.getByRole("button", { name: "Verificar" }).click();
+
+  const recusado = await page
+    .getByText("Código incorreto ou expirado")
+    .waitFor({ state: "visible", timeout: 5_000 })
+    .then(() => true)
+    .catch(() => false);
+
+  if (!recusado) return;
+
+  const restante = 30_000 - (Date.now() % 30_000);
+  await page.waitForTimeout(restante + 1_000);
   await page.fill("#codigo", generateSync({ secret: segredo }));
   await page.getByRole("button", { name: "Verificar" }).click();
 }
@@ -64,7 +81,7 @@ export async function entrarComo(page: Page, email: string) {
 
       if (!segredo) {
         throw new Error(
-          `${email} já tem segundo fator de uma execução anterior. Rode "npm run seed:usuarios" antes da suíte.`
+          `${email} tem segundo fator, mas o segredo não está em tests/e2e/.segredos-totp.json. O global-setup recadastra o fator das contas de teste.`
         );
       }
 

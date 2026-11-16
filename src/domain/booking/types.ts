@@ -44,7 +44,7 @@ export type ExistingBooking = {
   roomId: string;
   professorId: string;
   classId: string;
-  purpose: string;
+  purpose: string | null;
   startsAt: Date;
   endsAt: Date;
 };

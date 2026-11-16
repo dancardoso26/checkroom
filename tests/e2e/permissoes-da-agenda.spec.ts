@@ -50,17 +50,14 @@ for (const [papel, conta] of [["o aluno", ALUNO]] as const) {
   });
 }
 
-test("o professor só tem ações nas reservas que são dele", async ({ page }) => {
+test("o professor não vê a aula de uma turma em que não leciona", async ({ page }) => {
   await entrarComo(page, PROFESSOR);
   await page.goto(`${semanaDoDia(`${SEGUNDA}T12:00:00-03:00`)}&minhas=0`);
 
   await expect(page.getByRole("button", { name: "Nova reserva" })).toBeVisible();
-
-  const deOutroProfessor = await abrirDetalhe(page, AULA);
   await expect(
-    deOutroProfessor.getByRole("button", { name: "Cancelar reserva" })
+    page.locator("[data-reserva]").filter({ hasText: AULA })
   ).toHaveCount(0);
-  await page.keyboard.press("Escape");
 
   const dele = await abrirDetalhe(page, "Laboratório de Materiais");
   await expect(dele.getByRole("button", { name: "Cancelar reserva" })).toBeVisible();

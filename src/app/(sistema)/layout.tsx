@@ -5,7 +5,6 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { dispensaSegundoFator } from "@/domain/auth/segundo-fator";
 import { sessaoAtual } from "@/lib/sessao";
 
 export default async function SistemaLayout({
@@ -18,11 +17,7 @@ export default async function SistemaLayout({
   return (
     <SidebarProvider defaultOpen>
       {sessao && (
-        <BarraLateral
-          nome={sessao.nome}
-          papel={sessao.papel}
-          semSegundoFator={dispensaSegundoFator(sessao.email)}
-        />
+        <BarraLateral nome={sessao.nome} papel={sessao.papel} />
       )}
 
       <SidebarInset className="min-w-0">

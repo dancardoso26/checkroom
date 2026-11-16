@@ -123,8 +123,13 @@ senha descoberta dá uma sessão `aal1`, e com ela a API do Supabase responde
 direto, sem passar pelo proxy. O dano é limitado ao que aquele papel lê, mas
 torna o segundo fator contornável para leitura.
 
-**Ação:** políticas restritivas exigindo `aal2` nas tabelas de `public`. Já
-está no `TASKS.md`; recomendado antes da banca.
+**Corrigido em 16/11.** Migrations `20261116000100` e `20261116000200`: um
+gancho `exigir_segundo_fator` roda antes de toda chamada à API de dados e
+responde 403 a uma sessão sem segundo fator, inclusive nas funções `security
+definer`; uma política restritiva em todas as tabelas repete a regra para o
+Realtime, onde o gancho não roda. Conferido pelo E2E
+`segundo-fator-no-banco.spec.ts`: só com a senha, tabela e função respondem
+403; depois do código, o acesso volta.
 
 ### A4. O aceite dos termos não é conferido no proxy (média)
 
@@ -132,7 +137,10 @@ No primeiro acesso a tela inicial carrega antes da página de aceite. Quem não
 aceitou os termos consegue ver dados por um instante, e a API responde mesmo
 sem aceite.
 
-**Ação:** conferir a versão aceita no `proxy.ts`. Já está no `TASKS.md`.
+**Corrigido em 16/11.** O `proxy.ts` confere a versão aceita depois do segundo
+fator e manda para `/aceitar-termos` antes de qualquer página ou Server Action.
+O banco continua sem conferir o aceite: quem chamar a API direto com a sessão
+completa ainda lê sem ter aceitado. Fica registrado como limitação.
 
 ### A5. O professor lê a agenda inteira (média)
 
@@ -141,8 +149,11 @@ reservas de todos os colegas. É a rotina de aulas de outras pessoas, sem
 necessidade para a função de quem consulta. Contraria a Seção 4.3
 ("professores devem acessar suas turmas").
 
-**Ação:** já está no `TASKS.md` como "Agenda do professor restrita às turmas
-dele".
+**Corrigido em 16/11.** Migration `20261116000000`: o professor lê só as
+reservas no nome dele, as que registrou e as das turmas em que leciona no
+período (`leciona_na_turma`). Conferido no banco simulando cada papel e pelo
+E2E de permissões da agenda. A análise de conflitos continua vendo todas as
+reservas pelo servidor, sem mostrar o nome das que o professor não vê.
 
 ### A6. Testes e produção no mesmo banco (média)
 

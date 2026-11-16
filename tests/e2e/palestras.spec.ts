@@ -12,7 +12,7 @@ import {
 } from "./helpers/banco";
 import { cadastrarPalestra, preencherPalestra } from "./helpers/palestra";
 
-const DATA = dataDaqui(40);
+const DATA = dataDaqui(21);
 
 test.beforeEach(async () => {
   await limparCadastrosDeTeste();

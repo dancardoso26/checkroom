@@ -202,6 +202,11 @@ export async function criarAulaDeReferencia(
     listarEspacos(),
   ]);
 
+  const { corpo: perfis } = await pedir(
+    `profiles?professor_id=eq.${professor}&select=id&limit=1`
+  );
+  const autor = perfis.length === 1 ? (perfis[0].id as string) : await algumPerfil();
+
   for (const sala of salas) {
     const { ok, corpo } = await pedir("bookings", {
       method: "POST",
@@ -213,7 +218,7 @@ export async function criarAulaDeReferencia(
         purpose: AULA_DE_REFERENCIA.titulo,
         starts_at: new Date(`${dia}T${inicio}:00-03:00`).toISOString(),
         ends_at: new Date(`${dia}T${fim}:00-03:00`).toISOString(),
-        created_by: await algumPerfil(),
+        created_by: autor,
       }),
     });
 

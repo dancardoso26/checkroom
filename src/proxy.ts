@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-import { dispensaSegundoFator } from "@/domain/auth/segundo-fator";
+import { aceiteEmDia } from "@/domain/documentos/documentos";
+import type { Database } from "@/lib/supabase/database.types";
 import { OPCOES_DO_COOKIE_DE_SESSAO } from "@/lib/supabase/opcoes-de-cookie";
 
 const ROTAS_LIVRES = [
@@ -15,16 +16,18 @@ const ROTAS_DE_ENTRADA = ["/login", "/recuperar-senha"];
 
 const ROTAS_DE_SEGUNDO_FATOR = ["/verificacao", "/verificacao/configurar"];
 
+const ROTA_DE_ACEITE = "/aceitar-termos";
+
 function casa(rotas: string[], caminho: string): boolean {
   return rotas.some(
-    (rota) => caminho === rota || caminho.startsWith(`${rota}/`)
+    (rota) => caminho === rota || caminho.startsWith(`${rota}/`),
   );
 }
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
-  const supabase = createServerClient(
+  const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
@@ -43,7 +46,7 @@ export async function proxy(request: NextRequest) {
           }
         },
       },
-    }
+    },
   );
 
   const {
@@ -70,17 +73,6 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(destino);
   }
 
-  if (dispensaSegundoFator(user.email)) {
-    if (casa(ROTAS_DE_SEGUNDO_FATOR, caminho)) {
-      const destino = request.nextUrl.clone();
-      destino.pathname = "/reservas";
-      destino.search = "";
-      return NextResponse.redirect(destino);
-    }
-
-    return response;
-  }
-
   if (casa(ROTAS_DE_SEGUNDO_FATOR, caminho)) return response;
 
   const { data: claims } = await supabase.auth.getClaims();
@@ -88,6 +80,21 @@ export async function proxy(request: NextRequest) {
   if (claims?.claims?.aal !== "aal2") {
     const destino = request.nextUrl.clone();
     destino.pathname = "/verificacao";
+    return NextResponse.redirect(destino);
+  }
+
+  if (casa([ROTA_DE_ACEITE], caminho)) return response;
+
+  const { data: perfil } = await supabase
+    .from("profiles")
+    .select("terms_version")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!aceiteEmDia(perfil?.terms_version ?? null)) {
+    const destino = request.nextUrl.clone();
+    destino.pathname = ROTA_DE_ACEITE;
+    destino.search = "";
     return NextResponse.redirect(destino);
   }
 

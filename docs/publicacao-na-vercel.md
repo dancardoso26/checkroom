@@ -45,11 +45,11 @@ de uma troca de DNS, é cache local do IP antigo: limpe em
 - **Nunca rodar de novo `npm run seed:usuarios` nem o `seed.sql`.** Os dois
   apagam as contas e as tabelas. Com o sistema no ar, isso derruba o acesso de
   todo mundo.
-- **Segundo fator.** Em produção o código ignora `MFA_DISPENSADO_PARA`. As
-  contas de uso diário (`adm@umc.br`, `professor@umc.br`, `aluno@umc.br`,
-  `suporte@umc.br`) hoje entram sem autenticador só no seu computador; no site
-  publicado cada uma vai pedir o cadastro do autenticador (TOTP) no primeiro
-  acesso. Faça isso uma vez por conta antes da demonstração.
+- **Segundo fator.** Todas as contas exigem o autenticador (TOTP), também no
+  computador de desenvolvimento, e o banco recusa a sessão sem ele. As contas de
+  uso diário (`adm@umc.br`, `professor@umc.br`, `aluno@umc.br`,
+  `suporte@umc.br`) têm o segredo guardado em `tests/e2e/.segredos-totp.json`,
+  o mesmo cadastrado no celular.
 - **Migrations.** O banco já tem todas; não é preciso aplicar nada.
 
 ## 1. Pré-requisitos no repositório
@@ -107,8 +107,7 @@ Em **Settings > Environment Variables**, para o ambiente **Production**:
 | `RESEND_FROM` | `CheckRoom <nao-responda@checkroom.com.br>` | Domínio verificado no Resend |
 | `SITE_URL` | `https://SEU-DOMINIO` sem barra final | Entra nos links de convite e recuperação |
 
-**Não** defina `MFA_DISPENSADO_PARA`, `SEED_USER_PASSWORD` nem
-`SEED_DEMO_EMAIL` na Vercel: servem só para desenvolvimento e seed.
+**Não** defina `SEED_USER_PASSWORD` nem `SEED_DEMO_EMAIL` na Vercel: servem só para desenvolvimento e seed.
 
 O endereço `*.vercel.app` só é conhecido depois do primeiro deploy. Faça o
 primeiro deploy com um `SITE_URL` provisório, anote o endereço e atualize no

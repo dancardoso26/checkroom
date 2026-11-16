@@ -15,8 +15,8 @@ ataques", e a política publicada traz só o resumo.
 | Senha guardada como hash com sal (bcrypt), gerado e conferido pelo Supabase Auth | `auth.users` | Nenhuma coluna da aplicação guarda senha |
 | Senha nunca registrada em log ou auditoria | `src/app/login/acoes.ts`: a falha registra só o e-mail digitado | Revisão do código |
 | Regras mínimas de senha na definição e na troca | `src/domain/auth/senha.ts` | `senha.test.ts` |
-| Segundo fator (TOTP) obrigatório para todos os papéis | `src/proxy.ts` exige sessão `aal2` em toda rota interna | E2E "exige o segundo fator antes de liberar o sistema" |
-| Dispensa do segundo fator impossível em produção | `src/domain/auth/segundo-fator.ts` ignora `MFA_DISPENSADO_PARA` quando `NODE_ENV=production` | `segundo-fator.test.ts` |
+| Segundo fator (TOTP) obrigatório para todos os papéis, sem exceção | `src/proxy.ts` exige sessão `aal2` em toda rota interna | E2E "exige o segundo fator antes de liberar o sistema" |
+| Segundo fator exigido também pelo banco | Gancho `exigir_segundo_fator` antes de toda chamada à API de dados e política restritiva em todas as tabelas (`supabase/estado-atual/segundo-fator.sql`) | E2E `segundo-fator-no-banco.spec.ts` |
 | Troca de senha só com a sessão completa (segundo fator) ou aberta pelo link de convite ou de recuperação; a sessão aberta só com a senha não troca | `src/domain/auth/troca-de-senha.ts` | E2E "a sessão aberta só com a senha não troca a senha" |
 | Recuperação de senha por link de uso único e com validade | Supabase Auth, `src/app/auth/confirmar/route.ts` | E2E dos links quebrado e vencido |
 | Mensagem de erro de login não revela se o e-mail existe | `src/app/login/acoes.ts` | E2E "recusa senha incorreta sem dizer se o e-mail existe" |

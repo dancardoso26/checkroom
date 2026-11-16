@@ -148,6 +148,9 @@ vite.config.ts.timestamp-*
 /blob-report/
 /playwright/.cache/
 
+# Segredos TOTP das contas de teste, gerados pelo global-setup.
+tests/e2e/.segredos-totp.json
+
 # Arquivos de ferramentas locais de desenvolvimento.
 # AGENTS.md e recriado pelo `next dev` a cada execucao e nao faz parte do
 # projeto: ignora-lo evita que ele apareca como alteracao pendente para sempre.
