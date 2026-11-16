@@ -70,27 +70,27 @@ export function DetalhesDaAtividade({
   );
   const ehPalestra = campos.tipoDeAtividade === "lecture";
   const {
-    professores: professors,
-    turmas: classes,
-    disciplinas: subjects,
-    vinculos: assignments,
-    recursos: resources,
+    professores,
+    turmas,
+    disciplinas,
+    vinculos,
+    recursos: opcoesDeRecursos,
   } = catalogos;
   const ehAula = campos.tipoDeAtividade === "class";
 
   const turmasPermitidas =
-    ehAula && campos.professorId
-      ? classes.filter((c) =>
-          assignments.some(
+    (ehAula || professorFixo) && campos.professorId
+      ? turmas.filter((c) =>
+          vinculos.some(
             (a) => a.professorId === campos.professorId && a.turmaId === c.id,
           ),
         )
-      : classes;
+      : turmas;
 
   const disciplinasPermitidas =
     campos.professorId && campos.turmaId
-      ? subjects.filter((s) =>
-          assignments.some(
+      ? disciplinas.filter((s) =>
+          vinculos.some(
             (a) =>
               a.professorId === campos.professorId &&
               a.turmaId === campos.turmaId &&
@@ -199,7 +199,7 @@ export function DetalhesDaAtividade({
         <CamposDaPalestraNoPainel
           palestra={palestra}
           alterarPalestra={alterarPalestra}
-          professores={professors.map((p) => ({ id: p.id, nome: p.nome }))}
+          professores={professores.map((p) => ({ id: p.id, nome: p.nome }))}
           cursos={catalogos.cursos}
         />
       ) : (
@@ -210,7 +210,7 @@ export function DetalhesDaAtividade({
                 id="professorField"
                 className="flex h-9 items-center text-sm"
               >
-                {professors.find((p) => p.id === professorFixo)?.nome ??
+                {professores.find((p) => p.id === professorFixo)?.nome ??
                   "Professor não identificado"}
               </div>
             ) : (
@@ -222,7 +222,7 @@ export function DetalhesDaAtividade({
                   alterar("turmaId", "");
                   alterar("disciplinaId", "");
                 }}
-                opcoes={professors.map((p) => ({ id: p.id, nome: p.nome }))}
+                opcoes={professores.map((p) => ({ id: p.id, nome: p.nome }))}
                 placeholder="Professor"
                 rotuloDaPesquisa="Pesquisar professores"
               />
@@ -285,7 +285,7 @@ export function DetalhesDaAtividade({
       <LinhaDoFormulario rotulo="Recursos" htmlFor="resourcesField">
         <SeletorDeRecursos
           id="resourcesField"
-          recursos={resources}
+          recursos={opcoesDeRecursos}
           selecionados={recursos}
           alternar={alternarRecurso}
         />

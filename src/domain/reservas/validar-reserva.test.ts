@@ -532,6 +532,32 @@ describe("validarReserva", () => {
       });
     });
 
+    it("recusa prova do professor numa turma em que ele não leciona", () => {
+      const resultado = validarReserva(
+        montarPedido({
+          tipoDeAtividade: "exam",
+          disciplinaId: null,
+          finalidade: "Prova de recuperação",
+        }),
+        montarContexto({ vinculo: null, turmasDoProfessor: [TURMA_ENG2] }),
+      );
+
+      expect(codigosDe(resultado)).toEqual(["TURMA_SEM_VINCULO"]);
+    });
+
+    it("aceita prova do professor numa turma em que ele leciona", () => {
+      const resultado = validarReserva(
+        montarPedido({
+          tipoDeAtividade: "exam",
+          disciplinaId: null,
+          finalidade: "Prova de recuperação",
+        }),
+        montarContexto({ vinculo: null, turmasDoProfessor: [TURMA_SI8] }),
+      );
+
+      expect(resultado).toEqual({ valida: true });
+    });
+
     it("aceita prova sem disciplina nem vínculo", () => {
       const resultado = validarReserva(
         montarPedido({

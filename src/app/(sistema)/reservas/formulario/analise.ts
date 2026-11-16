@@ -20,7 +20,10 @@ import {
   mapaDeNomesDosRecursos,
 } from "@/lib/repositories/repositorio-de-recursos";
 import { buscarOcupacoesNoPeriodo } from "@/lib/repositories/repositorio-de-reservas";
-import { buscarVinculoDocente } from "@/lib/repositories/repositorio-de-disciplinas";
+import {
+  buscarVinculoDocente,
+  listarTurmasDoProfessor,
+} from "@/lib/repositories/repositorio-de-disciplinas";
 import { PERIODO_LETIVO_VIGENTE } from "@/domain/reservas/expediente";
 import { combinarDataEHora } from "@/lib/datas";
 import { carregarCalendarioDoDia } from "@/lib/repositories/repositorio-do-calendario";
@@ -84,19 +87,24 @@ export async function analisarReserva(
   const fim = combinarDataEHora(dados.data, dados.horaDeTermino);
 
   const calendario = await carregarCalendarioDoDia(dados.data);
+  const periodo = calendario.periodo?.codigo ?? PERIODO_LETIVO_VIGENTE;
 
-  const [turma, espacos, recursos, vinculo, ocupacoes] = await Promise.all([
-    buscarTurmaParaReserva(dados.turmaId),
-    listarEspacos(),
-    listarRecursos(),
-    buscarVinculoDocente({
-      professorId: dados.professorId,
-      disciplinaId: dados.disciplinaId,
-      turmaId: dados.turmaId,
-      periodo: calendario.periodo?.codigo ?? PERIODO_LETIVO_VIGENTE,
-    }),
-    buscarOcupacoesNoPeriodo({ inicio, fim }),
-  ]);
+  const [turma, espacos, recursos, vinculo, ocupacoes, turmasDoProfessor] =
+    await Promise.all([
+      buscarTurmaParaReserva(dados.turmaId),
+      listarEspacos(),
+      listarRecursos(),
+      buscarVinculoDocente({
+        professorId: dados.professorId,
+        disciplinaId: dados.disciplinaId,
+        turmaId: dados.turmaId,
+        periodo,
+      }),
+      buscarOcupacoesNoPeriodo({ inicio, fim }),
+      sessao.papel === "professor"
+        ? listarTurmasDoProfessor(dados.professorId, periodo)
+        : Promise.resolve(null),
+    ]);
 
   const nomesDosRecursos = mapaDeNomesDosRecursos(recursos);
 
@@ -117,6 +125,7 @@ export async function analisarReserva(
     ocupacoes,
     agora: new Date(),
     calendario,
+    turmasDoProfessor,
   };
 
   const avaliacoes = avaliarEspacos(pedido, espacos, contexto);

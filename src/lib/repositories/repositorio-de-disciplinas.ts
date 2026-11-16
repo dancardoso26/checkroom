@@ -108,3 +108,24 @@ export async function buscarVinculoDocente(parametros: {
     periodo: data.term,
   };
 }
+
+export async function listarTurmasDoProfessor(
+  professorId: string,
+  periodo: string,
+): Promise<string[]> {
+  const supabase = await criarClienteDoServidor();
+
+  const { data, error } = await supabase
+    .from("teaching_assignments")
+    .select("class_id")
+    .eq("professor_id", professorId)
+    .eq("term", periodo);
+
+  if (error) {
+    throw new Error(
+      `Falha ao consultar as turmas do professor: ${error.message}`,
+    );
+  }
+
+  return [...new Set(data.map((linha) => linha.class_id))];
+}

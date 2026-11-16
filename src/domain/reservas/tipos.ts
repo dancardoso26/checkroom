@@ -61,6 +61,8 @@ export type ContextoDaReserva = {
   agora: Date;
 
   calendario?: CalendarioDoDia;
+
+  turmasDoProfessor?: string[] | null;
 };
 
 export type ViolacaoDaReserva =
@@ -74,6 +76,7 @@ export type ViolacaoDaReserva =
   | { codigo: "CONFLITO_DE_PROFESSOR"; conflito: OcupacaoExistente }
   | { codigo: "CONFLITO_DE_TURMA"; conflito: OcupacaoExistente }
   | { codigo: "SEM_VINCULO_DOCENTE"; periodo: string }
+  | { codigo: "TURMA_SEM_VINCULO" }
   | { codigo: "DISCIPLINA_OBRIGATORIA" }
   | {
       codigo: "CAPACIDADE_INSUFICIENTE";
